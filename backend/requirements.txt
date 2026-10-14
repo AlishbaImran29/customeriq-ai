@@ -1,0 +1,8 @@
+# Runtime dependencies for the CustomerIQ AI backend (Python 3.13).
+fastapi==0.143.1
+uvicorn[standard]==0.54.0
+SQLAlchemy==2.1.4
+alembic==1.20.0
+psycopg[binary]==3.3.6
+pydantic==2.14.1
+pydantic-settings==2.16.0
