@@ -18,6 +18,7 @@ export default async function RevenuePage() {
   const currentAtRisk = atRiskTrend[atRiskTrend.length - 1]?.atRisk ?? 0;
   const totalAtRiskBySegment = atRiskBySegment.reduce((sum, s) => sum + s.atRisk, 0);
   const maxDriver = Math.max(...drivers.map((d) => d.impact));
+  const monthChange = previous ? ((latest - previous) / previous) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -31,8 +32,8 @@ export default async function RevenuePage() {
         <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">This month</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(latest)}</p>
-          <p className="text-xs font-medium text-emerald-700">
-            {formatSignedPercent(((latest - previous) / previous) * 100)} vs last month
+          <p className={monthChange >= 0 ? "text-xs font-medium text-emerald-700" : "text-xs font-medium text-rose-700"}>
+            {formatSignedPercent(monthChange)} vs last month
           </p>
         </Card>
         <Card className="p-4">
@@ -43,7 +44,9 @@ export default async function RevenuePage() {
         <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Revenue at risk (month)</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums text-rose-700">{formatCurrency(currentAtRisk)}</p>
-          <p className="text-xs text-slate-500">{formatPercent((currentAtRisk / latest) * 100)} of monthly revenue</p>
+          <p className="text-xs text-slate-500">
+            {latest ? `${formatPercent((currentAtRisk / latest) * 100)} of monthly revenue` : "No revenue recorded this month"}
+          </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">12-month exposure</p>

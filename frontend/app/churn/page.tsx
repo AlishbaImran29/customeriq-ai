@@ -7,7 +7,7 @@ import { Badge, riskVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getChurnOverview } from "@/lib/api/customer-intelligence";
-import { formatNumber, formatPercent, formatSignedPercent } from "@/lib/utils";
+import { formatNumber, formatPercent } from "@/lib/utils";
 
 export default async function ChurnPage() {
   const { churnRate, churnRateDelta, distribution, customers } = await getChurnOverview();
@@ -31,7 +31,10 @@ export default async function ChurnPage() {
             <TrendingDown className="h-4 w-4" aria-hidden="true" /> Predicted churn rate
           </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{formatPercent(churnRate)}</p>
-          <p className="text-xs font-medium text-rose-600">{formatSignedPercent(churnRateDelta)} vs last period</p>
+          <p className={churnRateDelta > 0 ? "text-xs font-medium text-rose-600" : "text-xs font-medium text-emerald-700"}>
+            {churnRateDelta > 0 ? "+" : ""}
+            {churnRateDelta.toFixed(1)} pts vs last period
+          </p>
         </Card>
         <Card className="p-4">
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">

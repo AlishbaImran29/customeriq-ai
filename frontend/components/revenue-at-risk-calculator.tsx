@@ -54,7 +54,7 @@ export function RevenueAtRiskCalculator() {
           <span className="text-xs text-slate-500">{churnRate.toFixed(1)}%</span>
         </label>
       </div>
-      <div className="rounded-2xl bg-slate-950 p-5 text-white">
+      <div className="rounded-2xl bg-slate-950 p-5 text-white" aria-live="polite">
         <p className="text-xs uppercase tracking-wide text-slate-400">
           Estimated revenue at risk
         </p>

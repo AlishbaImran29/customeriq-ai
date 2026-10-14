@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Activity,
   Bot,
@@ -48,14 +48,50 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
+// Matches Tailwind's `lg` breakpoint, where the sidebar is always visible.
+const DESKTOP_QUERY = "(min-width: 1024px)";
+
+function subscribeDesktop(onChange: () => void) {
+  const query = window.matchMedia(DESKTOP_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function useIsDesktop() {
+  return useSyncExternalStore(
+    subscribeDesktop,
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => true,
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const isDesktop = useIsDesktop();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  // The off-canvas drawer is hidden from keyboard and screen readers while closed.
+  const drawerHidden = !isDesktop && !open;
+
+  function openDrawer() {
+    setOpen(true);
+    requestAnimationFrame(() => closeButtonRef.current?.focus());
+  }
+
+  /** Closes the drawer; returns focus to the menu button unless navigating away. */
+  function closeDrawer(restoreFocus = true) {
+    setOpen(false);
+    if (restoreFocus) menuButtonRef.current?.focus();
+  }
 
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        menuButtonRef.current?.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -78,18 +114,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div
             className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
             aria-hidden="true"
-            onClick={() => setOpen(false)}
+            onClick={() => closeDrawer()}
           />
         ) : null}
         <aside
           id="app-sidebar"
+          inert={drawerHidden}
           className={cn(
             "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-800 bg-slate-950 text-slate-200 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
             open ? "translate-x-0" : "-translate-x-full",
           )}
         >
           <div className="flex items-center justify-between px-5 py-5">
-            <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
+            <Link href="/" className="flex items-center gap-2" onClick={() => closeDrawer(false)}>
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500 text-sm font-bold text-slate-950">
                 IQ
               </span>
@@ -99,8 +136,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
             </Link>
             <button
+              ref={closeButtonRef}
+              type="button"
               className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-900 hover:text-white lg:hidden"
-              onClick={() => setOpen(false)}
+              onClick={() => closeDrawer()}
               aria-label="Close navigation"
             >
               <X className="h-5 w-5" />
@@ -119,7 +158,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <li key={item.href}>
                         <Link
                           href={item.href}
-                          onClick={() => setOpen(false)}
+                          onClick={() => closeDrawer(false)}
                           aria-current={active ? "page" : undefined}
                           className={cn(
                             "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50",
@@ -151,8 +190,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
             <button
+              ref={menuButtonRef}
+              type="button"
               className="rounded-lg p-2 hover:bg-slate-100 lg:hidden"
-              onClick={() => setOpen(true)}
+              onClick={openDrawer}
               aria-label="Open navigation"
               aria-expanded={open}
               aria-controls="app-sidebar"

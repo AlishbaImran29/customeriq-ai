@@ -6,12 +6,15 @@ export function KpiCard({
   label,
   value,
   delta,
+  deltaUnit = "%",
   invertDelta,
   icon: Icon,
 }: {
   label: string;
   value: string;
   delta: number;
+  /** "%" for relative change, "pts" for change in a rate or score. */
+  deltaUnit?: "%" | "pts";
   invertDelta?: boolean;
   icon: LucideIcon;
 }) {
@@ -33,11 +36,11 @@ export function KpiCard({
             )}
           >
             {delta > 0 ? "+" : ""}
-            {formatPercent(delta)} vs last period
+            {deltaUnit === "%" ? formatPercent(delta) : `${delta.toFixed(1)} pts`} vs last period
           </p>
         </div>
         <div className="rounded-xl bg-teal-50 p-2 text-teal-700">
-          <Icon className="h-5 w-5" />
+          <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
       </div>
     </Card>

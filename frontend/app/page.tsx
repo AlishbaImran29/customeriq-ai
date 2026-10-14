@@ -33,9 +33,9 @@ export default async function OverviewPage() {
         <KpiCard label="Total Customers" value={formatNumber(kpis.totalCustomers)} delta={kpiDeltas.totalCustomers} icon={Users} />
         <KpiCard label="Revenue" value={formatCurrency(kpis.revenue)} delta={kpiDeltas.revenue} icon={TrendingUp} />
         <KpiCard label="Customer Lifetime Value" value={formatCurrency(kpis.averageClv)} delta={kpiDeltas.averageClv} icon={Wallet} />
-        <KpiCard label="Retention Rate" value={formatPercent(kpis.retentionRate)} delta={kpiDeltas.retentionRate} icon={HeartPulse} />
-        <KpiCard label="Churn Risk" value={formatPercent(kpis.churnRisk)} delta={kpiDeltas.churnRisk} invertDelta icon={Activity} />
-        <KpiCard label="Growth Score" value={`${kpis.growthScore}/100`} delta={kpiDeltas.growthScore} icon={Sparkles} />
+        <KpiCard label="Retention Rate" value={formatPercent(kpis.retentionRate)} delta={kpiDeltas.retentionRate} deltaUnit="pts" icon={HeartPulse} />
+        <KpiCard label="Churn Risk" value={formatPercent(kpis.churnRisk)} delta={kpiDeltas.churnRisk} deltaUnit="pts" invertDelta icon={Activity} />
+        <KpiCard label="Growth Score" value={`${kpis.growthScore}/100`} delta={kpiDeltas.growthScore} deltaUnit="pts" icon={Sparkles} />
       </section>
 
       <div className="grid gap-4 xl:grid-cols-5">
