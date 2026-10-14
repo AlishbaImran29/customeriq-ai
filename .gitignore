@@ -1,0 +1,23 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Python / backend
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Uploaded or real customer data
+backend/uploads/
+data/
+*.csv
+*.xlsx
+*.xls
+!**/fixtures/**
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
