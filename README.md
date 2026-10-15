@@ -23,7 +23,8 @@ The project specification is in [`docs/specification.pdf`](docs/specification.pd
 | AI Business Assistant | ✅ Real once `ANTHROPIC_API_KEY` is set; answers only from your summary figures |
 | Churn probability, predicted CLV, 3-month revenue forecast | ✅ Trained models (scikit-learn), **shown only if they pass an accuracy test** on data they were not trained on. Otherwise "Not available" with the reason. Details below. |
 | Growth score | ⏳ Not available — there is no agreed formula for it yet |
-| Sign-in / user accounts | ⏳ Not built. The header shows a "Demo workspace" placeholder. |
+| Sign-in (accounts, sessions, change password) | ✅ Built. In live mode every page and API call needs a signed-in user. Demo mode has no sign-in. |
+| Public real-world test dataset (UCI Online Retail II) | ✅ Converter included (see "Test data") |
 | Shopify orders export (CSV) | ✅ Detected automatically and converted on the server |
 | Shopify / WooCommerce API sync | ⏳ Not built. Use the Shopify CSV export (or a standard CSV) for now. |
 
@@ -124,6 +125,40 @@ Stop either server with **Ctrl+C** in its terminal.
 
 ---
 
+## Signing in
+
+In live mode the site shows a **sign-in page** first. Nothing about your customers
+is visible, and the API refuses every request, until someone is signed in.
+
+- **First time:** open the site. With no accounts yet it shows **Create your
+  account**: your name, email and a password (10+ characters; a few unrelated
+  words like "blue tractor sings loudly" work well). You are signed in straight away.
+- **Later:** **Sign in** with that email and password. "Keep me signed in on this
+  device" keeps you signed in for 30 days; without it the session ends after 24 hours
+  or when you close the browser.
+- **Your account** (avatar menu, top right): see your details, **change your
+  password** (other devices are signed out), or **Sign out**.
+- **More people / forgotten password:** use the command-line tool (passwords are
+  typed at a hidden prompt):
+
+```powershell
+cd D:\CustomerIQ.AI\backend
+.\.venv\Scripts\python.exe scripts\manage_users.py list
+.\.venv\Scripts\python.exe scripts\manage_users.py create teammate@company.com --name "Teammate"
+.\.venv\Scripts\python.exe scripts\manage_users.py reset-password you@company.com
+.\.venv\Scripts\python.exe scripts\manage_users.py deactivate former@company.com
+```
+
+How it is protected: passwords are stored only as scrypt hashes; the session cookie
+is `HttpOnly` (page scripts cannot read it) and `SameSite=Lax`; only a hash of the
+session token is stored; 8 wrong attempts lock that email for 15 minutes; writes from
+other websites are refused. Demo mode (no backend address) has no sign-in.
+
+> **Before putting the site on the internet:** set `APP_ENV=production` (secure
+> cookies, hides the API docs) and a `SETUP_CODE` in `backend/.env`, so a stranger who
+> finds the site first cannot create the owner account. Use HTTPS. There is one kind of
+> account (everyone sees everything); roles are not built.
+
 ## Using it
 
 1. Go to **Import Data**, choose a CSV or .xlsx file (one row per order), and
@@ -172,6 +207,35 @@ How they are kept honest:
 - Predictions are **estimates**. They are only as good as the data: models
   trained on the synthetic test data prove the code works, nothing more.
 
+### Public real-world test data (recommended for trying the predictions)
+
+No store of your own? The public **Online Retail II** dataset has real orders from a
+UK online shop: about 36,600 orders from 5,850 customers over two years. Credit the
+source if you share results (licence **CC BY 4.0**): Chen, D. (2012). *Online Retail II*
+[Dataset]. UCI Machine Learning Repository. <https://doi.org/10.24432/C5CG6D>
+
+1. Download `online+retail+ii.zip` from the dataset page
+   (<https://archive.ics.uci.edu/dataset/502/online+retail+ii>, 43 MB; the server is slow
+   and sometimes drops the connection, so retry if the zip is incomplete) and unzip
+   `online_retail_II.xlsx` into its **own empty folder** (it is untrusted data).
+2. Convert it (one row per invoice, guest checkouts and cancellations skipped, the
+   overlapping December 2010 rows counted once; see the script's header for every rule):
+
+```powershell
+cd D:\CustomerIQ.AI\backend
+.\.venv\Scripts\python.exe -I scripts\convert_uci_online_retail.py "C:\path\to\online_retail_II.xlsx"
+```
+
+3. Remove the synthetic data (below), then upload `data\public_uci_online_retail_ii.csv`
+   on the Import page. Its IDs start with `PUB-`; remove it later with
+   `delete_synthetic_data.py --source public`.
+
+Things to know: amounts are in **pounds** (the app shows a $ symbol); the dataset has no
+product categories, names, emails (placeholders `pub-<id>@example.com`) or engagement;
+and it is a gift wholesaler with a big Christmas peak. On it, the **churn model is
+accepted** (AUC 0.80 vs 0.76 for the simple rule), while **predicted CLV and the
+forecast are honestly declined** because they did not beat their simple baselines.
+
 ### Test data (synthetic)
 
 `backend/scripts/generate_demo_data.py` creates a **made-up** file
@@ -185,7 +249,8 @@ cd D:\CustomerIQ.AI\backend
 .\.venv\Scripts\python.exe scripts\delete_synthetic_data.py             # type DELETE to confirm
 ```
 
-Only rows whose IDs start with `SYN-` are deleted.
+Only rows whose IDs start with `SYN-` are deleted. (Add `--source public` to remove
+the public dataset's `PUB-` rows instead.)
 
 ### Turning on the AI assistant (optional)
 
@@ -237,6 +302,10 @@ npm.cmd run build
 | `Could not read package.json` at `D:\package.json` | You are in the wrong folder. Run the `cd` line first, then check with `pwd`. |
 | `EPERM: operation not permitted` / build lockfile errors | The folder is not writable for your user. In an **administrator** PowerShell: `icacls "D:\CustomerIQ.AI" /grant "${env:USERNAME}:(OI)(CI)M" /T`. |
 | Port 3000 is in use | Another project is running. Next.js picks 3001 automatically; use that address. |
+| You are sent to the **sign-in page** again and again | Your session ended (24 hours, or you signed out elsewhere), or the browser blocks cookies for this site. Sign in again; check cookies are allowed. |
+| **"That email or password is not correct."** | Check the email and password (the email ignores capital letters). After 8 wrong tries the email is locked for about 15 minutes. |
+| **"Too many sign-in attempts"** | Wait the number of minutes shown. A forgotten password can be reset with `manage_users.py reset-password`. |
+| Sign-in page says **"We can't reach the server"** | The backend is not running. Start Terminal 1 and click **Try again**. |
 | Pages say **Couldn't load live data** | The backend is not running or not reachable. Start Terminal 1, then click **Try again**. |
 | Health check shows `"database": "unavailable"` | PostgreSQL is stopped or `DB_PASSWORD` in `backend/.env` is wrong. Details are in the backend terminal. |
 | Assistant says **AI not configured** | Add `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY` with `AI_PROVIDER=openai`) to `backend/.env` and restart the backend. |
@@ -247,13 +316,14 @@ npm.cmd run build
 
 ```text
 backend/
-  app/api/v1/        HTTP endpoints (health, imports, analytics, assistant)
-  app/services/      import checks, analytics formulas, AI assistant
+  app/api/v1/        HTTP endpoints (health, auth, imports, analytics, assistant)
+  app/services/      import checks, analytics formulas, predictions, AI assistant, sign-in
   app/models/        database tables;  alembic/ = migrations
-  scripts/           synthetic data generator and cleanup
+  scripts/           test-data generator/converter, cleanup, manage_users.py
   tests/             pytest suite
 frontend/
-  app/               pages (one folder per page)
+  proxy.ts           sends visitors without a sign-in cookie to /login
+  app/               pages (one folder per page; login/ and account/ for sign-in)
   components/        UI components and charts
   lib/api/           API client; demo/live switch
   lib/mock/          sample data used only in demo mode

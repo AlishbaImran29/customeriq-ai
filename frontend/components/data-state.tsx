@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { unstable_rethrow } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { Database, FileUp, FlaskConical, Info } from "lucide-react";
 import { RetryButton } from "@/components/retry-button";
 import { EmptyState, ErrorState } from "@/components/states";
@@ -20,7 +20,11 @@ export async function load<T>(loader: () => Promise<T>): Promise<LoadResult<T>> 
     return { ok: true, data: await loader() };
   } catch (error) {
     unstable_rethrow(error);
-    if (error instanceof ApiError) return { ok: false, error };
+    if (error instanceof ApiError) {
+      // The session ended (or was never valid): sign in again instead of showing an error.
+      if (error.status === 401) redirect("/login?reason=expired");
+      return { ok: false, error };
+    }
     throw error;
   }
 }

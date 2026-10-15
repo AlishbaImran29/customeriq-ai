@@ -1,9 +1,16 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from app.api.v1 import analytics, assistant, health, imports
+from app.api.deps import require_user
+from app.api.v1 import analytics, assistant, auth, health, imports
 
 api_router = APIRouter(prefix="/api/v1")
+
+# Public: health check and the sign-in endpoints (which guard themselves).
 api_router.include_router(health.router)
-api_router.include_router(imports.router)
-api_router.include_router(analytics.router)
-api_router.include_router(assistant.router)
+api_router.include_router(auth.router)
+
+# Everything that touches customer data or the AI requires a signed-in user.
+_signed_in = [Depends(require_user)]
+api_router.include_router(imports.router, dependencies=_signed_in)
+api_router.include_router(analytics.router, dependencies=_signed_in)
+api_router.include_router(assistant.router, dependencies=_signed_in)

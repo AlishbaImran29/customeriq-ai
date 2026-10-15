@@ -22,6 +22,15 @@ these files: anything starting with `NEXT_PUBLIC_` is bundled into the browser,
 so never put API keys or passwords here. A failed live request shows an error
 state with **Try again**; it never falls back to sample data.
 
+## Sign-in
+
+In live mode `proxy.ts` sends visitors without a sign-in cookie to `/login` (it only
+checks that the cookie exists; the backend decides if it is still valid, and an expired
+session ends at `/login?reason=expired`). Demo mode has no sign-in. The browser only talks
+to this site: `next.config.ts` forwards `/api/v1/*` to the backend, so the cookie is
+first-party. Server Components forward the visitor's cookie when they call the backend.
+`/api` is excluded from the proxy matcher so file uploads are not buffered by it.
+
 ## Where things are
 
 | Path | Purpose |

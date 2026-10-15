@@ -51,7 +51,9 @@ Database tests are skipped automatically until `.env` is configured.
 | --- | --- |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Local PostgreSQL connection. Special characters in the password are handled. |
 | `DATABASE_URL` | Optional full URL (`postgresql+psycopg://…`) for hosted databases; overrides the fields above. |
-| `FRONTEND_ORIGINS` | Comma-separated browser origins allowed by CORS. |
+| `FRONTEND_ORIGINS` | Comma-separated website addresses allowed to talk to the API. Writes from any other website are refused. |
+| `APP_ENV` | `development` (default) or `production` (secure cookies, API docs hidden). |
+| `SETUP_CODE` | Optional. When set, creating the first account on the website needs this code. **Set it on a public site.** |
 | `AI_PROVIDER` | `anthropic` (default, Claude) or `openai`. |
 | `ANTHROPIC_API_KEY` | Enables the assistant with Claude. Server-side only. Needs API credits in the Claude Console (separate from Claude Pro/Max). |
 | `ANTHROPIC_MODEL` | Claude model ID (default `claude-opus-5-5`). |
@@ -93,6 +95,29 @@ Rules:
 A made-up sample file for trying the import: `tests/fixtures/sample_orders.csv`
 (its last row is intentionally invalid). Delete those `DEMO-` rows afterwards if
 you upload it to a real database.
+
+## Sign-in
+
+Every data endpoint (`imports`, `analytics`, `assistant`) requires a signed-in user and
+returns `401 not_signed_in` otherwise. Only `/health` and `/auth/*` are public.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/auth/status` | `{setupRequired, setupCodeRequired, authenticated, user}`: what the sign-in page shows. |
+| `POST /api/v1/auth/setup` | Create the **first** account (`409` once any account exists). Needs `setupCode` when `SETUP_CODE` is set. |
+| `POST /api/v1/auth/login` | `{email, password, remember}` -> sets the session cookie. Wrong credentials: one generic `401`; 8 failures lock the email for 15 minutes (`429`). |
+| `POST /api/v1/auth/logout` | Ends this session. |
+| `GET /api/v1/auth/me` | The signed-in user. |
+| `POST /api/v1/auth/change-password` | `{currentPassword, newPassword}`; signs out the other browsers. |
+
+- Passwords: scrypt hashes (standard library). Sessions: random token in an `HttpOnly`,
+  `SameSite=Lax` cookie (`Secure` when `APP_ENV=production`); the database stores only
+  its SHA-256 hash. 24 h, or 30 days with "remember me".
+- Writes whose `Origin` header is not in `FRONTEND_ORIGINS` are refused (`403`).
+- `APP_ENV=production` also hides `/docs`, `/redoc` and `/openapi.json`.
+- Command line: `scripts/manage_users.py list | create | reset-password | deactivate | activate`.
+- The frontend forwards `/api/v1/*` to this backend (Next.js `rewrites`), so the cookie
+  is first-party to the website; the backend does not need to be reachable from browsers.
 
 ## Prediction models
 

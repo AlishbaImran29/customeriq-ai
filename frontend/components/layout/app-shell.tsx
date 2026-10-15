@@ -13,11 +13,11 @@ import {
   Sparkles,
   TrendingUp,
   Upload,
-  UserRound,
   Users,
   Wallet,
   X,
 } from "lucide-react";
+import { AccountMenu } from "@/components/layout/account-menu";
 import { API_MODE } from "@/lib/api/config";
 import { cn } from "@/lib/utils";
 
@@ -104,6 +104,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const currentLabel =
     navGroups.flatMap((g) => g.items).find((item) => isActive(pathname, item.href))?.label ??
     "CustomerIQ AI";
+
+  // The sign-in screen stands alone, without the sidebar and header.
+  if (pathname.startsWith("/login")) return <>{children}</>;
 
   return (
     <div className="min-h-full bg-slate-50 text-slate-900">
@@ -219,23 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 {LIVE ? "Live data" : "Demo data"}
               </span>
-              {/* Placeholder only: there is no authentication yet, so no real user is shown. */}
-              <div
-                className="flex items-center gap-2"
-                title="Demo workspace. Sign-in is not available yet."
-              >
-                <span
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500"
-                  aria-hidden="true"
-                >
-                  <UserRound className="h-4 w-4" />
-                </span>
-                <span className="hidden text-xs leading-tight text-slate-500 md:block">
-                  <span className="block font-medium text-slate-700">Demo workspace</span>
-                  Sign-in not available
-                </span>
-                <span className="sr-only md:hidden">Demo workspace. Sign-in is not available yet.</span>
-              </div>
+              <AccountMenu />
             </div>
           </header>
           <main id="main-content" tabIndex={-1} className="flex-1 p-4 outline-none sm:p-6 lg:p-8">

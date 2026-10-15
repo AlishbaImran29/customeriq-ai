@@ -29,6 +29,23 @@ class Settings(BaseSettings):
     # Comma-separated list of browser origins allowed by CORS.
     frontend_origins: str = "http://localhost:3000,http://localhost:3001"
 
+    # "production" turns on secure cookies and hides the interactive API docs.
+    app_env: Literal["development", "production"] = "development"
+    # Optional code required to create the FIRST account through the website. Set it
+    # on a public deployment so a stranger cannot claim the owner account.
+    setup_code: SecretStr | None = None
+    session_cookie_name: str = "ciq_session"
+    session_hours: int = 24            # login without "remember me"
+    remember_session_days: int = 30    # login with "remember me"
+
+    @property
+    def cookie_secure(self) -> bool:
+        return self.app_env == "production"
+
+    @property
+    def setup_code_required(self) -> bool:
+        return bool(self.setup_code and self.setup_code.get_secret_value().strip())
+
     # AI assistant (server-side only; never exposed to the browser).
     # Provider: "anthropic" (Claude, default) or "openai".
     ai_provider: Literal["anthropic", "openai"] = "anthropic"

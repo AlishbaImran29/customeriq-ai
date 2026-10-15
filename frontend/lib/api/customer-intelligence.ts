@@ -5,6 +5,7 @@
 // A failed live request throws ApiError — it never falls back to sample data.
 
 import "server-only";
+import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { API_MODE, apiGet } from "@/lib/api/config";
 import * as mock from "@/lib/mock/customer-intelligence";
@@ -40,10 +41,14 @@ const DEMO_META: DataMeta = {
   unavailable: [],
 };
 
-/** Live requests must run per request, never at build time. */
+/**
+ * Live requests run per request (never at build time) and carry the visitor's
+ * sign-in cookie to the backend.
+ */
 async function live<T>(path: string): Promise<T> {
   await connection();
-  return apiGet<T>(path, { cache: "no-store" });
+  const cookie = (await cookies()).toString();
+  return apiGet<T>(path, { cache: "no-store", headers: cookie ? { cookie } : undefined });
 }
 
 const byChurnDesc = (a: Customer, b: Customer) =>
