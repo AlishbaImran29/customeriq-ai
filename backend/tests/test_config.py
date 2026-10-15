@@ -62,3 +62,13 @@ def test_pool_size_defaults_and_overrides():
     assert (default.db_pool_size, default.db_max_overflow) == (5, 10)
     small = make_settings(db_pool_size=1, db_max_overflow=1)
     assert (small.db_pool_size, small.db_max_overflow) == (1, 1)
+
+
+def test_blank_database_url_does_not_hide_the_separate_fields():
+    """migrate_remote.py and hosting dashboards can leave DATABASE_URL set but empty."""
+    fields = dict(db_host="h.example", db_name="db", db_user="user", db_password="pw")
+    blank = make_settings(database_url="", **fields)
+    assert blank.database_configured is True
+    assert blank.sqlalchemy_url().host == "h.example"
+    assert make_settings(database_url="").database_configured is False
+    assert make_settings(database_url="postgresql://u:p@h/db").database_configured is True

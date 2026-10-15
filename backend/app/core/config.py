@@ -80,8 +80,9 @@ class Settings(BaseSettings):
 
     @property
     def database_configured(self) -> bool:
-        if self.database_url is not None:
-            return bool(self.database_url.get_secret_value().strip())
+        # A blank DATABASE_URL counts as "not set", so the separate DB_* fields are used.
+        if self.database_url is not None and self.database_url.get_secret_value().strip():
+            return True
         return bool(self.db_name and self.db_user and self.db_password)
 
     def sqlalchemy_url(self) -> URL:
