@@ -10,6 +10,7 @@ import {
   assistantStarters,
   getAssistantStatus,
   getSampleAssistantReply,
+  PROVIDER_KEY,
   sendAssistantMessage,
   type AssistantStatus,
   type ChatRole,
@@ -296,13 +297,14 @@ function StatusBanner({ status, onCheck }: { status: StatusState; onCheck: () =>
       </div>
     );
   }
-  const { configured, model, dataAsOf, customerCount } = status.status;
+  const { provider, configured, model, dataAsOf, customerCount } = status.status;
   if (!configured) {
     return (
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
         <span>
-          <strong>AI not configured.</strong> Add <code>OPENAI_API_KEY</code> to <code>backend/.env</code> and
-          restart the backend. It needs an OpenAI API account with credits.
+          <strong>AI not configured.</strong> Add <code>{PROVIDER_KEY[provider]}</code> to{" "}
+          <code>backend/.env</code> and restart the backend. It needs an API account with credits
+          {provider === "anthropic" ? " (separate from a Claude Pro or Max subscription)" : ""}.
         </span>
         <Button variant="secondary" onClick={onCheck}>Check again</Button>
       </div>

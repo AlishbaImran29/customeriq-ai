@@ -9,3 +9,4 @@ pydantic-settings==2.16.0
 openpyxl==3.1.5
 python-multipart==0.0.32
 openai==3.31.0
+anthropic==1.14.0

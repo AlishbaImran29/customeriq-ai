@@ -51,8 +51,8 @@ export default function AssistantPage() {
                   drivers, and anonymous customer IDs with their totals.
                 </p>
                 <p>
-                  <strong>Never</strong> customer names or email addresses. The API key stays on the
-                  server, and requests ask OpenAI not to store the conversation.
+                  <strong>Never</strong> customer names or email addresses. The AI provider&apos;s
+                  API key stays on the server and is never sent to your browser.
                 </p>
                 <p>
                   Predictions (churn probability, predicted CLV, forecasts) are not available yet, so

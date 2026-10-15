@@ -52,8 +52,10 @@ Database tests are skipped automatically until `.env` is configured.
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Local PostgreSQL connection. Special characters in the password are handled. |
 | `DATABASE_URL` | Optional full URL (`postgresql+psycopg://…`) for hosted databases; overrides the fields above. |
 | `FRONTEND_ORIGINS` | Comma-separated browser origins allowed by CORS. |
-| `OPENAI_API_KEY` | Enables the AI assistant. Server-side only; never expose it to the frontend. Needs an OpenAI API account with credits. |
-| `OPENAI_MODEL` | Model ID for the assistant (default `gpt-6-luna`, OpenAI's cost-efficient model). |
+| `AI_PROVIDER` | `anthropic` (default, Claude) or `openai`. |
+| `ANTHROPIC_API_KEY` | Enables the assistant with Claude. Server-side only. Needs API credits in the Claude Console (separate from Claude Pro/Max). |
+| `ANTHROPIC_MODEL` | Claude model ID (default `claude-opus-5-5`). |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` | Used only when `AI_PROVIDER=openai` (default model `gpt-6-luna`). |
 
 ## Imports
 
@@ -89,15 +91,20 @@ you upload it to a real database.
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /api/v1/assistant/status` | `{configured, model, dataAsOf, customerCount}`. Never calls OpenAI. |
+| `GET /api/v1/assistant/status` | `{provider, configured, model, dataAsOf, customerCount}`. Never calls the AI provider. |
 | `POST /api/v1/assistant/chat` | Body `{"messages": [{"role": "user", "content": "…"}]}` (max 20 messages, 2,000 characters each; last must be from the user). |
 
-- Without `OPENAI_API_KEY` the chat returns `503 assistant_not_configured`.
+- Without the provider's API key the chat returns `503 assistant_not_configured`.
 - With no imported data it returns a fixed message (`answeredBy: "system"`) and
-  does not call OpenAI.
+  does not call the AI provider.
 - The model receives only the Phase 3 summary (KPIs, segments, monthly revenue,
   drivers, recommendations, and up to 10 customers by **customer_id only**).
-  **Customer names and emails are never sent.** Requests use `store=false`.
+  **Customer names and emails are never sent.**
+- **Claude:** the system prompt (rules + data summary) is marked for prompt
+  caching, so follow-up questions on unchanged data reuse it at a lower price;
+  server-side fallbacks (`fallbacks: "default"`) retry a safety-declined request
+  on a suitable model; effort is set to `medium`. A remaining refusal returns
+  `422 assistant_declined`. **OpenAI:** requests use `store=false`.
 - It is instructed to answer only from that summary and to say when something
   (e.g. predictions or profit) is not available.
 - Provider failures map to clear errors: `assistant_auth_failed`,

@@ -4,6 +4,9 @@ import json
 from datetime import date, timedelta
 from decimal import Decimal
 
+from types import SimpleNamespace
+
+import anthropic
 import httpx2 as httpx
 import openai
 import pytest
@@ -13,7 +16,15 @@ from app.core.config import Settings, get_settings
 from app.core.errors import ApiError
 from app.main import app
 from app.services import analytics as a
-from app.services.assistant import MAX_HISTORY, ChatTurn, OpenAIModel
+from app.services.assistant import (
+    CLAUDE_FALLBACK_BETA,
+    MAX_HISTORY,
+    ChatTurn,
+    ClaudeModel,
+    OpenAIModel,
+    get_model,
+    recent_turns,
+)
 from app.services.assistant_context import build_context
 from tests.conftest import requires_database
 from tests.test_analytics_api import import_customers
@@ -84,7 +95,8 @@ def test_not_configured_returns_503_without_calling_ai():
     finally:
         app.dependency_overrides.clear()
     assert response.status_code == 503
-    assert response.json()["error"]["code"] == "assistant_not_configured"
+    error = response.json()["error"]
+    assert error["code"] == "assistant_not_configured" and "ANTHROPIC_API_KEY" in error["message"]
 
 
 # --- with the database (rolled back) ----------------------------------------------
@@ -113,14 +125,18 @@ def test_answer_is_grounded_in_data_summary(db_client):
     assert "Answer ONLY from the JSON data summary" in instructions
     assert '"customerCount":30' in instructions
     assert "@example.com" not in instructions  # no emails sent to the AI
-    assert len(turns) == MAX_HISTORY and turns[-1].content == "Which segment earns most?"
+    assert turns[0].role == "user" and len(turns) <= MAX_HISTORY
+    assert turns[-1].content == "Which segment earns most?"
 
 
 @requires_database
 def test_status_reports_configuration_and_data(db_client):
-    app.dependency_overrides[get_settings] = lambda: Settings(_env_file=None, openai_api_key="sk-test")
+    app.dependency_overrides[get_settings] = lambda: Settings(_env_file=None, anthropic_api_key="sk-ant-test")
     body = db_client.get("/api/v1/assistant/status").json()
-    assert body == {"configured": True, "model": "gpt-6-luna", "dataAsOf": None, "customerCount": 0}
+    assert body == {
+        "provider": "anthropic", "configured": True, "model": "claude-opus-5-5",
+        "dataAsOf": None, "customerCount": 0,
+    }
 
 
 # --- provider error mapping --------------------------------------------------------
@@ -166,3 +182,101 @@ def test_request_disables_storage_and_limits_output(monkeypatch):
     assert model.answer("rules", [ChatTurn("user", "hi")]) == "Answer."
     assert captured["store"] is False and captured["max_output_tokens"] == 700
     assert captured["model"] == "gpt-6-luna" and captured["instructions"] == "rules"
+
+
+# --- provider selection -------------------------------------------------------------
+
+def test_recent_turns_start_with_a_user_message():
+    # 11 alternating turns: the last 10 begin with an assistant turn, which is dropped.
+    turns = [ChatTurn("assistant" if i % 2 else "user", str(i)) for i in range(11)]
+    recent = recent_turns(turns)
+    assert recent[0].role == "user" and recent[-1].content == "10" and len(recent) == 9
+
+
+def test_provider_selection():
+    assert isinstance(get_model(Settings(_env_file=None, anthropic_api_key="sk-ant-test")), ClaudeModel)
+    openai_settings = Settings(_env_file=None, ai_provider="openai", openai_api_key="sk-test")
+    assert isinstance(get_model(openai_settings), OpenAIModel)
+    # An OpenAI key alone does not configure the default (Claude) provider.
+    with pytest.raises(ApiError) as exc:
+        get_model(Settings(_env_file=None, openai_api_key="sk-test"))
+    assert exc.value.code == "assistant_not_configured" and "ANTHROPIC_API_KEY" in exc.value.message
+
+
+# --- Claude (Anthropic) ------------------------------------------------------------------
+
+def claude() -> ClaudeModel:
+    return ClaudeModel(Settings(_env_file=None, anthropic_api_key="sk-ant-test"))
+
+
+def claude_reply(*blocks, stop_reason="end_turn"):
+    usage = SimpleNamespace(input_tokens=10, cache_read_input_tokens=0,
+                            cache_creation_input_tokens=900, output_tokens=40)
+    return SimpleNamespace(content=list(blocks), stop_reason=stop_reason, usage=usage)
+
+
+def test_claude_request_uses_caching_fallbacks_and_effort(monkeypatch):
+    model = claude()
+    captured = {}
+
+    def create(**kwargs):
+        captured.update(kwargs)
+        return claude_reply(
+            SimpleNamespace(type="thinking", thinking=""),
+            SimpleNamespace(type="text", text=" Champions lead. "),
+        )
+
+    monkeypatch.setattr(model._client.beta.messages, "create", create)
+    assert model.answer("rules + data", [ChatTurn("user", "hi")]) == "Champions lead."
+    assert captured["model"] == "claude-opus-5-5"
+    assert captured["system"] == [
+        {"type": "text", "text": "rules + data", "cache_control": {"type": "ephemeral"}}
+    ]
+    assert captured["messages"] == [{"role": "user", "content": "hi"}]
+    assert captured["fallbacks"] == "default" and captured["betas"] == [CLAUDE_FALLBACK_BETA]
+    assert captured["output_config"] == {"effort": "medium"} and captured["max_tokens"] == 16000
+    assert "thinking" not in captured and "temperature" not in captured
+
+
+def test_claude_refusal_becomes_clear_error(monkeypatch):
+    model = claude()
+    monkeypatch.setattr(model._client.beta.messages, "create",
+                        lambda **_: claude_reply(stop_reason="refusal"))
+    with pytest.raises(ApiError) as exc:
+        model.answer("rules", [ChatTurn("user", "hi")])
+    assert exc.value.code == "assistant_declined"
+
+
+def _anthropic_error(cls, status: int, error_type: str):
+    body = {"type": "error", "error": {"type": error_type, "message": "provider error"}}
+    response = httpx.Response(
+        status, request=httpx.Request("POST", "https://api.anthropic.com/v1/messages"), json=body
+    )
+    return cls("provider error", response=response, body=body)
+
+
+_request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+
+
+@pytest.mark.parametrize("error, code, status", [
+    (_anthropic_error(anthropic.AuthenticationError, 401, "authentication_error"), "assistant_auth_failed", 502),
+    (_anthropic_error(anthropic.PermissionDeniedError, 403, "permission_error"), "assistant_permission_denied", 502),
+    (_anthropic_error(anthropic.NotFoundError, 404, "not_found_error"), "assistant_model_not_found", 502),
+    (_anthropic_error(anthropic.RateLimitError, 429, "rate_limit_error"), "assistant_rate_limited", 503),
+    (_anthropic_error(anthropic.APIStatusError, 402, "billing_error"), "assistant_quota_exceeded", 503),
+    (_anthropic_error(anthropic.InternalServerError, 529, "overloaded_error"), "assistant_rate_limited", 503),
+    (_anthropic_error(anthropic.InternalServerError, 500, "api_error"), "assistant_provider_error", 502),
+    (anthropic.APITimeoutError(request=_request), "assistant_timeout", 504),
+    (anthropic.APIConnectionError(request=_request), "assistant_unreachable", 503),
+])
+def test_claude_errors_become_clear_api_errors(monkeypatch, error, code, status):
+    model = claude()
+
+    def fail(**_):
+        raise error
+
+    monkeypatch.setattr(model._client.beta.messages, "create", fail)
+    with pytest.raises(ApiError) as exc:
+        model.answer("rules", [ChatTurn("user", "hi")])
+    assert (exc.value.code, exc.value.status_code) == (code, status)
+    assert "sk-ant-test" not in exc.value.message

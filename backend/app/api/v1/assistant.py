@@ -36,8 +36,9 @@ def status(settings: Settings = Depends(get_settings), db: Session = Depends(get
     """Whether the assistant can answer. Does not call the AI provider."""
     snapshot = load_snapshot(db)
     return AssistantStatus(
+        provider=settings.ai_provider,
         configured=settings.assistant_configured,
-        model=settings.openai_model if settings.assistant_configured else None,
+        model=settings.assistant_model if settings.assistant_configured else None,
         data_as_of=snapshot.as_of,
         customer_count=len(snapshot.customers),
     )

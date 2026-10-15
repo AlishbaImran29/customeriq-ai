@@ -1,8 +1,9 @@
 // AI Business Assistant service.
 //
 // Live mode: questions go to POST /api/v1/assistant/chat. The backend owns the
-// OpenAI key (never sent to the browser), answers only from computed summary
-// figures, and never sends customer names or emails to the AI provider.
+// AI provider key (Anthropic Claude by default; never sent to the browser),
+// answers only from computed summary figures, and never sends customer names or
+// emails to the AI provider.
 // Demo mode: answers are matched from a fixed set of sample responses.
 
 import { API_MODE, apiGet, apiPostJson } from "@/lib/api/config";
@@ -28,7 +29,15 @@ export type ChatReply = {
   customerCount: number;
 };
 
+export type AiProvider = "anthropic" | "openai";
+
+export const PROVIDER_KEY: Record<AiProvider, string> = {
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+};
+
 export type AssistantStatus = {
+  provider: AiProvider;
   configured: boolean;
   model: string | null;
   dataAsOf: string | null;

@@ -9,7 +9,7 @@ recommendations, and ask an AI assistant about your data.
 | Frontend | Next.js 16, TypeScript, Tailwind CSS, Recharts | [`frontend/`](frontend/) |
 | Backend API | Python 3.13, FastAPI | [`backend/`](backend/) |
 | Database | PostgreSQL 18 | (local service) |
-| AI assistant | OpenAI Responses API (optional) | `backend/app/services/assistant.py` |
+| AI assistant | Anthropic Claude API (default) or OpenAI (optional) | `backend/app/services/assistant.py` |
 
 The project specification is in [`docs/specification.pdf`](docs/specification.pdf).
 
@@ -20,7 +20,7 @@ The project specification is in [`docs/specification.pdf`](docs/specification.pd
 | CSV / Excel (.xlsx) import with row validation | ✅ Real, server-side |
 | Dashboard KPIs, RFM segments, health scores, revenue trends and drivers | ✅ Calculated from your data with fixed formulas |
 | Inactivity levels, revenue at risk, recommendations, executive summary | ✅ Rule-based (described as such in the UI) |
-| AI Business Assistant | ✅ Real once `OPENAI_API_KEY` is set; answers only from your summary figures |
+| AI Business Assistant | ✅ Real once `ANTHROPIC_API_KEY` is set; answers only from your summary figures |
 | Churn probability, predicted CLV, revenue forecast, growth score | ⏳ Not available — needs trained models (Phase 4). Shown as "Not available yet". |
 | Sign-in / user accounts | ⏳ Not built. The header shows a "Demo workspace" placeholder. |
 | Shopify / WooCommerce API sync | ⏳ Not built. Use their CSV export with the Import page for now. |
@@ -150,14 +150,21 @@ Only rows whose IDs start with `SYN-` are deleted.
 
 ### Turning on the AI assistant (optional)
 
-1. Create an API key at platform.openai.com. It needs an account **with
-   credits** — this is separate from ChatGPT or Claude subscriptions.
+The assistant uses **Claude** (Anthropic) by default.
+
+1. Create an API key in the **Claude Console** at <https://platform.claude.com>
+   (API keys page). API usage is billed separately from Claude Pro / Max
+   subscriptions, so the account needs **API credits** (Billing page).
 2. Add to `backend/.env` (type the key yourself; never share it):
 
    ```dotenv
-   OPENAI_API_KEY='your-key'
-   OPENAI_MODEL=gpt-6-luna
+   AI_PROVIDER=anthropic
+   ANTHROPIC_API_KEY='your-key'
+   ANTHROPIC_MODEL=claude-opus-5-5
    ```
+
+   To use OpenAI instead: `AI_PROVIDER=openai`, `OPENAI_API_KEY='your-key'`,
+   `OPENAI_MODEL=gpt-6-luna`.
 
 3. Restart the backend (Ctrl+C, then start it again).
 
@@ -193,8 +200,8 @@ npm.cmd run build
 | Port 3000 is in use | Another project is running. Next.js picks 3001 automatically; use that address. |
 | Pages say **Couldn't load live data** | The backend is not running or not reachable. Start Terminal 1, then click **Try again**. |
 | Health check shows `"database": "unavailable"` | PostgreSQL is stopped or `DB_PASSWORD` in `backend/.env` is wrong. Details are in the backend terminal. |
-| Assistant says **AI not configured** | Add `OPENAI_API_KEY` to `backend/.env` and restart the backend. |
-| Assistant says **no remaining credits** | Add credits to your OpenAI account (billing page). |
+| Assistant says **AI not configured** | Add `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY` with `AI_PROVIDER=openai`) to `backend/.env` and restart the backend. |
+| Assistant says **no remaining credits** | Add API credits in the Claude Console (Billing) — a Claude Pro subscription does not include API credits. |
 | Build fails with `Failed to fetch Geist from Google Fonts` | The build downloads fonts; check the internet connection and run it again. |
 
 ## Project layout

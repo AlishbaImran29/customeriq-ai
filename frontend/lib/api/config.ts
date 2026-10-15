@@ -5,7 +5,7 @@
 // Live mode: the variable is set. Requests go to the backend, and failures are
 // shown as errors — never silently replaced with sample data.
 //
-// Never put secrets (OpenAI keys, DB credentials) in NEXT_PUBLIC_ vars: they are
+// Never put secrets (AI provider keys, DB credentials) in NEXT_PUBLIC_ vars: they are
 // bundled into the browser. AI calls must be proxied through the backend.
 
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/+$/, "");

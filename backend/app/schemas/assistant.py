@@ -38,6 +38,7 @@ class ChatResponse(CamelModel):
 
 
 class AssistantStatus(CamelModel):
+    provider: Literal["anthropic", "openai"]
     configured: bool
     model: str | None
     data_as_of: date | None

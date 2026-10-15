@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,13 +30,26 @@ class Settings(BaseSettings):
     frontend_origins: str = "http://localhost:3000,http://localhost:3001"
 
     # AI assistant (server-side only; never exposed to the browser).
+    # Provider: "anthropic" (Claude, default) or "openai".
+    ai_provider: Literal["anthropic", "openai"] = "anthropic"
+    anthropic_api_key: SecretStr | None = None
+    anthropic_model: str = "claude-opus-5-5"
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-6-luna"
-    assistant_timeout_seconds: float = 30.0
+    assistant_timeout_seconds: float = 60.0
+
+    @property
+    def assistant_api_key(self) -> SecretStr | None:
+        return self.anthropic_api_key if self.ai_provider == "anthropic" else self.openai_api_key
+
+    @property
+    def assistant_model(self) -> str:
+        return self.anthropic_model if self.ai_provider == "anthropic" else self.openai_model
 
     @property
     def assistant_configured(self) -> bool:
-        return bool(self.openai_api_key and self.openai_api_key.get_secret_value().strip())
+        key = self.assistant_api_key
+        return bool(key and key.get_secret_value().strip())
 
     @property
     def cors_origins(self) -> list[str]:
