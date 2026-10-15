@@ -1,13 +1,14 @@
 // AI Business Assistant service.
 //
-// No language model is connected. Answers are matched from a fixed set of sample
-// responses so the chat UI can be exercised end to end. When the backend is
-// ready, replace `getSampleAssistantReply` with a POST to /api/v1/assistant/chat
-// (the backend owns the OpenAI / LangChain integration and its API keys).
+// Live mode: questions go to POST /api/v1/assistant/chat. The backend owns the
+// OpenAI key (never sent to the browser), answers only from computed summary
+// figures, and never sends customer names or emails to the AI provider.
+// Demo mode: answers are matched from a fixed set of sample responses.
 
+import { API_MODE, apiGet, apiPostJson } from "@/lib/api/config";
 import { assistantReplies } from "@/lib/mock/customer-intelligence";
 
-export const ASSISTANT_CONNECTED = false;
+export const ASSISTANT_MODE = API_MODE;
 
 export const assistantStarters = [
   "Which customers are most likely to churn?",
@@ -16,9 +17,40 @@ export const assistantStarters = [
   "Where are our best upsell opportunities?",
 ];
 
+export type ChatRole = "user" | "assistant";
+
+export type ChatReply = {
+  reply: string;
+  /** "ai" = generated from your data; "system" = fixed message, no AI used. */
+  answeredBy: "ai" | "system";
+  model: string | null;
+  dataAsOf: string | null;
+  customerCount: number;
+};
+
+export type AssistantStatus = {
+  configured: boolean;
+  model: string | null;
+  dataAsOf: string | null;
+  customerCount: number;
+};
+
+/** GET /api/v1/assistant/status — does not call the AI provider. */
+export function getAssistantStatus(): Promise<AssistantStatus> {
+  return apiGet<AssistantStatus>("/api/v1/assistant/status");
+}
+
+/** POST /api/v1/assistant/chat with the conversation so far (last item = question). */
+export function sendAssistantMessage(
+  messages: { role: ChatRole; content: string }[],
+): Promise<ChatReply> {
+  return apiPostJson<ChatReply>("/api/v1/assistant/chat", { messages });
+}
+
 const fallback =
   "I can only answer a fixed set of sample questions about churn, CLV, segments, retention, health scores, revenue, and recommendations. Try one of the suggested questions.";
 
+/** Demo mode only: keyword-matched sample answer (not AI-generated). */
 export function getSampleAssistantReply(question: string): string {
   const q = question.toLowerCase();
   const found = assistantReplies.find((item) =>

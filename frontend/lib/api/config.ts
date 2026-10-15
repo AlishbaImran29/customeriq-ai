@@ -81,3 +81,13 @@ export function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
 export function apiPostForm<T>(path: string, form: FormData, init?: RequestInit): Promise<T> {
   return request<T>(path, { ...init, method: "POST", body: form });
 }
+
+/** POST a JSON body and parse the JSON response. */
+export function apiPostJson<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  return request<T>(path, {
+    ...init,
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", ...init?.headers },
+  });
+}

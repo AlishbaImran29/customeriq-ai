@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     # Comma-separated list of browser origins allowed by CORS.
     frontend_origins: str = "http://localhost:3000,http://localhost:3001"
 
+    # AI assistant (server-side only; never exposed to the browser).
+    openai_api_key: SecretStr | None = None
+    openai_model: str = "gpt-6-luna"
+    assistant_timeout_seconds: float = 30.0
+
+    @property
+    def assistant_configured(self) -> bool:
+        return bool(self.openai_api_key and self.openai_api_key.get_secret_value().strip())
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.frontend_origins.split(",") if o.strip()]
