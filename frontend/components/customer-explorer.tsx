@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, SearchX } from "lucide-react";
+import { Download, Search, SearchX } from "lucide-react";
 import { CustomersTable } from "@/components/customers-table";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { FilterPills } from "@/components/ui/filter-pills";
 import { Input, Select } from "@/components/ui/input";
+import { downloadCsv } from "@/lib/csv-export";
 import type { Customer, RiskLevel, SegmentName } from "@/lib/types";
 
 const segments: SegmentName[] = [
@@ -59,6 +60,22 @@ export function CustomerExplorer({
     })),
   ];
 
+  function exportCsv() {
+    downloadCsv(
+      `customeriq-customers-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        "customer_id", "name", "email", "channel", "segment", riskLabel, "churn_probability_percent",
+        "orders", "revenue", "current_clv", "predicted_clv", "health_score", "last_purchase",
+        "days_since_last_order", "recommended_action",
+      ],
+      filtered.map((c) => [
+        c.id, c.name, c.email, c.channel, c.segment, c.riskLevel, c.churnProbability?.toFixed(1),
+        c.orders, c.revenue, c.currentClv, c.predictedClv, c.healthScore, c.lastPurchase,
+        c.daysSinceLastOrder, c.recommendedAction,
+      ]),
+    );
+  }
+
   function reset() {
     setQuery("");
     setSegment("all");
@@ -98,9 +115,20 @@ export function CustomerExplorer({
         </div>
         <FilterPills label={`Filter by ${riskLabel.toLowerCase()}`} options={riskOptions} value={risk} onChange={setRisk} />
       </div>
-      <p className="text-xs text-slate-500" aria-live="polite">
-        Showing {filtered.length} of {customers.length} customers
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-slate-500" aria-live="polite">
+          Showing {filtered.length} of {customers.length} customers
+        </p>
+        <Button
+          variant="secondary"
+          onClick={exportCsv}
+          disabled={filtered.length === 0}
+          title="Downloads the customers shown above. Amounts are as imported (no currency conversion)."
+        >
+          <Download className="h-4 w-4" aria-hidden="true" />
+          Download CSV
+        </Button>
+      </div>
       {filtered.length > 0 ? (
         <CustomersTable rows={filtered} caption={caption} riskLabel={riskLabel} />
       ) : (

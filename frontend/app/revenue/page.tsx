@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { getRevenueOverview } from "@/lib/api/customer-intelligence";
 import { Money } from "@/components/money";
-import { formatPercent, formatSignedPercent } from "@/lib/utils";
+import { formatNumber, formatPercent, formatSignedPercent } from "@/lib/utils";
 
 export default function RevenuePage() {
   return (
@@ -192,6 +192,17 @@ async function RevenueContent() {
                         </span>
                       </div>
                       <Progress value={item.revenue} max={max} label={`${item.name} revenue`} />
+                      {item.orders != null && item.customers != null ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {formatNumber(item.orders)} orders · {formatNumber(item.customers)} customers
+                          {item.avgOrderValue != null ? (
+                            <>
+                              {" "}· average order <Money value={item.avgOrderValue} />
+                            </>
+                          ) : null}
+                          {item.repeatRate != null ? ` · ${formatPercent(item.repeatRate, 0)} bought again` : ""}
+                        </p>
+                      ) : null}
                     </div>
                   ))
                 )}

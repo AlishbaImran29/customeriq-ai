@@ -113,6 +113,11 @@ class ShareRow(CamelModel):
     name: str
     revenue: float
     share: float
+    # Only set for category/channel/country groups (not for new-vs-returning).
+    orders: int | None = None
+    customers: int | None = None
+    avg_order_value: float | None = None
+    repeat_rate: float | None = None
 
 
 class RevenueDrivers(CamelModel):

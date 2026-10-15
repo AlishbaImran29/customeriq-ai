@@ -125,7 +125,17 @@ export type RevenuePoint = {
 
 export type RevenueAtRiskPoint = { month: string; atRisk: number };
 
-export type ShareRow = { name: string; revenue: number; share: number };
+export type ShareRow = {
+  name: string;
+  revenue: number;
+  share: number;
+  /** Order statistics; set for category, channel and country groups in live data. */
+  orders?: number | null;
+  customers?: number | null;
+  avgOrderValue?: number | null;
+  /** % of this group's customers with 2+ orders in it during the period. */
+  repeatRate?: number | null;
+};
 
 export type RevenueDriverGroup = { title: string; rows: ShareRow[] };
 

@@ -212,3 +212,21 @@ def test_growth_score_needs_at_least_three_inputs():
     snapshot = _snapshot_for_growth()
     assert a.growth_score(snapshot, {"retentionRate": None}, {"revenue": 20.0, "totalCustomers": None}) is None
     assert a.growth_score(a.build_snapshot([]), {"retentionRate": 60.0}, {"revenue": 1.0, "totalCustomers": 1.0}) is None
+
+
+# --- revenue drivers: order stats per channel ------------------------------------
+
+def test_revenue_drivers_report_orders_customers_average_and_repeat_rate():
+    facts = [
+        order("A", 10, 100, channel="Shopify"),
+        order("A", 20, 50, channel="Shopify"),    # A buys twice on Shopify -> repeat
+        order("B", 30, 150, channel="Shopify"),   # B buys once on Shopify
+        order("B", 40, 80, channel="Etsy"),
+    ]
+    rows = {r["name"]: r for r in a.revenue_drivers(a.build_snapshot(facts))["byChannel"]}
+
+    shopify = rows["Shopify"]
+    assert (shopify["orders"], shopify["customers"]) == (3, 2)
+    assert shopify["avgOrderValue"] == 100.0
+    assert shopify["repeatRate"] == 50.0  # 1 of 2 customers ordered twice on Shopify
+    assert rows["Etsy"]["repeatRate"] == 0.0 and rows["Etsy"]["orders"] == 1

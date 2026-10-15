@@ -453,12 +453,26 @@ def monthly_revenue(snapshot: Snapshot) -> list[dict]:
     return rows
 
 
-def _share_rows(totals: dict[str, float]) -> list[dict]:
+def _share_rows(totals: dict[str, float], buyers: dict[str, Counter[str]] | None = None) -> list[dict]:
+    """Revenue and share per group; with `buyers` (orders per customer in the group) also order counts.
+
+    Repeat rate = share of the group's customers with 2+ orders in the group during the window.
+    """
     grand = sum(totals.values())
-    rows = [
-        {"name": name, "revenue": round(value, 2), "share": value / grand * 100 if grand else 0.0}
-        for name, value in totals.items()
-    ]
+    rows = []
+    for name, value in totals.items():
+        row = {"name": name, "revenue": round(value, 2), "share": value / grand * 100 if grand else 0.0}
+        counts = buyers.get(name) if buyers else None
+        if counts:
+            orders = sum(counts.values())
+            customers = len(counts)
+            row.update(
+                orders=orders,
+                customers=customers,
+                avgOrderValue=round(value / orders, 2),
+                repeatRate=sum(1 for n in counts.values() if n >= 2) / customers * 100,
+            )
+        rows.append(row)
     return sorted(rows, key=lambda r: r["revenue"], reverse=True)
 
 
@@ -475,19 +489,24 @@ def revenue_drivers(snapshot: Snapshot) -> dict:
     by_channel: Counter[str] = Counter()
     by_country: Counter[str] = Counter()
     new_vs_returning: Counter[str] = Counter()
+    buyers: dict[str, dict[str, Counter[str]]] = {"category": {}, "channel": {}, "country": {}}
     for o in snapshot.orders:
         value = float(o.value)
         if o.order_date >= year_start:
-            by_category[o.category or "Not specified"] += value
-            by_channel[o.channel or "Not specified"] += value
-            by_country[o.country or "Not specified"] += value
+            for dimension, totals, name in (
+                ("category", by_category, o.category or "Not specified"),
+                ("channel", by_channel, o.channel or "Not specified"),
+                ("country", by_country, o.country or "Not specified"),
+            ):
+                totals[name] += value
+                buyers[dimension].setdefault(name, Counter())[o.customer_id] += 1
         if _in(o.order_date, current):
             is_new = _in(first_order[o.customer_id], current)
             new_vs_returning["New customers" if is_new else "Returning customers"] += value
     return {
-        "byCategory": _share_rows(by_category),
-        "byChannel": _share_rows(by_channel),
-        "byCountry": _share_rows(by_country),
+        "byCategory": _share_rows(by_category, buyers["category"]),
+        "byChannel": _share_rows(by_channel, buyers["channel"]),
+        "byCountry": _share_rows(by_country, buyers["country"]),
         "newVsReturning": _share_rows(new_vs_returning),
     }
 
