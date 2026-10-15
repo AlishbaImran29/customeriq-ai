@@ -230,3 +230,33 @@ def test_revenue_drivers_report_orders_customers_average_and_repeat_rate():
     assert shopify["avgOrderValue"] == 100.0
     assert shopify["repeatRate"] == 50.0  # 1 of 2 customers ordered twice on Shopify
     assert rows["Etsy"]["repeatRate"] == 0.0 and rows["Etsy"]["orders"] == 1
+
+
+# --- KPI period length and cohort retention ----------------------------------------
+
+def test_kpi_period_length_changes_the_revenue_window():
+    # 100 within the last 30 days, 200 between 31 and 90 days ago.
+    facts = [order("A", 5, 100), order("B", 60, 200), order("C", 400, 1)]
+    snapshot = a.build_snapshot(facts)
+    assert a.kpis(snapshot)[0]["revenue"] == 300.0
+    assert a.kpis(snapshot, 30)[0]["revenue"] == 100.0
+    labels = [c["label"] for c in a.growth_score(snapshot, {"retentionRate": 50.0}, {"revenue": 10.0, "totalCustomers": 5.0}, 30)["components"]]
+    assert "Retention rate (30 days)" in labels
+
+
+def test_cohort_retention_counts_customers_who_ordered_again_each_month():
+    # AS_OF is 13 Oct 2026, so October is still in progress. 90 days ago = mid July.
+    facts = [
+        order("A", 90), order("A", 60),    # A: first order July, again in August
+        order("B", 90),                    # B: July only
+        order("C", 30), order("C", 5),     # C: first order September, again in October (partial)
+    ]
+    result = a.cohort_retention(a.build_snapshot(facts))
+    rows = {r["label"]: r for r in result["cohorts"]}
+    july, september = rows["Jul 2026"], rows["Sep 2026"]
+    assert july["size"] == 2 and july["retention"][0] == 100.0
+    assert july["retention"][1] == 50.0 and july["retention"][2] == 0.0  # Aug: A back; Sep: nobody
+    assert july["retention"][3] is None                                    # Oct is unfinished
+    assert september["size"] == 1 and september["retention"][1] is None   # partial October
+    assert result["partialMonth"] == "Oct 2026"
+    assert result["averages"][0] == 100.0

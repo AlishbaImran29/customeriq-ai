@@ -197,6 +197,22 @@ class CustomersOut(CamelModel):
     customers: list[CustomerOut]
 
 
+class CohortRow(CamelModel):
+    label: str
+    size: int
+    # % of the cohort that ordered in month 0, 1, 2...; null where that month is not measurable yet.
+    retention: list[float | None]
+
+
+class CohortsOut(CamelModel):
+    meta: Meta
+    cohorts: list[CohortRow]
+    averages: list[float | None]
+    months: int
+    # The month still in progress (left out of the comparison), if any.
+    partial_month: str | None
+
+
 class SegmentsOut(CamelModel):
     meta: Meta
     segments: list[SegmentStats]

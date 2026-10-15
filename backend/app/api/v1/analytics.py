@@ -12,6 +12,7 @@ from app.schemas.analytics import (
     MODEL_NOT_TRAINED,
     ChurnOut,
     ClvOut,
+    CohortsOut,
     CustomerOut,
     CustomersOut,
     HealthOut,
@@ -161,12 +162,15 @@ def _revenue_series(snapshot: a.Snapshot, preds: pr.Predictions) -> list[dict]:
 
 
 @router.get("/dashboard/overview", response_model=OverviewOut)
-def overview(db: Session = Depends(get_db)) -> OverviewOut:
+def overview(
+    days: int = Query(a.WINDOW_DAYS, ge=7, le=365, description="Length of the KPI period in days."),
+    db: Session = Depends(get_db),
+) -> OverviewOut:
     snapshot = load_snapshot(db)
     preds = pr.get_predictions(snapshot)
-    values, deltas = a.kpis(snapshot)
+    values, deltas = a.kpis(snapshot, days)
     values["churnRisk"] = pr.churn_kpi(snapshot, preds)
-    growth = a.growth_score(snapshot, values, deltas)
+    growth = a.growth_score(snapshot, values, deltas, days)
     values["growthScore"] = growth["score"] if growth else None
     if preds.churn.available:
         # Biggest expected revenue loss first: predicted chance of leaving x 12-month spend.
@@ -189,7 +193,7 @@ def overview(db: Session = Depends(get_db)) -> OverviewOut:
         kpis=Kpis.model_validate(values),
         kpi_deltas=Kpis.model_validate(deltas),
         growth_score_details=growth,
-        executive_summary=a.executive_summary(snapshot, values, deltas),
+        executive_summary=a.executive_summary(snapshot, values, deltas, days),
         revenue_series=_revenue_series(snapshot, preds),
         segments=a.segment_summaries(snapshot, preds.predicted_spend if preds.clv.available else None),
         top_recommendations=[r for r in recs if r["impact"] == "High"][:3] or recs[:3],
@@ -209,6 +213,21 @@ def customers(
         total=len(ranked),
         customers=_customers(ranked, limit, preds),
     )
+
+
+@router.get("/cohorts", response_model=CohortsOut)
+def cohorts(db: Session = Depends(get_db)) -> CohortsOut:
+    """Monthly cohort retention. Pure counting, so no prediction model is trained for it."""
+    snapshot = load_snapshot(db)
+    not_used = ModelInfo(status="unavailable", reason="Not used on this page.", metrics=[])
+    meta = Meta(
+        as_of=snapshot.as_of,
+        customer_count=len(snapshot.customers),
+        segmented=snapshot.segmented,
+        models=ModelsMeta(churn=not_used, clv=not_used, forecast=not_used),
+        unavailable=[],
+    )
+    return CohortsOut(meta=meta, **a.cohort_retention(snapshot))
 
 
 @router.get("/segments", response_model=SegmentsOut)

@@ -21,6 +21,7 @@ from decimal import Decimal
 from statistics import median
 
 WINDOW_DAYS = 90
+# Period lengths offered for the Overview KPIs (the churn model itself always looks 90 days ahead).
 YEAR_DAYS = 365
 MIN_CUSTOMERS_FOR_SEGMENTS = 20
 SINGLE_ORDER_GAP_DAYS = 90
@@ -294,18 +295,18 @@ def health_band(score: int) -> str:
 
 # --- aggregate views ------------------------------------------------------------
 
-def _window(as_of: date, windows_back: int) -> tuple[date, date]:
-    """Inclusive date range of a 90-day window; 0 = the most recent window."""
-    end = as_of - timedelta(days=WINDOW_DAYS * windows_back)
-    return end - timedelta(days=WINDOW_DAYS - 1), end
+def _window(as_of: date, windows_back: int, days: int = WINDOW_DAYS) -> tuple[date, date]:
+    """Inclusive date range of a `days`-long window; 0 = the most recent window."""
+    end = as_of - timedelta(days=days * windows_back)
+    return end - timedelta(days=days - 1), end
 
 
 def _in(d: date, window: tuple[date, date]) -> bool:
     return window[0] <= d <= window[1]
 
 
-def kpis(snapshot: Snapshot) -> tuple[dict, dict]:
-    """Return (values, deltas). Deltas are None when history is too short."""
+def kpis(snapshot: Snapshot, days: int = WINDOW_DAYS) -> tuple[dict, dict]:
+    """Return (values, deltas) for `days`-long periods. Deltas are None when history is too short."""
     keys = ["totalCustomers", "revenue", "averageClv", "retentionRate", "churnRisk", "growthScore"]
     values: dict[str, float | None] = dict.fromkeys(keys)
     deltas: dict[str, float | None] = dict.fromkeys(keys)
@@ -315,7 +316,7 @@ def kpis(snapshot: Snapshot) -> tuple[dict, dict]:
     as_of = snapshot.as_of
     assert as_of is not None
     first_date = min(o.order_date for o in snapshot.orders)
-    current, previous, older = _window(as_of, 0), _window(as_of, 1), _window(as_of, 2)
+    current, previous, older = _window(as_of, 0, days), _window(as_of, 1, days), _window(as_of, 2, days)
     covers_previous = first_date <= previous[0]
     covers_older = first_date <= older[0]
 
@@ -360,16 +361,20 @@ def retention_rate(
 # sub-score. It is not an industry standard and is not a prediction. The page shows the
 # inputs and weights. Inputs that cannot be measured yet (short history) are left out and
 # the remaining weights are scaled up; at least three inputs are needed.
-GROWTH_COMPONENTS = [
-    ("revenueGrowth", "Revenue growth (last 90 days vs the 90 before)", 0.35),
-    ("retention", "Retention rate (90 days)", 0.30),
-    ("health", "Average customer health score", 0.20),
-    ("customerGrowth", "Customer growth (vs 90 days ago)", 0.15),
-]
+def growth_components(days: int = WINDOW_DAYS) -> list[tuple[str, str, float]]:
+    return [
+        ("revenueGrowth", f"Revenue growth (last {days} days vs the {days} before)", 0.35),
+        ("retention", f"Retention rate ({days} days)", 0.30),
+        ("health", "Average customer health score", 0.20),
+        ("customerGrowth", f"Customer growth (vs {days} days ago)", 0.15),
+    ]
+
+
+GROWTH_COMPONENTS = growth_components()
 MIN_GROWTH_INPUTS = 3
 
 
-def growth_score(snapshot: Snapshot, values: dict, deltas: dict) -> dict | None:
+def growth_score(snapshot: Snapshot, values: dict, deltas: dict, days: int = WINDOW_DAYS) -> dict | None:
     """0-100 growth score with its breakdown, or None when fewer than three inputs exist.
 
     Sub-scores: revenue growth -50%..+50% maps to 0..100; customer growth -20%..+20% maps
@@ -386,7 +391,8 @@ def growth_score(snapshot: Snapshot, values: dict, deltas: dict) -> dict | None:
         "health": (clamp(average_health), f"{average_health:.0f}/100"),
         "customerGrowth": None if customer_change is None else (clamp(50 + 2.5 * customer_change), f"{customer_change:+.1f}%"),
     }
-    used = [(key, label, weight) for key, label, weight in GROWTH_COMPONENTS if inputs[key] is not None]
+    components = growth_components(days)
+    used = [(key, label, weight) for key, label, weight in components if inputs[key] is not None]
     if len(used) < MIN_GROWTH_INPUTS:
         return None
     total_weight = sum(weight for _, _, weight in used)
@@ -403,7 +409,7 @@ def growth_score(snapshot: Snapshot, values: dict, deltas: dict) -> dict | None:
             }
             for key, label, weight in used
         ],
-        "missing": [label for key, label, _ in GROWTH_COMPONENTS if inputs[key] is None],
+        "missing": [label for key, label, _ in components if inputs[key] is None],
     }
 
 
@@ -508,6 +514,53 @@ def revenue_drivers(snapshot: Snapshot) -> dict:
         "byChannel": _share_rows(by_channel, buyers["channel"]),
         "byCountry": _share_rows(by_country, buyers["country"]),
         "newVsReturning": _share_rows(new_vs_returning),
+    }
+
+
+def cohort_retention(snapshot: Snapshot, max_cohorts: int = 12, max_offset: int = 12) -> dict:
+    """Monthly cohort retention: customers grouped by the month of their first order, and the
+    % of each group that ordered again in each later month (month 0 is 100% by definition).
+
+    The month still in progress is not compared (it would look worse than it is), so it is
+    left empty after month 0. Only the most recent `max_cohorts` cohorts are returned.
+    """
+    empty: dict = {"cohorts": [], "averages": [], "months": max_offset, "partialMonth": None}
+    if snapshot.empty or not snapshot.customers:
+        return empty
+    as_of = snapshot.as_of
+    assert as_of is not None
+
+    def month_index(d: date) -> int:
+        return d.year * 12 + d.month - 1
+
+    last = month_index(as_of)
+    partial_last = (as_of + timedelta(days=1)).month == as_of.month  # as_of is not the last day of its month
+    members: dict[int, list[set[int]]] = {}
+    for c in snapshot.customers:
+        members.setdefault(month_index(c.first_order), []).append({month_index(d) for d in c.order_dates})
+
+    rows = []
+    for start in sorted(members)[-max_cohorts:]:
+        group = members[start]
+        retention: list[float | None] = []
+        for offset in range(max_offset + 1):
+            month = start + offset
+            if month > last or (offset > 0 and month == last and partial_last):
+                retention.append(None)
+            else:
+                retention.append(sum(1 for months in group if month in months) / len(group) * 100)
+        rows.append({"label": date(start // 12, start % 12 + 1, 1).strftime("%b %Y"), "size": len(group), "retention": retention})
+
+    averages: list[float | None] = []
+    for offset in range(max_offset + 1):
+        seen = [(row["size"], row["retention"][offset]) for row in rows if row["retention"][offset] is not None]
+        total = sum(size for size, _ in seen)
+        averages.append(sum(size * value for size, value in seen) / total if total else None)
+    return {
+        "cohorts": rows,
+        "averages": averages,
+        "months": max_offset,
+        "partialMonth": as_of.strftime("%b %Y") if partial_last else None,
     }
 
 
@@ -630,7 +683,7 @@ def recommendations(snapshot: Snapshot) -> list[dict]:
     return sorted(items, key=lambda r: (order[r["impact"]], -r["historicalRevenue"]))
 
 
-def executive_summary(snapshot: Snapshot, values: dict, deltas: dict) -> dict:
+def executive_summary(snapshot: Snapshot, values: dict, deltas: dict, days: int = WINDOW_DAYS) -> dict:
     if snapshot.empty:
         return {"headline": "No data imported yet.", "bullets": [], "method": "rules"}
     assert snapshot.as_of is not None
@@ -638,8 +691,8 @@ def executive_summary(snapshot: Snapshot, values: dict, deltas: dict) -> dict:
     if deltas["revenue"] is not None:
         direction = "up" if deltas["revenue"] >= 0 else "down"
         headline = (
-            f"Revenue in the last 90 days is {direction} {abs(deltas['revenue']):.1f}% "
-            "on the previous 90 days."
+            f"Revenue in the last {days} days is {direction} {abs(deltas['revenue']):.1f}% "
+            f"on the previous {days} days."
         )
     else:
         headline = f"Customer summary as of {snapshot.as_of:%d %b %Y}."

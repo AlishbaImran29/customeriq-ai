@@ -38,6 +38,7 @@ export const URDU: Record<string, string> = {
   Overview: "جائزہ",
   Segmentation: "کسٹمر گروپس",
   "Churn Prediction": "کسٹمر چھوڑنے کی پیش گوئی",
+  "Cohort Retention": "گروہ وار برقراری",
   "Lifetime Value": "مجموعی قدر",
   "Health Scores": "صحت کے اسکور",
   "Revenue Intelligence": "آمدنی کا تجزیہ",

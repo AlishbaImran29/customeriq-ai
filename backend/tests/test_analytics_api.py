@@ -15,6 +15,7 @@ ENDPOINTS = [
     "/api/v1/customers/health",
     "/api/v1/revenue/intelligence",
     "/api/v1/recommendations",
+    "/api/v1/cohorts",
 ]
 
 
@@ -83,3 +84,16 @@ def test_limit_is_validated(db_client):
     response = db_client.get("/api/v1/customers?limit=0")
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "validation_error"
+
+
+@requires_database
+def test_cohorts_and_overview_period_with_data(db_client):
+    import_customers(db_client, 30)
+    cohorts = db_client.get("/api/v1/cohorts").json()
+    assert cohorts["cohorts"] and cohorts["months"] == 12
+    assert all(row["retention"][0] == 100.0 for row in cohorts["cohorts"])
+
+    short = db_client.get("/api/v1/dashboard/overview?days=30").json()
+    default = db_client.get("/api/v1/dashboard/overview").json()
+    assert short["kpis"]["revenue"] <= default["kpis"]["revenue"]
+    assert db_client.get("/api/v1/dashboard/overview?days=2").status_code == 422

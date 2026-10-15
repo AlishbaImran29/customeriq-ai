@@ -20,6 +20,7 @@ import {
 } from "@/components/data-state";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
+import { DEFAULT_PERIOD, PERIOD_OPTIONS, PeriodPicker } from "@/components/period-picker";
 import { RevenueForecastChart, SegmentDonutChart } from "@/components/charts/dashboard-charts";
 import { EmptyState } from "@/components/states";
 import { Badge, impactVariant, riskVariant } from "@/components/ui/badge";
@@ -70,7 +71,7 @@ function GrowthScoreExplainer({ details }: { details: GrowthScoreDetails }) {
   );
 }
 
-export default function OverviewPage() {
+export default function OverviewPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   return (
     <div className="space-y-6">
       <PageHeader
@@ -78,14 +79,16 @@ export default function OverviewPage() {
         description="Customer performance and business health at a glance: segmentation, churn risk, lifetime value, and growth opportunities."
       />
       <Suspense fallback={<PageSkeleton cards={6} />}>
-        <OverviewContent />
+        <OverviewContent searchParams={searchParams} />
       </Suspense>
     </div>
   );
 }
 
-async function OverviewContent() {
-  const result = await load(getOverview);
+async function OverviewContent({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+  const requested = Number((await searchParams).days);
+  const days = (PERIOD_OPTIONS as readonly number[]).includes(requested) ? requested : DEFAULT_PERIOD;
+  const result = await load(() => getOverview(days));
   if (!result.ok) return <DataErrorState error={result.error} />;
   const {
     meta,
@@ -109,13 +112,19 @@ async function OverviewContent() {
     <>
       <DataSourceBanner meta={meta} />
 
+      {live ? (
+        <Suspense fallback={null}>
+          <PeriodPicker current={days} />
+        </Suspense>
+      ) : null}
+
       <ModelNote model={meta.models.churn} title="Churn model" />
       <ModelNote model={meta.models.forecast} title="Revenue forecast" />
 
       <section aria-label="Key metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard label="Total Customers" value={value(kpis.totalCustomers, formatNumber)} delta={kpiDeltas.totalCustomers} icon={Users} />
         <KpiCard
-          label={live ? "Revenue (last 90 days)" : "Revenue"}
+          label={live ? `Revenue (last ${days} days)` : "Revenue"}
           value={value(kpis.revenue, money)}
           delta={kpiDeltas.revenue}
           icon={TrendingUp}
@@ -127,7 +136,7 @@ async function OverviewContent() {
           icon={Wallet}
         />
         <KpiCard
-          label={live ? "Retention Rate (90 days)" : "Retention Rate"}
+          label={live ? `Retention Rate (${days} days)` : "Retention Rate"}
           value={value(kpis.retentionRate, formatPercent)}
           delta={kpiDeltas.retentionRate}
           deltaUnit="pts"

@@ -73,7 +73,7 @@ export type Overview = {
 type OverviewResponse = Omit<Overview, "segments"> & { segments: SegmentStats[] };
 
 /** GET /api/v1/dashboard/overview */
-export async function getOverview(): Promise<Overview> {
+export async function getOverview(days = 90): Promise<Overview> {
   if (API_MODE === "demo") {
     return {
       meta: DEMO_META,
@@ -87,8 +87,34 @@ export async function getOverview(): Promise<Overview> {
       growthScoreDetails: null,
     };
   }
-  const data = await live<OverviewResponse>("/api/v1/dashboard/overview");
+  const data = await live<OverviewResponse>(`/api/v1/dashboard/overview?days=${days}`);
   return { ...data, segments: withSegmentMeta(data.segments) };
+}
+
+// --- Cohort retention -----------------------------------------------------------
+
+export type CohortRow = {
+  label: string;
+  size: number;
+  /** % of the cohort that ordered in month 0, 1, 2...; null where not measurable yet. */
+  retention: (number | null)[];
+};
+
+export type CohortOverview = {
+  meta: DataMeta;
+  cohorts: CohortRow[];
+  averages: (number | null)[];
+  months: number;
+  /** The month still in progress (left out of the comparison), if any. */
+  partialMonth: string | null;
+};
+
+/** GET /api/v1/cohorts (live data only: there is no sample cohort data) */
+export async function getCohorts(): Promise<CohortOverview> {
+  if (API_MODE === "demo") {
+    return { meta: DEMO_META, cohorts: [], averages: [], months: 12, partialMonth: null };
+  }
+  return live<CohortOverview>("/api/v1/cohorts");
 }
 
 // --- Customers & segments -----------------------------------------------------

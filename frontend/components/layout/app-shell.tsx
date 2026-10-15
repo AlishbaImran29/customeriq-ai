@@ -16,6 +16,7 @@ import {
   Users,
   Wallet,
   X,
+  Grid3x3,
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { CurrencyMenu } from "@/components/layout/currency-menu";
@@ -33,6 +34,7 @@ const navGroups = [
       { href: "/", label: "Overview", icon: LayoutDashboard },
       { href: "/segmentation", label: "Segmentation", icon: Users },
       { href: "/churn", label: "Churn Prediction", icon: Activity },
+      { href: "/cohorts", label: "Cohort Retention", icon: Grid3x3 },
       { href: "/clv", label: "Lifetime Value", icon: Wallet },
       { href: "/health", label: "Health Scores", icon: HeartPulse },
       { href: "/revenue", label: "Revenue Intelligence", icon: TrendingUp },
