@@ -100,7 +100,9 @@ export function DataErrorState({ error }: { error: ApiError }) {
       ? "Start the backend (see backend/README.md), then retry."
       : error.status === 503
         ? "The backend could not reach its database."
-        : undefined;
+        : error.code === "not_found"
+          ? "The backend does not know this request. It is probably an older version: restart it (or redeploy the API) and retry."
+          : undefined;
   return (
     <ErrorState
       title="Couldn't load live data"

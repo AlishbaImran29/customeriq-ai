@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.errors import ApiError
 from app.db.session import get_db
 from app.schemas.analytics import (
     MODEL_NOT_TRAINED,
@@ -340,7 +341,7 @@ def customer_detail(
     snapshot = load_snapshot(db)
     found = next((c for c in snapshot.customers if c.customer_id == id), None)
     if found is None:
-        raise HTTPException(status_code=404, detail="No customer with that ID.")
+        raise ApiError(404, "customer_not_found", "No customer with that ID.")
     preds = pr.get_predictions(snapshot)
     orders = sorted((o for o in snapshot.orders if o.customer_id == id), key=lambda o: o.order_date, reverse=True)
     dates = sorted(found.order_dates)

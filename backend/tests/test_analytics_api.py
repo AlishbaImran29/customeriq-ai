@@ -122,4 +122,5 @@ def test_customer_detail_lists_orders_and_404s_for_unknown_ids(db_client):
     dates = [o["orderDate"] for o in body["orders"]]
     assert dates == sorted(dates, reverse=True)  # newest first
     assert body["averageDaysBetweenOrders"] == 30.0  # the test data places repeat orders 30 days apart
-    assert db_client.get("/api/v1/customer?id=NOPE").status_code == 404
+    missing = db_client.get("/api/v1/customer?id=NOPE")
+    assert missing.status_code == 404 and missing.json()["error"]["code"] == "customer_not_found"

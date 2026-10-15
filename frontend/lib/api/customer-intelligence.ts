@@ -152,7 +152,9 @@ export async function getCustomerDetail(id: string): Promise<CustomerDetail | nu
   try {
     return await live<CustomerDetail>(`/api/v1/customer?id=${encodeURIComponent(id)}`);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) return null;
+    // Only the backend's own "no such customer" answer; any other 404 (for example an outdated
+    // backend without this endpoint) must stay a visible error instead of looking like a missing customer.
+    if (error instanceof ApiError && error.code === "customer_not_found") return null;
     throw error;
   }
 }
