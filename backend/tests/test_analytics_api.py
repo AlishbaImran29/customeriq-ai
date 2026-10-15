@@ -47,9 +47,12 @@ def test_overview_with_data(db_client):
     body = db_client.get("/api/v1/dashboard/overview").json()
     assert body["meta"]["segmented"] is True
     assert body["kpis"]["totalCustomers"] == 30
-    assert body["kpis"]["churnRisk"] is None and body["kpis"]["growthScore"] is None
+    assert body["kpis"]["churnRisk"] is None  # churn needs a trained model; this data is too small
+    details = body["growthScoreDetails"]
+    assert details is not None and body["kpis"]["growthScore"] == details["score"]  # 4 inputs measurable here
+    assert 0 <= details["score"] <= 100 and {c["key"] for c in details["components"]} >= {"health", "retention"}
     unavailable = {u["field"] for u in body["meta"]["unavailable"]}
-    assert {"churnRisk", "growthScore", "revenueForecast"} <= unavailable
+    assert {"churnRisk", "revenueForecast"} <= unavailable and "growthScore" not in unavailable
     assert body["executiveSummary"]["method"] == "rules"
     assert sum(s["customers"] for s in body["segments"]) == 30
     assert all(s["avgPredictedClv"] is None for s in body["segments"])

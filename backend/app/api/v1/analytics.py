@@ -42,7 +42,9 @@ _FIELD_MODEL = {
     "predictedClv": "clv",
     "revenueForecast": "forecast",
 }
-GROWTH_SCORE_REASON = "No agreed formula yet; needs a defined and validated model."
+GROWTH_SCORE_REASON = (
+    "Needs at least three of its four inputs; revenue and customer growth need 180+ days of order history."
+)
 
 
 def _model_info(model: pr.ModelResult) -> ModelInfo:
@@ -53,13 +55,14 @@ def _model_info(model: pr.ModelResult) -> ModelInfo:
     )
 
 
-def _meta(snapshot: a.Snapshot, preds: pr.Predictions, *fields: str) -> Meta:
+def _meta(snapshot: a.Snapshot, preds: pr.Predictions, *fields: str, growth: dict | None = None) -> Meta:
     """Response context. `fields` are prediction fields this page would show; those
     whose model is not available are listed with the reason."""
     unavailable = []
     for field in fields:
         if field == "growthScore":
-            unavailable.append(Unavailable(field=field, reason=GROWTH_SCORE_REASON))
+            if growth is None:
+                unavailable.append(Unavailable(field=field, reason=GROWTH_SCORE_REASON))
             continue
         model: pr.ModelResult = getattr(preds, _FIELD_MODEL[field])
         if not model.available:
@@ -163,6 +166,8 @@ def overview(db: Session = Depends(get_db)) -> OverviewOut:
     preds = pr.get_predictions(snapshot)
     values, deltas = a.kpis(snapshot)
     values["churnRisk"] = pr.churn_kpi(snapshot, preds)
+    growth = a.growth_score(snapshot, values, deltas)
+    values["growthScore"] = growth["score"] if growth else None
     if preds.churn.available:
         # Biggest expected revenue loss first: predicted chance of leaving x 12-month spend.
         attention = sorted(
@@ -180,9 +185,10 @@ def overview(db: Session = Depends(get_db)) -> OverviewOut:
         attention = sorted(snapshot.customers, key=lambda c: c.activity_ratio, reverse=True)
     recs = a.recommendations(snapshot)
     return OverviewOut(
-        meta=_meta(snapshot, preds, "churnRisk", "growthScore", "revenueForecast"),
+        meta=_meta(snapshot, preds, "churnRisk", "growthScore", "revenueForecast", growth=growth),
         kpis=Kpis.model_validate(values),
         kpi_deltas=Kpis.model_validate(deltas),
+        growth_score_details=growth,
         executive_summary=a.executive_summary(snapshot, values, deltas),
         revenue_series=_revenue_series(snapshot, preds),
         segments=a.segment_summaries(snapshot, preds.predicted_spend if preds.clv.available else None),

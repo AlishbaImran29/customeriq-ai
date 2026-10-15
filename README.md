@@ -22,7 +22,8 @@ The project specification is in [`docs/specification.pdf`](docs/specification.pd
 | Inactivity levels, revenue at risk, recommendations, executive summary | ✅ Rule-based (described as such in the UI) |
 | AI Business Assistant | ✅ Real once `ANTHROPIC_API_KEY` is set; answers only from your summary figures |
 | Churn probability, predicted CLV, 3-month revenue forecast | ✅ Trained models (scikit-learn), **shown only if they pass an accuracy test** on data they were not trained on. Otherwise "Not available" with the reason. Details below. |
-| Growth score | ⏳ Not available — there is no agreed formula for it yet |
+| Growth Score | ✅ Our own 0-100 score from four measured metrics (revenue growth, retention, average health, customer growth). The page shows the inputs and weights; it is not an industry standard and not a prediction. Needs about 6 months of history. |
+| Revenue at Risk calculator | ✅ A "what if" tool that starts from your At-Risk and Lost customers |
 | Sign-in (accounts, sessions, change password) | ✅ Built. In live mode every page and API call needs a signed-in user. Demo mode has no sign-in. |
 | Public real-world test dataset (UCI Online Retail II) | ✅ Converter included (see "Test data") |
 | Shopify orders export (CSV) | ✅ Detected automatically and converted on the server |
@@ -97,7 +98,19 @@ run in demo mode.
 
 ---
 
-## Run the app (every time)
+## Quick start on Windows (after the first-time setup)
+
+1. Close any old CustomerIQ terminals or black windows (so ports 8000 and 3001 are free).
+2. **Double-click `start-customeriq.bat`** in the project folder.
+3. Two black windows open (the backend and the website) and your browser opens at
+   <http://localhost:3001>. Keep the black windows open while you use the app.
+4. To stop the app, close the two black windows.
+
+If it says a port is "already in use", something is still running: close the old windows
+and try again. Run `start-customeriq.bat check` to test the setup without starting anything.
+The rest of this section explains the same thing by hand, with terminals.
+
+## Run the app by hand (every time)
 
 Open **two terminals** in VS Code (Terminal → New Terminal, then **+**).
 
@@ -277,9 +290,10 @@ names or emails.
 
 ---
 
-## Putting it on the internet
+## Putting it on the internet (optional)
 
-Step-by-step guide (GitHub, Supabase, Railway, Vercel): [`docs/DEPLOY.md`](docs/DEPLOY.md).
+You do **not** need this to use the app on your own computer. If you ever want it online,
+here is a step-by-step guide (GitHub, Supabase, Railway, Vercel): [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Checks
 

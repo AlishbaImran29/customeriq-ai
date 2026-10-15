@@ -356,6 +356,57 @@ def retention_rate(
     return retained / len(cohort) * 100
 
 
+# Growth Score: our own composite of four MEASURED metrics, each turned into a 0-100
+# sub-score. It is not an industry standard and is not a prediction. The page shows the
+# inputs and weights. Inputs that cannot be measured yet (short history) are left out and
+# the remaining weights are scaled up; at least three inputs are needed.
+GROWTH_COMPONENTS = [
+    ("revenueGrowth", "Revenue growth (last 90 days vs the 90 before)", 0.35),
+    ("retention", "Retention rate (90 days)", 0.30),
+    ("health", "Average customer health score", 0.20),
+    ("customerGrowth", "Customer growth (vs 90 days ago)", 0.15),
+]
+MIN_GROWTH_INPUTS = 3
+
+
+def growth_score(snapshot: Snapshot, values: dict, deltas: dict) -> dict | None:
+    """0-100 growth score with its breakdown, or None when fewer than three inputs exist.
+
+    Sub-scores: revenue growth -50%..+50% maps to 0..100; customer growth -20%..+20% maps
+    to 0..100; retention and health are already 0..100.
+    """
+    if snapshot.empty or not snapshot.customers:
+        return None
+    average_health = sum(c.health_score for c in snapshot.customers) / len(snapshot.customers)
+    revenue_change, customer_change = deltas.get("revenue"), deltas.get("totalCustomers")
+    retention = values.get("retentionRate")
+    inputs: dict[str, tuple[float, str] | None] = {
+        "revenueGrowth": None if revenue_change is None else (clamp(50 + revenue_change), f"{revenue_change:+.1f}%"),
+        "retention": None if retention is None else (clamp(retention), f"{retention:.1f}%"),
+        "health": (clamp(average_health), f"{average_health:.0f}/100"),
+        "customerGrowth": None if customer_change is None else (clamp(50 + 2.5 * customer_change), f"{customer_change:+.1f}%"),
+    }
+    used = [(key, label, weight) for key, label, weight in GROWTH_COMPONENTS if inputs[key] is not None]
+    if len(used) < MIN_GROWTH_INPUTS:
+        return None
+    total_weight = sum(weight for _, _, weight in used)
+    score = sum(weight * inputs[key][0] for key, _, weight in used) / total_weight  # type: ignore[index]
+    return {
+        "score": round_half_up(score),
+        "components": [
+            {
+                "key": key,
+                "label": label,
+                "measure": inputs[key][1],  # type: ignore[index]
+                "value": round(inputs[key][0]),  # type: ignore[index]
+                "weight": round(weight / total_weight * 100),
+            }
+            for key, label, weight in used
+        ],
+        "missing": [label for key, label, _ in GROWTH_COMPONENTS if inputs[key] is None],
+    }
+
+
 def segment_summaries(
     snapshot: Snapshot, predicted_spend: dict[str, float] | None = None
 ) -> list[dict]:

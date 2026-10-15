@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { DataErrorState, DataSourceBanner, ModelNote, NoDataState, PageSkeleton, load, reasonFor } from "@/components/data-state";
 import { NotAvailableValue } from "@/components/not-available";
 import { PageHeader } from "@/components/page-header";
-import { RevenueAtRiskCalculator } from "@/components/revenue-at-risk-calculator";
+import { RevenueAtRiskCalculator, type CalculatorDefaults } from "@/components/revenue-at-risk-calculator";
 import { RevenueAtRiskChart, RevenueForecastChart } from "@/components/charts/dashboard-charts";
 import { EmptyState } from "@/components/states";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,15 +20,6 @@ export default function RevenuePage() {
       <Suspense fallback={<PageSkeleton cards={4} />}>
         <RevenueContent />
       </Suspense>
-      <Card>
-        <CardHeader>
-          <CardTitle>Revenue at risk calculator</CardTitle>
-          <CardDescription>Estimate exposure for a scenario. Calculated in your browser from the inputs below.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RevenueAtRiskCalculator />
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -52,6 +43,17 @@ async function RevenueContent() {
   const totalAtRisk = atRiskBySegment.reduce((sum, s) => sum + s.atRisk, 0);
   const revenue12m = live ? (drivers[0]?.rows.reduce((sum, r) => sum + r.revenue, 0) ?? 0) : 0;
   const currentAtRisk = atRiskTrend?.[atRiskTrend.length - 1]?.atRisk ?? 0;
+  const atRiskCustomerCount = atRiskBySegment.reduce((sum, s) => sum + s.customers, 0);
+  // Live data: start from your At-Risk and Lost customers. Demo: made-up sample numbers.
+  const calculatorDefaults: CalculatorDefaults =
+    live && atRiskCustomerCount > 0
+      ? {
+          customers: atRiskCustomerCount,
+          yearlySpend: totalAtRisk / atRiskCustomerCount,
+          share: 50,
+          source: `your ${atRiskCustomerCount.toLocaleString("en-US")} At-Risk and Lost customers (their spend over the last 12 months), with a 50% leaving guess`,
+        }
+      : { customers: 3680, yearlySpend: 320, share: 40, source: "made-up sample numbers" };
 
   return (
     <>
@@ -197,6 +199,19 @@ async function RevenueContent() {
           );
         })}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue at risk calculator</CardTitle>
+          <CardDescription>
+            Try a &ldquo;what if&rdquo;: how much yearly revenue is exposed if some of these customers leave? Runs in
+            your browser from the sliders.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RevenueAtRiskCalculator key={calculatorDefaults.source} defaults={calculatorDefaults} />
+        </CardContent>
+      </Card>
     </>
   );
 }

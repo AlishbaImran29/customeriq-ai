@@ -1,5 +1,11 @@
 # Putting CustomerIQ AI on the internet
 
+> **Optional.** The app runs fine on your own computer with `start-customeriq.bat` (see the
+> README). This guide is only for the day you want a public website. It was written for
+> Railway, but a free combination (Vercel for the site, Render for the API, Supabase for the
+> database) also works: use the backend's `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
+> `DB_PASSWORD` and `DB_SSLMODE=require` settings instead of building a `DATABASE_URL`.
+
 This guide takes the app from your computer to a public website, step by step. Three
 services each run one part, and **GitHub** holds the code that feeds them:
 

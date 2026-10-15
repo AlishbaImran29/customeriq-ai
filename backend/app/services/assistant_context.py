@@ -14,7 +14,6 @@ TOP_CUSTOMERS = 10
 RECENT_MONTHS = 13
 
 ALWAYS_NOT_AVAILABLE = [
-    "growth score (no agreed formula yet)",
     "profit or margins (no cost data is imported)",
 ]
 
@@ -27,14 +26,17 @@ DEFINITIONS = {
     "inactivityLevel": "Rule-based: days since last order divided by the customer's usual gap. Not a prediction.",
     "revenueAtRisk": "Last-12-month spend of customers now At-Risk or Lost. Historical, not a predicted loss.",
     "healthScore": "0–100 from purchase frequency, spending, engagement and activity trend.",
+    "growthScore": "Our own 0-100 composite of revenue growth, retention, average health and customer growth (see growthScoreBreakdown). Not an industry standard and not a prediction.",
     "churnProbability": "Model estimate of the chance a customer places no order in the next 90 days. Not a certainty.",
     "predictedClv": "Model estimate: revenue to date plus predicted spend over the next 180 days.",
     "revenueForecast": "Model estimate of monthly revenue with an 80% prediction range; seasonality is not modelled.",
 }
 
 
-def _not_available(preds: pr.Predictions) -> list[str]:
+def _not_available(preds: pr.Predictions, growth: dict | None) -> list[str]:
     missing = list(ALWAYS_NOT_AVAILABLE)
+    if growth is None:
+        missing.append("growth score (needs at least three of its four inputs, i.e. 180+ days of history)")
     for name, label in (("churn", "churn probability"), ("clv", "predicted CLV"), ("forecast", "revenue forecast")):
         model = getattr(preds, name)
         if not model.available:
@@ -103,6 +105,8 @@ def build_context(snapshot: a.Snapshot) -> dict[str, Any]:
     preds = pr.get_predictions(snapshot)
     values, deltas = a.kpis(snapshot)
     values["churnRisk"] = pr.churn_kpi(snapshot, preds)
+    growth = a.growth_score(snapshot, values, deltas)
+    values["growthScore"] = growth["score"] if growth else None
     drivers = a.revenue_drivers(snapshot)
     attention = sorted(
         (c for c in snapshot.customers if c.segment == "At-Risk Customers"),
@@ -150,5 +154,6 @@ def build_context(snapshot: a.Snapshot) -> dict[str, Any]:
         ],
         "predictions": _prediction_details(snapshot, preds),
         "definitions": DEFINITIONS,
-        "notAvailable": _not_available(preds),
+        "growthScoreBreakdown": growth["components"] if growth else None,
+        "notAvailable": _not_available(preds, growth),
     }

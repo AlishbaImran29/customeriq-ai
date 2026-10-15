@@ -158,10 +158,27 @@ class RiskBucket(CamelModel):
     customers: int
 
 
+class GrowthComponent(CamelModel):
+    key: str
+    label: str
+    measure: str        # the measured value, e.g. "+12.3%"
+    value: int          # its 0-100 sub-score
+    weight: int         # percent weight after re-scaling for missing inputs
+
+
+class GrowthScoreDetails(CamelModel):
+    """How the Growth Score was calculated (our own composite, not an industry standard)."""
+
+    score: int
+    components: list[GrowthComponent]
+    missing: list[str]
+
+
 class OverviewOut(CamelModel):
     meta: Meta
     kpis: Kpis
     kpi_deltas: Kpis
+    growth_score_details: GrowthScoreDetails | None
     executive_summary: ExecutiveSummary
     revenue_series: list[RevenuePoint]
     segments: list[SegmentStats]

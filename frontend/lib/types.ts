@@ -88,6 +88,14 @@ export type Kpis = {
   growthScore: number | null;
 };
 
+/** How the Growth Score was calculated: our own composite of measured metrics. */
+export type GrowthScoreDetails = {
+  score: number;
+  components: { key: string; label: string; measure: string; value: number; weight: number }[];
+  /** Inputs left out because there is not enough history yet. */
+  missing: string[];
+};
+
 export type SegmentStats = {
   name: SegmentName;
   customers: number;

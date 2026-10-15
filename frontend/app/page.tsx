@@ -25,9 +25,49 @@ import { EmptyState } from "@/components/states";
 import { Badge, impactVariant, riskVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOverview } from "@/lib/api/customer-intelligence";
+import type { GrowthScoreDetails } from "@/lib/types";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
 
-const NO_FORMULA = "No agreed formula yet; needs a defined, validated model.";
+
+function GrowthScoreExplainer({ details }: { details: GrowthScoreDetails }) {
+  return (
+    <details className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+      <summary className="cursor-pointer font-medium text-slate-900">
+        How the Growth Score ({details.score}/100) is calculated
+      </summary>
+      <p className="mt-2 text-xs text-slate-500">
+        It is <strong>our own</strong> weighted average of the measured inputs below, not an industry standard and
+        not a prediction. Revenue growth −50% to +50% maps to 0–100; customer growth −20% to +20% maps to 0–100.
+        {details.missing.length > 0
+          ? ` Left out for now (not enough history): ${details.missing.join("; ")}. The other weights are scaled up.`
+          : ""}
+      </p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[520px] text-left text-sm">
+          <caption className="sr-only">Growth Score inputs, their measured values, scores, and weights</caption>
+          <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th scope="col" className="py-2 pr-3 font-medium">Input</th>
+              <th scope="col" className="px-3 py-2 font-medium">Measured</th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">Score (0–100)</th>
+              <th scope="col" className="py-2 pl-3 text-right font-medium">Weight</th>
+            </tr>
+          </thead>
+          <tbody>
+            {details.components.map((item) => (
+              <tr key={item.key} className="border-b border-slate-100 last:border-0">
+                <td className="py-2 pr-3">{item.label}</td>
+                <td className="px-3 py-2 tabular-nums">{item.measure}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{item.value}</td>
+                <td className="py-2 pl-3 text-right tabular-nums">{item.weight}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
 
 export default function OverviewPage() {
   return (
@@ -46,8 +86,17 @@ export default function OverviewPage() {
 async function OverviewContent() {
   const result = await load(getOverview);
   if (!result.ok) return <DataErrorState error={result.error} />;
-  const { meta, kpis, kpiDeltas, executiveSummary, revenueSeries, segments, topRecommendations, atRiskCustomers } =
-    result.data;
+  const {
+    meta,
+    kpis,
+    kpiDeltas,
+    growthScoreDetails,
+    executiveSummary,
+    revenueSeries,
+    segments,
+    topRecommendations,
+    atRiskCustomers,
+  } = result.data;
   if (meta.source === "live" && !meta.asOf) return <NoDataState />;
   const live = meta.source === "live";
   const churnPredicted = meta.models.churn.status === "available";
@@ -98,10 +147,13 @@ async function OverviewContent() {
           value={value(kpis.growthScore, (n) => `${n}/100`)}
           delta={kpiDeltas.growthScore}
           deltaUnit="pts"
-          unavailableReason={NO_FORMULA}
+          unavailableReason={reasonFor(meta, "growthScore")}
+          note={live ? "Our own score from measured metrics (see below)" : "Sample score"}
           icon={Sparkles}
         />
       </section>
+
+      {growthScoreDetails ? <GrowthScoreExplainer details={growthScoreDetails} /> : null}
 
       <div className="grid gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3">

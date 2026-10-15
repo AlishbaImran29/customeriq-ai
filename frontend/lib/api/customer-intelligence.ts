@@ -14,6 +14,7 @@ import type {
   Customer,
   DataMeta,
   ExecutiveSummary,
+  GrowthScoreDetails,
   HealthBucket,
   HealthFactors,
   Kpis,
@@ -57,6 +58,8 @@ const byChurnDesc = (a: Customer, b: Customer) =>
 // --- Overview -------------------------------------------------------------
 
 export type Overview = {
+  /** Live data only: the breakdown behind the Growth Score. */
+  growthScoreDetails: GrowthScoreDetails | null;
   meta: DataMeta;
   kpis: Kpis;
   kpiDeltas: Kpis;
@@ -81,6 +84,7 @@ export async function getOverview(): Promise<Overview> {
       segments: mock.segmentSummary,
       topRecommendations: mock.recommendations.filter((i) => i.impact === "High").slice(0, 3),
       atRiskCustomers: [...mock.customers].sort(byChurnDesc).slice(0, 4),
+      growthScoreDetails: null,
     };
   }
   const data = await live<OverviewResponse>("/api/v1/dashboard/overview");

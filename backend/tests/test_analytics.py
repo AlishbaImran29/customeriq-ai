@@ -165,3 +165,50 @@ def test_recommendations_have_no_invented_revenue_estimates():
     recs = a.recommendations(a.build_snapshot(facts))
     assert recs and all(r["estimatedRevenue"] is None for r in recs)
     assert all(r["historicalRevenue"] >= 0 for r in recs)
+
+
+# --- Growth Score -------------------------------------------------------------------------------
+
+def _snapshot_for_growth():
+    return a.build_snapshot([order(f"C{i}", i * 5, 50 + i) for i in range(30)])
+
+
+def _expected_score(parts):
+    """parts: {key: (subscore, weight)} -> the weighted mean the docs promise."""
+    return a.round_half_up(sum(v * w for v, w in parts.values()) / sum(w for _, w in parts.values()))
+
+
+def test_growth_score_combines_four_measured_inputs():
+    snapshot = _snapshot_for_growth()
+    health = sum(c.health_score for c in snapshot.customers) / len(snapshot.customers)
+    result = a.growth_score(snapshot, {"retentionRate": 60.0}, {"revenue": 20.0, "totalCustomers": 10.0})
+    parts = {"rev": (70.0, 0.35), "ret": (60.0, 0.30), "health": (health, 0.20), "cust": (75.0, 0.15)}
+    assert result["score"] == _expected_score(parts)
+    by_key = {c["key"]: c for c in result["components"]}
+    assert by_key["revenueGrowth"]["value"] == 70 and by_key["revenueGrowth"]["measure"] == "+20.0%"
+    assert by_key["customerGrowth"]["value"] == 75 and by_key["retention"]["measure"] == "60.0%"
+    assert [c["weight"] for c in result["components"]] == [35, 30, 20, 15] and result["missing"] == []
+
+
+def test_growth_sub_scores_are_clamped_to_0_100():
+    snapshot = _snapshot_for_growth()
+    high = a.growth_score(snapshot, {"retentionRate": 100.0}, {"revenue": 500.0, "totalCustomers": 90.0})
+    low = a.growth_score(snapshot, {"retentionRate": 0.0}, {"revenue": -500.0, "totalCustomers": -90.0})
+    assert {c["key"]: c["value"] for c in high["components"]}["revenueGrowth"] == 100
+    assert {c["key"]: c["value"] for c in low["components"]}["customerGrowth"] == 0
+    assert 0 <= low["score"] < high["score"] <= 100
+
+
+def test_growth_score_rescales_weights_when_an_input_is_missing():
+    snapshot = _snapshot_for_growth()
+    health = sum(c.health_score for c in snapshot.customers) / len(snapshot.customers)
+    result = a.growth_score(snapshot, {"retentionRate": 60.0}, {"revenue": 20.0, "totalCustomers": None})
+    assert result["missing"] == ["Customer growth (vs 90 days ago)"]
+    assert [c["weight"] for c in result["components"]] == [41, 35, 24]  # 0.35 / 0.30 / 0.20 over 0.85
+    assert result["score"] == _expected_score({"rev": (70.0, 0.35), "ret": (60.0, 0.30), "health": (health, 0.20)})
+
+
+def test_growth_score_needs_at_least_three_inputs():
+    snapshot = _snapshot_for_growth()
+    assert a.growth_score(snapshot, {"retentionRate": None}, {"revenue": 20.0, "totalCustomers": None}) is None
+    assert a.growth_score(a.build_snapshot([]), {"retentionRate": 60.0}, {"revenue": 1.0, "totalCustomers": 1.0}) is None

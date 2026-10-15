@@ -242,8 +242,9 @@ def test_api_shows_predictions_only_when_models_are_available(db_client):
 
     overview = db_client.get("/api/v1/dashboard/overview").json()
     assert overview["kpis"]["churnRisk"] == pytest.approx(body["churnRate"])
-    assert overview["kpis"]["growthScore"] is None  # still no agreed formula
-    assert "growthScore" in {u["field"] for u in overview["meta"]["unavailable"]}
+    details = overview["growthScoreDetails"]
+    assert overview["kpis"]["growthScore"] == details["score"] and 0 <= details["score"] <= 100
+    assert "growthScore" not in {u["field"] for u in overview["meta"]["unavailable"]}
 
 
 # --- AI assistant context ----------------------------------------------------------------------------------
@@ -259,7 +260,8 @@ def test_assistant_context_has_estimates_with_validation_and_no_personal_data():
     assert "Accuracy on unseen period (AUC)" in churn["validation"]
     assert ctx["predictions"]["churn"]["highestExpectedRevenueLoss"]
     assert not any(item.startswith("churn probability") for item in ctx["notAvailable"])
-    assert any(item.startswith("growth score") for item in ctx["notAvailable"])
+    assert isinstance(ctx["kpis"]["growthScore"], (int, float)) and ctx["growthScoreBreakdown"]
+    assert not any(item.startswith("growth score") for item in ctx["notAvailable"])
     assert "@example.com" not in json.dumps(ctx, default=str)
 
 
