@@ -1,12 +1,32 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { EXTRA } from "@/lib/translations";
 
 // Interface language. English is the source text; Urdu is looked up by the exact English
 // string, so anything without a translation simply stays in English (never blank).
 // The page layout stays left-to-right; only the words change.
 
-export type Language = "en" | "ur";
+export const LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "ur", name: "اردو" },
+  { code: "hi", name: "हिन्दी" },
+  { code: "bn", name: "বাংলা" },
+  { code: "ar", name: "العربية" },
+  { code: "es", name: "Español" },
+  { code: "fr", name: "Français" },
+  { code: "de", name: "Deutsch" },
+  { code: "pt", name: "Português" },
+  { code: "zh", name: "中文" },
+  { code: "ru", name: "Русский" },
+  { code: "id", name: "Bahasa Indonesia" },
+] as const;
+
+export type Language = (typeof LANGUAGES)[number]["code"];
+
+function isLanguage(value: unknown): value is Language {
+  return LANGUAGES.some((l) => l.code === value);
+}
 
 const STORAGE_KEY = "ciq_language";
 
@@ -117,7 +137,8 @@ function start() {
   if (started) return;
   started = true;
   try {
-    if (window.localStorage.getItem(STORAGE_KEY) === "ur") set("ur");
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (isLanguage(saved) && saved !== "en") set(saved);
   } catch {
     // Storage blocked: stay in English.
   }
@@ -133,7 +154,10 @@ export function setLanguage(next: Language) {
 }
 
 export function translate(language: Language, text: string) {
-  return language === "ur" ? (URDU[text] ?? text) : text;
+  if (language === "en") return text;
+  const table = language === "ur" ? URDU : EXTRA[language];
+  // "Not available yet." and "Not available yet" share one translation.
+  return table?.[text] ?? table?.[text.replace(/\.$/, "")] ?? text;
 }
 
 function subscribe(listener: () => void) {
