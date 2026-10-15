@@ -271,3 +271,43 @@ def test_assistant_context_lists_unavailable_models_with_reasons():
     assert ctx["predictions"]["models"]["churn"]["status"] == "unavailable"
     assert "churn" not in ctx["predictions"]
     assert any(item.startswith("churn probability (Not enough history") for item in ctx["notAvailable"])
+
+
+# --- regression: found with the real public dataset ----------------------------------------------------------
+
+def test_data_with_no_engagement_at_all_still_trains():
+    """Shopify exports (and the public dataset) have no engagement column. An all-empty feature
+    used to crash the boosting library and break every dashboard page."""
+    facts = [
+        a.OrderFact(f.customer_id, f.name, f.email, f.order_date, f.value, f.channel, f.category, f.country, None)
+        for f in synthetic_facts(800)
+    ]
+    preds = pr.train_all(a.build_snapshot(facts))
+    for model in (preds.churn, preds.clv, preds.forecast):
+        # Each model either trains or is declined by its quality gate; none may crash.
+        assert "could not be trained" not in (model.reason or ""), model.reason
+    assert preds.clv.available, preds.clv.reason
+    assert all(v >= 0 for v in preds.predicted_spend.values())
+    # Without engagement, churn may legitimately fall short of the simple recency rule.
+    assert preds.churn.available or "Not reliable enough yet" in (preds.churn.reason or "")
+    assert all(0.0 <= p <= 1.0 for p in preds.churn_probability.values())
+
+
+def test_uninformative_features_are_dropped_before_training():
+    import numpy as np
+
+    x = np.array([[1.0, 5.0, np.nan, 7.0], [2.0, 5.0, np.nan, 8.0], [3.0, 5.0, np.nan, np.nan]])
+    assert pr._usable_columns(x) == [0, 3]  # constant and all-empty columns removed
+    with pytest.raises(ValueError):
+        pr._fit(pr._classifier(), np.full((4, 3), np.nan), np.array([0, 1, 0, 1]))
+
+
+def test_a_failing_model_reports_unavailable_instead_of_crashing(monkeypatch):
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(pr, "_train_churn", broken)
+    preds = pr.train_all(a.build_snapshot(synthetic_facts(300)))
+    assert preds.churn.status == "unavailable"
+    assert "could not be trained" in preds.churn.reason and preds.churn_probability == {}
+    assert preds.clv.status in ("available", "unavailable")  # the other models are unaffected

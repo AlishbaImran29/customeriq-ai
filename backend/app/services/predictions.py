@@ -160,6 +160,33 @@ def _dataset(
     return np.array(rows, dtype=float).reshape(-1, len(FEATURES)), np.array(labels), ids
 
 
+@dataclass
+class _Fitted:
+    """A fitted model plus the feature columns it was trained on."""
+
+    estimator: HistGradientBoostingClassifier | HistGradientBoostingRegressor
+    columns: list[int]
+
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        if isinstance(self.estimator, HistGradientBoostingClassifier):
+            return self.estimator.predict_proba(x[:, self.columns])[:, 1]
+        return self.estimator.predict(x[:, self.columns])
+
+
+def _usable_columns(x: np.ndarray) -> list[int]:
+    """Columns with at least two different known values. A constant or entirely empty
+    column (for example engagement, when the imported data has none at all) carries no
+    information and makes the boosting library fail."""
+    return [j for j in range(x.shape[1]) if len(np.unique(x[~np.isnan(x[:, j]), j])) >= 2]
+
+
+def _fit(estimator, x: np.ndarray, y: np.ndarray) -> _Fitted:
+    columns = _usable_columns(x)
+    if not columns:
+        raise ValueError("no feature has more than one distinct value")
+    return _Fitted(estimator.fit(x[:, columns], y), columns)
+
+
 def _classifier() -> HistGradientBoostingClassifier:
     return HistGradientBoostingClassifier(
         max_iter=150, learning_rate=0.08, max_depth=3, min_samples_leaf=20,
@@ -201,8 +228,8 @@ def _train_churn(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResu
     if problems:
         return ModelResult.unavailable("Not reliable enough yet: " + "; ".join(problems) + "."), {}
 
-    model = _classifier().fit(x_train, y_train)
-    p_test = model.predict_proba(x_test)[:, 1]
+    model = _fit(_classifier(), x_train, y_train)
+    p_test = model.predict(x_test)
     auc = float(roc_auc_score(y_test, p_test))
     baseline_auc = float(roc_auc_score(y_test, x_test[:, _RECENCY_INDEX]))  # longer silence = riskier
     brier = float(brier_score_loss(y_test, p_test))
@@ -218,9 +245,9 @@ def _train_churn(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResu
         ), {}
 
     # Final model learns from both periods, then scores every customer as of today.
-    final = _classifier().fit(np.vstack([x_train, x_test]), np.concatenate([y_train, y_test]))
+    final = _fit(_classifier(), np.vstack([x_train, x_test]), np.concatenate([y_train, y_test]))
     x_now, _, ids = _dataset(hists, snapshot.as_of, h, "churn")
-    probabilities = dict(zip(ids, (float(p) for p in final.predict_proba(x_now)[:, 1]), strict=True))
+    probabilities = dict(zip(ids, (float(p) for p in final.predict(x_now)), strict=True))
     metrics = [
         ("Accuracy on unseen period (AUC)", f"{auc:.2f}"),
         ("Simple recency rule (AUC)", f"{baseline_auc:.2f}"),
@@ -263,7 +290,7 @@ def _train_clv(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResult
             f"{2 * h} days ago (needs at least {MIN_TRAIN_ROWS})."
         ), {}
 
-    model = _regressor().fit(x_train, y_train)
+    model = _fit(_regressor(), x_train, y_train)
     prediction = np.maximum(model.predict(x_test), 0.0)
     mae = float(mean_absolute_error(y_test, prediction))
     # Baseline: assume each customer spends the next 180 days what they spent in the last 180.
@@ -274,7 +301,7 @@ def _train_clv(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResult
             f"assuming customers repeat their last {h} days (${baseline_mae:,.0f})."
         ), {}
 
-    final = _regressor().fit(np.vstack([x_train, x_test]), np.concatenate([y_train, y_test]))
+    final = _fit(_regressor(), np.vstack([x_train, x_test]), np.concatenate([y_train, y_test]))
     x_now, _, ids = _dataset(hists, snapshot.as_of, h, "spend")
     spend = dict(zip(ids, (max(0.0, float(v)) for v in final.predict(x_now)), strict=True))
     metrics = [
@@ -368,14 +395,26 @@ def _train_forecast(snapshot: Snapshot) -> tuple[ModelResult, list[dict]]:
 
 # --- entry points ------------------------------------------------------------------------------
 
+def _safely(name: str, train, empty):
+    """Run one trainer. An unexpected failure must never break the dashboards: the model
+    is reported as unavailable instead, and the details go to the server log."""
+    try:
+        return train()
+    except Exception:
+        logger.exception("Training the %s model failed; reporting it as unavailable", name)
+        return ModelResult.unavailable(
+            "The model could not be trained on this data (details are in the server log)."
+        ), empty
+
+
 def train_all(snapshot: Snapshot) -> Predictions:
     if snapshot.empty:
         none = ModelResult.unavailable("No customer data has been imported yet.")
         return Predictions(churn=none, clv=none, forecast=none)
     hists = _histories(snapshot)
-    churn, probabilities = _train_churn(snapshot, hists)
-    clv, spend = _train_clv(snapshot, hists)
-    forecast, points = _train_forecast(snapshot)
+    churn, probabilities = _safely("churn", lambda: _train_churn(snapshot, hists), {})
+    clv, spend = _safely("clv", lambda: _train_clv(snapshot, hists), {})
+    forecast, points = _safely("forecast", lambda: _train_forecast(snapshot), [])
     logger.info(
         "Models trained: churn=%s clv=%s forecast=%s (%d customers)",
         churn.status, clv.status, forecast.status, len(snapshot.customers),
