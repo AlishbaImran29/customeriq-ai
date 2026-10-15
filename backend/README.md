@@ -48,7 +48,7 @@ Database tests are skipped automatically until `.env` is configured.
 ## Configuration (`.env`)
 
 | Variable | Purpose |
-|---|---|
+| --- | --- |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Local PostgreSQL connection. Special characters in the password are handled. |
 | `DATABASE_URL` | Optional full URL (`postgresql+psycopg://…`) for hosted databases; overrides the fields above. |
 | `FRONTEND_ORIGINS` | Comma-separated browser origins allowed by CORS. |
@@ -58,7 +58,7 @@ Database tests are skipped automatically until `.env` is configured.
 ## Imports
 
 | Endpoint | Purpose |
-|---|---|
+| --- | --- |
 | `POST /api/v1/imports` | Upload one file (multipart field `file`). Returns `201` with the import result. |
 | `GET /api/v1/imports?limit=20` | Recent imports, newest first (no row errors). |
 | `GET /api/v1/imports/{id}` | One import, including its row errors. |
@@ -88,7 +88,7 @@ you upload it to a real database.
 ## AI Business Assistant
 
 | Endpoint | Purpose |
-|---|---|
+| --- | --- |
 | `GET /api/v1/assistant/status` | `{configured, model, dataAsOf, customerCount}`. Never calls OpenAI. |
 | `POST /api/v1/assistant/chat` | Body `{"messages": [{"role": "user", "content": "…"}]}` (max 20 messages, 2,000 characters each; last must be from the user). |
 
@@ -119,7 +119,7 @@ Validation errors list the field locations and reasons, never the submitted valu
 ## Database schema
 
 | Table | Contents |
-|---|---|
+| --- | --- |
 | `customers` | One row per `customer_id` from imports (email, optional name/country). |
 | `orders` | One row per imported order: date, value, optional category/channel, optional `engagement_score` (0–100; NULL means not provided — never treated as 0). |
 | `import_jobs` | Each uploaded file: status, row counts, row-level errors (no customer values). |

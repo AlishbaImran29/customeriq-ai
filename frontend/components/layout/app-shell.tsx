@@ -13,6 +13,7 @@ import {
   Sparkles,
   TrendingUp,
   Upload,
+  UserRound,
   Users,
   Wallet,
   X,
@@ -218,12 +219,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 {LIVE ? "Live data" : "Demo data"}
               </span>
+              {/* Placeholder only: there is no authentication yet, so no real user is shown. */}
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-xs font-semibold text-white"
-                aria-label="Account"
-                role="img"
+                className="flex items-center gap-2"
+                title="Demo workspace. Sign-in is not available yet."
               >
-                AL
+                <span
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500"
+                  aria-hidden="true"
+                >
+                  <UserRound className="h-4 w-4" />
+                </span>
+                <span className="hidden text-xs leading-tight text-slate-500 md:block">
+                  <span className="block font-medium text-slate-700">Demo workspace</span>
+                  Sign-in not available
+                </span>
+                <span className="sr-only md:hidden">Demo workspace. Sign-in is not available yet.</span>
               </div>
             </div>
           </header>

@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CustomerIQ AI — Frontend
 
-## Getting Started
+Next.js 16 (App Router) dashboard for CustomerIQ AI. For full setup and run
+instructions, see the [project README](../README.md).
 
-First, run the development server:
+## Run
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```powershell
+npm.cmd install      # first time only (Bash: npm install)
+npm.cmd run dev      # Bash: npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Demo vs live data
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| `NEXT_PUBLIC_API_BASE_URL` (in `.env.local`) | Mode | Data shown |
+| --- | --- | --- |
+| not set | Demo | Sample data from `lib/mock`, labelled "Demo data" |
+| `http://127.0.0.1:8000` | Live | Your imported data from the FastAPI backend, labelled "Live data" |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env.local` for live mode. Only public values belong in
+these files: anything starting with `NEXT_PUBLIC_` is bundled into the browser,
+so never put API keys or passwords here. A failed live request shows an error
+state with **Try again**; it never falls back to sample data.
 
-## Learn More
+## Where things are
 
-To learn more about Next.js, take a look at the following resources:
+| Path | Purpose |
+| --- | --- |
+| `app/<page>/page.tsx` | Pages. Each renders its header instantly and streams data inside `<Suspense>`. |
+| `lib/api/config.ts` | API client (`apiGet`, `apiPostForm`, `apiPostJson`), `API_MODE`, `ApiError`. |
+| `lib/api/customer-intelligence.ts` | Server-only data loaders for the dashboards (demo or live). |
+| `lib/api/data-import.ts`, `lib/api/assistant.ts` | Import and assistant calls (run in the browser). |
+| `lib/types.ts` | Shared types; `null` means "not available yet" (e.g. predictions). |
+| `components/data-state.tsx` | Data banner, empty, error, and loading states shared by pages. |
+| `lib/mock/` | Sample data for demo mode only. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```powershell
+npx.cmd tsc --noEmit
+npm.cmd run lint
+npm.cmd run build
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project uses Next.js 16, which differs from older versions. See
+`AGENTS.md` and the guides in `node_modules/next/dist/docs/` before changing
+framework-level code.
