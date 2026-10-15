@@ -35,8 +35,8 @@ def ask_connection_details() -> None:
         DB_SSLMODE="require", DATABASE_URL="",
     )
     print(f"\nAbout to update the tables on {host} (database '{database}', user '{user}').")
-    if input("Type YES to continue: ").strip() != "YES":
-        raise SystemExit("Cancelled. Nothing was changed.")
+    if input("Type yes to continue (anything else cancels): ").strip().lower() not in ("yes", "y"):
+        raise SystemExit("Cancelled. Nothing was changed. Run the command again and type: yes")
 
 
 def main() -> int:

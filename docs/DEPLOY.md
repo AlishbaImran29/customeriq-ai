@@ -46,7 +46,7 @@ cd D:\CustomerIQ.AI\backend
 
 It asks for the **host**, **port**, **database**, **user** and **password** (the password is
 typed hidden and never saved). It shows where it is about to write and waits for you to type
-`YES`. At the end it lists the tables: `customers`, `import_jobs`, `orders`, `sessions`,
+`yes`. At the end it lists the tables: `customers`, `import_jobs`, `orders`, `sessions`,
 `users`, `alembic_version`. Run it again after any future update that changes the database.
 
 ## 3. Deploy the API (Vercel project 1)
