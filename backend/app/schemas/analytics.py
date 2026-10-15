@@ -82,6 +82,25 @@ class CustomerOut(CamelModel):
     recommended_action: str
 
 
+class OrderOut(CamelModel):
+    order_date: date
+    value: float
+    category: str | None
+    channel: str | None
+
+
+class CustomerDetailOut(CamelModel):
+    meta: Meta
+    customer: CustomerOut
+    first_order: date
+    average_order_value: float
+    # null with fewer than two orders.
+    average_days_between_orders: float | None
+    orders_total: int
+    # Newest first; capped, so `orders_total` may be larger than the list.
+    orders: list[OrderOut]
+
+
 class Kpis(CamelModel):
     total_customers: float | None
     revenue: float | None

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { NotAvailableCell } from "@/components/not-available";
 import { Badge, riskVariant } from "@/components/ui/badge";
 import { Money } from "@/components/money";
@@ -35,7 +36,12 @@ export function CustomersTable({
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
               <td className="px-3 py-3">
-                <p className="font-medium text-slate-900">{row.name}</p>
+                <Link
+                  href={`/customers/${encodeURIComponent(row.id)}`}
+                  className="font-medium text-teal-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                >
+                  {row.name}
+                </Link>
                 <p className="text-xs text-slate-500">
                   {row.id}
                   {row.channel ? ` · ${row.channel}` : ""}

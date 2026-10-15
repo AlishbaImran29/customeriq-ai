@@ -110,3 +110,16 @@ def test_overview_accepts_a_date_range(db_client):
     assert ranged.json()["kpis"]["revenue"] >= full["kpis"]["revenue"]  # a longer period covers more
     assert db_client.get("/api/v1/dashboard/overview?start=2030-01-02&end=2030-01-01").status_code == 422
     assert db_client.get("/api/v1/dashboard/overview?start=1990-01-01&end=2026-01-01").status_code == 422  # over 3 years
+
+
+@requires_database
+def test_customer_detail_lists_orders_and_404s_for_unknown_ids(db_client):
+    import_customers(db_client, 30)
+    found = db_client.get("/api/v1/customer?id=T3")
+    assert found.status_code == 200, found.text
+    body = found.json()
+    assert body["customer"]["id"] == "T3" and body["ordersTotal"] == len(body["orders"]) == body["customer"]["orders"]
+    dates = [o["orderDate"] for o in body["orders"]]
+    assert dates == sorted(dates, reverse=True)  # newest first
+    assert body["averageDaysBetweenOrders"] == 30.0  # the test data places repeat orders 30 days apart
+    assert db_client.get("/api/v1/customer?id=NOPE").status_code == 404

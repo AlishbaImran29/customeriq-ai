@@ -15,6 +15,7 @@ from app.schemas.analytics import (
     ChurnOut,
     ClvOut,
     CohortsOut,
+    CustomerDetailOut,
     CustomerOut,
     CustomersOut,
     HealthOut,
@@ -23,6 +24,7 @@ from app.schemas.analytics import (
     Metric,
     ModelInfo,
     ModelsMeta,
+    OrderOut,
     OverviewOut,
     RecommendationsOut,
     RevenueOut,
@@ -37,6 +39,7 @@ router = APIRouter(tags=["analytics"])
 
 DEFAULT_LIMIT = 500
 MAX_PERIOD_DAYS = 1095  # three years
+MAX_ORDERS_SHOWN = 200
 MAX_LIMIT = 2000
 
 # Which trained model produces each prediction field.
@@ -326,4 +329,31 @@ def recommendations(db: Session = Depends(get_db)) -> RecommendationsOut:
     snapshot = load_snapshot(db)
     return RecommendationsOut(
         meta=_meta(snapshot, pr.get_predictions(snapshot)), items=a.recommendations(snapshot)
+    )
+
+
+@router.get("/customer", response_model=CustomerDetailOut)
+def customer_detail(
+    id: str = Query(..., min_length=1, max_length=100, description="The customer's ID from the import."),
+    db: Session = Depends(get_db),
+) -> CustomerDetailOut:
+    snapshot = load_snapshot(db)
+    found = next((c for c in snapshot.customers if c.customer_id == id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="No customer with that ID.")
+    preds = pr.get_predictions(snapshot)
+    orders = sorted((o for o in snapshot.orders if o.customer_id == id), key=lambda o: o.order_date, reverse=True)
+    dates = sorted(found.order_dates)
+    gaps = [(later - earlier).days for earlier, later in zip(dates, dates[1:])]
+    return CustomerDetailOut(
+        meta=_meta(snapshot, preds, "churnProbability", "predictedClv"),
+        customer=_customer(found, preds),
+        first_order=found.first_order,
+        average_order_value=round(found.revenue / found.orders, 2),
+        average_days_between_orders=round(sum(gaps) / len(gaps), 1) if gaps else None,
+        orders_total=len(orders),
+        orders=[
+            OrderOut(order_date=o.order_date, value=round(float(o.value), 2), category=o.category, channel=o.channel)
+            for o in orders[:MAX_ORDERS_SHOWN]
+        ],
     )

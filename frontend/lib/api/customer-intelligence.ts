@@ -8,7 +8,7 @@ import type { DateRange } from "@/lib/dates";
 import "server-only";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import { API_MODE, apiGet } from "@/lib/api/config";
+import { API_MODE, ApiError, apiGet } from "@/lib/api/config";
 import * as mock from "@/lib/mock/customer-intelligence";
 import { withSegmentMeta } from "@/lib/segments";
 import type {
@@ -117,6 +117,44 @@ export async function getCohorts(): Promise<CohortOverview> {
     return { meta: DEMO_META, cohorts: [], averages: [], months: 12, partialMonth: null };
   }
   return live<CohortOverview>("/api/v1/cohorts");
+}
+
+// --- One customer ----------------------------------------------------------------
+
+export type CustomerOrder = { orderDate: string; value: number; category: string | null; channel: string | null };
+
+export type CustomerDetail = {
+  meta: DataMeta;
+  customer: Customer;
+  firstOrder: string | null;
+  averageOrderValue: number | null;
+  averageDaysBetweenOrders: number | null;
+  ordersTotal: number;
+  /** Newest first, capped; `ordersTotal` can be larger. Empty in demo mode (no order history). */
+  orders: CustomerOrder[];
+};
+
+/** GET /api/v1/customer?id= */
+export async function getCustomerDetail(id: string): Promise<CustomerDetail | null> {
+  if (API_MODE === "demo") {
+    const customer = mock.customers.find((c) => c.id === id);
+    if (!customer) return null;
+    return {
+      meta: DEMO_META,
+      customer,
+      firstOrder: null,
+      averageOrderValue: customer.orders > 0 ? customer.revenue / customer.orders : null,
+      averageDaysBetweenOrders: null,
+      ordersTotal: customer.orders,
+      orders: [],
+    };
+  }
+  try {
+    return await live<CustomerDetail>(`/api/v1/customer?id=${encodeURIComponent(id)}`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
 }
 
 // --- Customers & segments -----------------------------------------------------
