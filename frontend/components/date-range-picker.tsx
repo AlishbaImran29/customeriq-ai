@@ -114,7 +114,7 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
         <div
           role="dialog"
           aria-label="Choose a period"
-          className="absolute left-0 z-30 mt-2 flex w-[min(94vw,600px)] flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:flex-row"
+          className="absolute left-0 z-30 mt-2 flex w-[min(94vw,560px)] flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:flex-row"
         >
           <div className="flex flex-wrap gap-1.5 sm:w-40 sm:shrink-0 sm:flex-col">
             {presets(asOf).map((preset) => {
@@ -225,31 +225,31 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
                 })}
             </div>
             <p className="mt-2 text-[11px] text-slate-400">Days after {formatRange({ from: asOf, to: asOf })} (the last day of data) are not selectable.</p>
-          </div>
 
-          <div className="flex flex-col justify-between gap-3 sm:w-48 sm:shrink-0">
-            <div className="text-xs text-slate-600">
-              {complete ? (
-                <>
-                  <p className="font-medium text-slate-900">{formatRange(complete)}</p>
-                  <p>{days} days</p>
-                  {tooLong ? (
-                    <p className="mt-1 text-rose-700">Choose at most {MAX_RANGE_DAYS} days (about 3 years).</p>
-                  ) : (
-                    <p className="mt-1 text-slate-500">Compared with the {days} days before: {formatRange(previousRange(complete))}.</p>
-                  )}
-                </>
-              ) : (
-                <p>Click an end date to finish the range.</p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setOpen(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button onClick={apply} disabled={!complete || tooLong} className="flex-1">
-                Apply
-              </Button>
+            <div className="mt-3 flex flex-col gap-3 border-t border-slate-100 pt-3">
+              <div className="text-xs text-slate-600">
+                {complete ? (
+                  <>
+                    <p className="font-medium text-slate-900">{formatRange(complete)}</p>
+                    <p>{days} days</p>
+                    {tooLong ? (
+                      <p className="mt-1 text-rose-700">Choose at most {MAX_RANGE_DAYS} days (about 3 years).</p>
+                    ) : (
+                      <p className="mt-1 text-slate-500">Compared with the {days} days before: {formatRange(previousRange(complete))}.</p>
+                    )}
+                  </>
+                ) : (
+                  <p>Click an end date to finish the range.</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setOpen(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button onClick={apply} disabled={!complete || tooLong} className="flex-1">
+                  Apply
+                </Button>
+              </div>
             </div>
           </div>
         </div>
