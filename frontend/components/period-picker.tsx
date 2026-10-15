@@ -2,9 +2,8 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FilterPills } from "@/components/ui/filter-pills";
+import { DEFAULT_PERIOD, PERIOD_OPTIONS } from "@/lib/period";
 
-export const PERIOD_OPTIONS = [30, 90, 180, 365] as const;
-export const DEFAULT_PERIOD = 90;
 
 /** Chooses how many days the revenue and retention figures cover (kept in the page address). */
 export function PeriodPicker({ current }: { current: number }) {

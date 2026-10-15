@@ -20,7 +20,8 @@ import {
 } from "@/components/data-state";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
-import { DEFAULT_PERIOD, PERIOD_OPTIONS, PeriodPicker } from "@/components/period-picker";
+import { PeriodPicker } from "@/components/period-picker";
+import { DEFAULT_PERIOD, PERIOD_OPTIONS } from "@/lib/period";
 import { RevenueForecastChart, SegmentDonutChart } from "@/components/charts/dashboard-charts";
 import { EmptyState } from "@/components/states";
 import { Badge, impactVariant, riskVariant } from "@/components/ui/badge";
