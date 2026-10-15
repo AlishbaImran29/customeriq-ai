@@ -16,6 +16,7 @@ import type {
   HealthBucket,
   HealthFactors,
   Kpis,
+  ModelInfo,
   Recommendation,
   RevenueAtRiskPoint,
   RevenueDriverGroup,
@@ -27,11 +28,15 @@ import type {
   ShareRow,
 } from "@/lib/types";
 
+// Sample predictions in demo mode are part of the made-up sample data.
+const DEMO_MODEL: ModelInfo = { status: "available", reason: null, metrics: [] };
+
 const DEMO_META: DataMeta = {
   source: "demo",
   asOf: null,
   customerCount: mock.kpis.totalCustomers ?? 0,
   segmented: true,
+  models: { churn: DEMO_MODEL, clv: DEMO_MODEL, forecast: DEMO_MODEL },
   unavailable: [],
 };
 

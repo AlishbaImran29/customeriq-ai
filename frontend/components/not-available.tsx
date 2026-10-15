@@ -1,4 +1,4 @@
-const DEFAULT_REASON = "Needs a trained model (Phase 4).";
+const DEFAULT_REASON = "Not available: see the note on this page.";
 
 /** Table-cell marker for a value that cannot be shown yet. */
 export function NotAvailableCell({ reason = DEFAULT_REASON }: { reason?: string }) {

@@ -264,6 +264,14 @@ _request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
     (_anthropic_error(anthropic.NotFoundError, 404, "not_found_error"), "assistant_model_not_found", 502),
     (_anthropic_error(anthropic.RateLimitError, 429, "rate_limit_error"), "assistant_rate_limited", 503),
     (_anthropic_error(anthropic.APIStatusError, 402, "billing_error"), "assistant_quota_exceeded", 503),
+    # Seen live: no credits reported as a 400 with a credit-balance message.
+    (anthropic.BadRequestError(
+        "Your credit balance is too low to access the Anthropic API.",
+        response=httpx.Response(400, request=httpx.Request("POST", "https://api.anthropic.com/v1/messages")),
+        body={"type": "error", "error": {"type": "invalid_request_error",
+                                         "message": "Your credit balance is too low to access the Anthropic API."}},
+    ), "assistant_quota_exceeded", 503),
+    (_anthropic_error(anthropic.BadRequestError, 400, "invalid_request_error"), "assistant_provider_error", 502),
     (_anthropic_error(anthropic.InternalServerError, 529, "overloaded_error"), "assistant_rate_limited", 503),
     (_anthropic_error(anthropic.InternalServerError, 500, "api_error"), "assistant_provider_error", 502),
     (anthropic.APITimeoutError(request=_request), "assistant_timeout", 504),

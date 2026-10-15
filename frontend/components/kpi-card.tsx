@@ -9,6 +9,7 @@ export function KpiCard({
   deltaUnit = "%",
   invertDelta,
   unavailableReason,
+  note,
   icon: Icon,
 }: {
   label: string;
@@ -21,6 +22,8 @@ export function KpiCard({
   invertDelta?: boolean;
   /** Shown instead of the value when `value` is null. */
   unavailableReason?: string;
+  /** Shown under the value when there is no change to show (e.g. a model estimate). */
+  note?: string;
   icon: LucideIcon;
 }) {
   const positive = delta !== null && (invertDelta ? delta < 0 : delta >= 0);
@@ -37,7 +40,7 @@ export function KpiCard({
                 Not available yet
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                {unavailableReason ?? "Needs a trained model (Phase 4)."}
+                {unavailableReason ?? "Not available yet."}
               </p>
             </>
           ) : (
@@ -46,7 +49,7 @@ export function KpiCard({
                 {value}
               </p>
               {delta === null ? (
-                <p className="mt-1 text-xs text-slate-500">Not enough history to compare</p>
+                <p className="mt-1 text-xs text-slate-500">{note ?? "Not enough history to compare"}</p>
               ) : (
                 <p
                   className={cn(

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { AlertTriangle, ShieldAlert, TrendingDown } from "lucide-react";
 import { CustomerExplorer } from "@/components/customer-explorer";
-import { DataErrorState, DataSourceBanner, NoDataState, PageSkeleton, load } from "@/components/data-state";
+import { DataErrorState, DataSourceBanner, ModelNote, NoDataState, PageSkeleton, load } from "@/components/data-state";
 import { NotAvailableValue } from "@/components/not-available";
 import { PageHeader } from "@/components/page-header";
 import { RiskDistributionChart } from "@/components/charts/dashboard-charts";
@@ -30,7 +30,8 @@ async function ChurnContent() {
   if (!result.ok) return <DataErrorState error={result.error} />;
   const { meta, churnRate, churnRateDelta, distribution, customers } = result.data;
   if (meta.source === "live" && !meta.asOf) return <NoDataState />;
-  const live = meta.source === "live";
+  // Without an available churn model the page shows rule-based inactivity instead.
+  const inactivityView = meta.models.churn.status !== "available";
   const total = distribution.reduce((sum, b) => sum + b.customers, 0);
   const elevated = distribution
     .filter((b) => b.level === "High" || b.level === "Critical")
@@ -40,15 +41,26 @@ async function ChurnContent() {
   return (
     <>
       <DataSourceBanner meta={meta} />
-      {live ? (
+      {inactivityView ? (
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-          <strong className="text-slate-900">Churn probability is not available yet.</strong> It needs a
-          trained and validated model (Phase 4). Until then this page shows a <strong>rule-based inactivity
+          <strong className="text-slate-900">Churn probability is not available.</strong>{" "}
+          {meta.models.churn.reason} Until then this page shows a <strong>rule-based inactivity
           level</strong>: days since a customer&apos;s last order divided by their usual gap between orders
           (Low ≤ 1×, Medium ≤ 1.5×, High ≤ 2.5×, Critical beyond). It describes behaviour; it does not
           predict it.
         </div>
-      ) : null}
+      ) : (
+        <>
+          <ModelNote model={meta.models.churn} title="Churn model" />
+          {meta.source === "live" ? (
+            <p className="text-xs text-slate-500">
+              Churn means placing <strong>no order in the next 90 days</strong>. Levels: Low under 25%,
+              Medium 25–50%, High 50–80%, Critical 80% or more. Predicted churn rate is the average
+              chance among customers who ordered in the last 12 months.
+            </p>
+          ) : null}
+        </>
+      )}
 
       <section aria-label="Churn summary" className="grid gap-4 sm:grid-cols-3">
         <Card className="p-4">
@@ -71,18 +83,18 @@ async function ChurnContent() {
         </Card>
         <Card className="p-4">
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-            <AlertTriangle className="h-4 w-4" aria-hidden="true" /> {live ? "High + critical inactivity" : "High + critical risk"}
+            <AlertTriangle className="h-4 w-4" aria-hidden="true" /> {inactivityView ? "High + critical inactivity" : "High + critical risk"}
           </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{formatNumber(elevated)}</p>
           <p className="text-xs text-slate-500">{formatPercent(total ? (elevated / total) * 100 : 0)} of customers</p>
         </Card>
         <Card className="p-4">
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-            <ShieldAlert className="h-4 w-4" aria-hidden="true" /> {live ? "Critical inactivity" : "Critical risk"}
+            <ShieldAlert className="h-4 w-4" aria-hidden="true" /> {inactivityView ? "Critical inactivity" : "Critical risk"}
           </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{formatNumber(critical)}</p>
           <p className="text-xs text-slate-500">
-            {live ? "More than 2.5× their usual gap since the last order" : "Churn probability of 80% or higher"}
+            {inactivityView ? "More than 2.5× their usual gap since the last order" : "Churn probability of 80% or higher"}
           </p>
         </Card>
       </section>
@@ -90,8 +102,8 @@ async function ChurnContent() {
       <div className="grid gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-2">
           <CardHeader>
-            <CardTitle>{live ? "Inactivity levels" : "Risk distribution"}</CardTitle>
-            <CardDescription>{live ? "Customers by rule-based inactivity level." : "Customers by churn risk level."}</CardDescription>
+            <CardTitle>{inactivityView ? "Inactivity levels" : "Risk distribution"}</CardTitle>
+            <CardDescription>{inactivityView ? "Customers by rule-based inactivity level." : "Customers by churn risk level."}</CardDescription>
           </CardHeader>
           <CardContent>
             <RiskDistributionChart data={distribution} />
@@ -116,7 +128,7 @@ async function ChurnContent() {
               )}
               <div className="mt-3">
                 <Badge variant={riskVariant(customer.riskLevel)}>
-                  {customer.riskLevel} {live ? "inactivity" : "risk"}
+                  {customer.riskLevel} {inactivityView ? "inactivity" : "risk"}
                 </Badge>
               </div>
               <p className="mt-auto pt-3 text-sm text-slate-600">
@@ -130,16 +142,16 @@ async function ChurnContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{live ? "Customers by inactivity" : "Churn predictions"}</CardTitle>
+          <CardTitle>{inactivityView ? "Customers by inactivity" : "Churn predictions"}</CardTitle>
           <CardDescription>
-            {live ? "Most inactive first, relative to each customer's own buying rhythm." : "Sorted by churn probability, highest first."}
+            {inactivityView ? "Most inactive first, relative to each customer's own buying rhythm." : "Sorted by churn probability, highest first."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <CustomerExplorer
             customers={customers}
-            caption={live ? "Customers sorted by inactivity" : "Customers sorted by churn probability"}
-            riskLabel={live ? "Inactivity" : "Churn risk"}
+            caption={inactivityView ? "Customers sorted by inactivity" : "Customers sorted by churn probability"}
+            riskLabel={inactivityView ? "Inactivity" : "Churn risk"}
           />
         </CardContent>
       </Card>

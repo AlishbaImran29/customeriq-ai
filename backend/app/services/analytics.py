@@ -1,9 +1,10 @@
 """Descriptive customer analytics computed from imported orders.
 
 Everything here is calculated directly from the data with fixed, documented
-formulas (agreed for Phase 3). Nothing is predicted: churn probability,
-predicted CLV, revenue forecasts and the growth score need trained models
-(Phase 4) and are reported as unavailable.
+formulas (agreed for Phase 3). Nothing in this module is predicted. Churn
+probability, predicted CLV and revenue forecasts come from the separate prediction
+models in services/predictions.py; the growth score has no agreed formula and is
+unavailable.
 
 The reference date ("as of") is the latest order date in the data, so older
 imports are analysed relative to their own end date.
@@ -355,20 +356,27 @@ def retention_rate(
     return retained / len(cohort) * 100
 
 
-def segment_summaries(snapshot: Snapshot) -> list[dict]:
+def segment_summaries(
+    snapshot: Snapshot, predicted_spend: dict[str, float] | None = None
+) -> list[dict]:
+    """Per-segment totals. With `predicted_spend` (a trained CLV model's next-180-day
+    spend per customer), also the average predicted CLV = revenue to date + that spend."""
     if not snapshot.segmented:
         return []
     rows = []
     for name in SEGMENTS:
         members = [c for c in snapshot.customers if c.segment == name]
         revenue = sum(c.revenue for c in members)
+        predicted = None
+        if predicted_spend is not None and members:
+            predicted = (revenue + sum(predicted_spend.get(c.customer_id, 0.0) for c in members)) / len(members)
         rows.append(
             {
                 "name": name,
                 "customers": len(members),
                 "revenue": revenue,
                 "avgClv": revenue / len(members) if members else 0.0,
-                "avgPredictedClv": None,
+                "avgPredictedClv": predicted,
             }
         )
     return rows

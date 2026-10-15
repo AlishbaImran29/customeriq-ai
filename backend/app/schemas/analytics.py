@@ -1,7 +1,9 @@
 """Response shapes for the analytics endpoints (camelCase, matching lib/types.ts).
 
-Fields that need a trained model (churn probability, predicted CLV, forecasts,
-growth score) are always null until Phase 4 and come with an `unavailable` note.
+Prediction fields (churn probability, predicted CLV, forecast) are null unless the
+corresponding model passed its quality gate (see services/predictions.py);
+`meta.models` says which are available, with validation metrics or the reason
+they are not. The growth score is always null (no agreed formula).
 """
 
 from datetime import date
@@ -14,7 +16,7 @@ SegmentName = Literal[
 ]
 RiskLevel = Literal["Low", "Medium", "High", "Critical"]
 
-MODEL_NOT_TRAINED = "Needs a trained and validated model (planned for Phase 4)."
+MODEL_NOT_TRAINED = "Needs a trained and validated model."
 
 
 class Unavailable(CamelModel):
@@ -22,13 +24,33 @@ class Unavailable(CamelModel):
     reason: str
 
 
+class Metric(CamelModel):
+    label: str
+    value: str
+
+
+class ModelInfo(CamelModel):
+    """Whether a prediction model is available, and how well it was tested."""
+
+    status: Literal["available", "unavailable"]
+    reason: str | None
+    metrics: list[Metric]
+
+
+class ModelsMeta(CamelModel):
+    churn: ModelInfo
+    clv: ModelInfo
+    forecast: ModelInfo
+
+
 class Meta(CamelModel):
-    """Common context: data date and which values are not available."""
+    """Common context: data date, model status, and which values are not available."""
 
     source: Literal["live"] = "live"
     as_of: date | None
     customer_count: int
     segmented: bool
+    models: ModelsMeta
     unavailable: list[Unavailable]
 
 
@@ -78,9 +100,13 @@ class SegmentStats(CamelModel):
 
 
 class RevenuePoint(CamelModel):
+    """Actual months have `actual`; forecast months have `forecast` and `range`."""
+
     month: str
-    actual: float
-    partial: bool
+    actual: float | None = None
+    forecast: float | None = None
+    range: tuple[float, float] | None = None
+    partial: bool = False
 
 
 class ShareRow(CamelModel):
@@ -181,7 +207,6 @@ class HealthOut(CamelModel):
 class RevenueOut(CamelModel):
     meta: Meta
     series: list[RevenuePoint]
-    forecast: None = None
     at_risk_by_segment: list[AtRiskRow]
     drivers: RevenueDrivers
 

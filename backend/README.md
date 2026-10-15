@@ -2,10 +2,10 @@
 
 FastAPI + PostgreSQL API for the CustomerIQ AI dashboard.
 
-**Status:** Phase 5. Implemented: database + migrations, CSV/XLSX imports,
-descriptive analytics endpoints (Phase 3), and the AI Business Assistant.
-Not implemented yet: trained ML predictions (churn probability, predicted CLV,
-revenue forecast) — these are always returned as `null` with a reason.
+**Status:** Phase 4 done. Implemented: database + migrations, CSV/XLSX imports,
+descriptive analytics endpoints, trained prediction models (churn probability,
+predicted CLV, revenue forecast), and the AI Business Assistant. The growth score
+has no agreed formula and is always `null`.
 
 ## Requirements
 
@@ -93,6 +93,25 @@ Rules:
 A made-up sample file for trying the import: `tests/fixtures/sample_orders.csv`
 (its last row is intentionally invalid). Delete those `DEMO-` rows afterwards if
 you upload it to a real database.
+
+## Prediction models
+
+`app/services/predictions.py` trains three scikit-learn models from the imported
+orders (`HistGradientBoosting` classifier/regressor; a linear trend with an OLS
+prediction interval for the forecast). They are cached per data fingerprint and
+**retrained automatically** when the data changes.
+
+- **Time-based validation:** features are computed as of a past date (no look-ahead),
+  the label comes from the following 90 / 180 days. Train on the older period, test
+  on the later one; the final model is refit on both and scores customers as of today.
+- **Quality gates:** minimum history and customers (200 training customers, 30
+  examples of each outcome, 12 complete months for the forecast), churn AUC >= 0.65,
+  and the model must beat a simple baseline. If not, the field is `null` and
+  `meta.models.<name>.reason` says why.
+- **Every analytics response** carries `meta.models` (`status`, `reason`, and
+  validation `metrics`). Prediction fields (`churnProbability`, `predictedClv`,
+  forecast points in `series`) are `null`/absent unless the model is available.
+- Missing engagement stays a missing value (never 0).
 
 ## AI Business Assistant
 

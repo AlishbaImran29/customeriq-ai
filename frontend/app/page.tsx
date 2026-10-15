@@ -9,7 +9,15 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { DataErrorState, DataSourceBanner, NoDataState, PageSkeleton, load } from "@/components/data-state";
+import {
+  DataErrorState,
+  DataSourceBanner,
+  ModelNote,
+  NoDataState,
+  PageSkeleton,
+  load,
+  reasonFor,
+} from "@/components/data-state";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
 import { RevenueForecastChart, SegmentDonutChart } from "@/components/charts/dashboard-charts";
@@ -42,11 +50,16 @@ async function OverviewContent() {
     result.data;
   if (meta.source === "live" && !meta.asOf) return <NoDataState />;
   const live = meta.source === "live";
+  const churnPredicted = meta.models.churn.status === "available";
+  const forecastPredicted = meta.models.forecast.status === "available";
   const value = (v: number | null, format: (n: number) => string) => (v === null ? null : format(v));
 
   return (
     <>
       <DataSourceBanner meta={meta} />
+
+      <ModelNote model={meta.models.churn} title="Churn model" />
+      <ModelNote model={meta.models.forecast} title="Revenue forecast" />
 
       <section aria-label="Key metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard label="Total Customers" value={value(kpis.totalCustomers, formatNumber)} delta={kpiDeltas.totalCustomers} icon={Users} />
@@ -70,7 +83,16 @@ async function OverviewContent() {
           unavailableReason="Needs at least 180 days of order history."
           icon={HeartPulse}
         />
-        <KpiCard label="Churn Risk" value={value(kpis.churnRisk, formatPercent)} delta={kpiDeltas.churnRisk} deltaUnit="pts" invertDelta icon={Activity} />
+        <KpiCard
+          label={live ? "Predicted Churn Risk" : "Churn Risk"}
+          value={value(kpis.churnRisk, formatPercent)}
+          delta={kpiDeltas.churnRisk}
+          deltaUnit="pts"
+          invertDelta
+          unavailableReason={reasonFor(meta, "churnRisk")}
+          note="Model estimate: average chance of no order in the next 90 days"
+          icon={Activity}
+        />
         <KpiCard
           label="Growth Score"
           value={value(kpis.growthScore, (n) => `${n}/100`)}
@@ -84,11 +106,13 @@ async function OverviewContent() {
       <div className="grid gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3">
           <CardHeader>
-            <CardTitle>{live ? "Revenue trend" : "Revenue trend & forecast"}</CardTitle>
+            <CardTitle>{forecastPredicted ? "Revenue trend & forecast" : "Revenue trend"}</CardTitle>
             <CardDescription>
-              {live
-                ? "Monthly revenue from your orders. The last month may be partial (month to date). Forecasts need a trained model (Phase 4)."
-                : "Monthly revenue with a three-month forecast and confidence range."}
+              {!live
+                ? "Monthly revenue with a three-month forecast and confidence range."
+                : forecastPredicted
+                  ? "Monthly revenue from your orders with a 3-month trend forecast (model estimate, shaded 80% range). The last month may be partial."
+                  : `Monthly revenue from your orders. The last month may be partial (month to date). Forecast not shown: ${reasonFor(meta, "revenueForecast") ?? "not available."}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -163,11 +187,15 @@ async function OverviewContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{live ? "Valuable customers going quiet" : "Customers most likely to churn"}</CardTitle>
+            <CardTitle>
+              {!live ? "Customers most likely to churn" : churnPredicted ? "Valuable customers likely to leave" : "Valuable customers going quiet"}
+            </CardTitle>
             <CardDescription>
-              {live
-                ? "At-Risk customers with the highest spend in the last 12 months. Inactivity is rule-based, not a prediction."
-                : "Ranked by predicted churn probability."}
+              {!live
+                ? "Ranked by predicted churn probability."
+                : churnPredicted
+                  ? "Highest expected revenue loss: predicted chance of leaving × 12-month spend. Model estimate."
+                  : "At-Risk customers with the highest spend in the last 12 months. Inactivity is rule-based, not a prediction."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -197,7 +225,7 @@ async function OverviewContent() {
               </ul>
             )}
             <Link href="/churn" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:text-teal-800">
-              {live ? "View inactivity levels" : "View churn predictions"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              {churnPredicted ? "View churn predictions" : "View inactivity levels"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </CardContent>
         </Card>

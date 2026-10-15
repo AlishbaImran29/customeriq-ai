@@ -105,6 +105,7 @@ export function RevenueForecastChart({ data }: { data: RevenuePoint[] }) {
           fillOpacity={0.15}
           legendType="square"
           activeDot={false}
+          connectNulls
           isAnimationActive={false}
         />
         ) : null}
@@ -124,6 +125,7 @@ export function RevenueForecastChart({ data }: { data: RevenuePoint[] }) {
             strokeWidth={2}
             strokeDasharray="5 4"
             dot={false}
+            connectNulls
             activeDot={{ r: 4 }}
           />
         ) : null}

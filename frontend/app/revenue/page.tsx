@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { DataErrorState, DataSourceBanner, NoDataState, PageSkeleton, load } from "@/components/data-state";
+import { DataErrorState, DataSourceBanner, ModelNote, NoDataState, PageSkeleton, load, reasonFor } from "@/components/data-state";
 import { NotAvailableValue } from "@/components/not-available";
 import { PageHeader } from "@/components/page-header";
 import { RevenueAtRiskCalculator } from "@/components/revenue-at-risk-calculator";
@@ -39,6 +39,7 @@ async function RevenueContent() {
   const { meta, series, atRiskTrend, atRiskBySegment, drivers } = result.data;
   if (meta.source === "live" && !meta.asOf) return <NoDataState />;
   const live = meta.source === "live";
+  const forecastPredicted = meta.models.forecast.status === "available";
 
   const actuals = series.filter((p) => p.actual !== undefined);
   // Compare complete months only; a month still in progress would look like a drop.
@@ -55,6 +56,7 @@ async function RevenueContent() {
   return (
     <>
       <DataSourceBanner meta={meta} />
+      <ModelNote model={meta.models.forecast} title="Revenue forecast" />
 
       <section aria-label="Revenue summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
@@ -73,11 +75,11 @@ async function RevenueContent() {
         <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Next 3 months forecast</p>
           {forecast.length === 0 ? (
-            <NotAvailableValue />
+            <NotAvailableValue reason={reasonFor(meta, "revenueForecast")} />
           ) : (
             <>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(forecastTotal)}</p>
-              <p className="text-xs text-slate-500">Includes holiday peak</p>
+              <p className="text-xs text-slate-500">{live ? "Model estimate (see range on the chart)" : "Includes holiday peak"}</p>
             </>
           )}
         </Card>
@@ -112,11 +114,13 @@ async function RevenueContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{live ? "Revenue trend" : "Revenue trend & forecast"}</CardTitle>
+          <CardTitle>{live && !forecastPredicted ? "Revenue trend" : "Revenue trend & forecast"}</CardTitle>
           <CardDescription>
-            {live
-              ? "Monthly revenue from your orders. The last month may be partial (month to date). Forecasting needs a trained model (Phase 4)."
-              : "Actual revenue through October; forecast with confidence range for the next three months."}
+            {!live
+              ? "Actual revenue through October; forecast with confidence range for the next three months."
+              : forecastPredicted
+                ? "Monthly revenue from your orders, then a 3-month trend forecast (model estimate) with a shaded 80% range. The last actual month may be partial."
+                : `Monthly revenue from your orders. The last month may be partial (month to date). Forecast not shown: ${reasonFor(meta, "revenueForecast") ?? "not available."}`}
           </CardDescription>
         </CardHeader>
         <CardContent>

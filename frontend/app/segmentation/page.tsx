@@ -28,6 +28,7 @@ async function SegmentationContent() {
   const [{ meta, segments }, { customers, total }] = result.data;
   if (meta.source === "live" && !meta.asOf) return <NoDataState />;
   const live = meta.source === "live";
+  const churnPredicted = meta.models.churn.status === "available";
   const totalCustomers = segments.reduce((sum, s) => sum + s.customers, 0);
   const totalRevenue = segments.reduce((sum, s) => sum + s.revenue, 0);
   const share = (part: number, whole: number) => formatPercent(whole ? (part / whole) * 100 : 0);
@@ -106,7 +107,7 @@ async function SegmentationContent() {
         <CardHeader>
           <CardTitle>Customer roster</CardTitle>
           <CardDescription>
-            Search and filter customers by segment and {live ? "inactivity" : "churn risk"}.
+            Search and filter customers by segment and {churnPredicted ? "churn risk" : "inactivity"}.
             {total > customers.length ? ` Showing the top ${formatNumber(customers.length)} of ${formatNumber(total)} by revenue.` : ""}
           </CardDescription>
         </CardHeader>
@@ -114,7 +115,7 @@ async function SegmentationContent() {
           <CustomerExplorer
             customers={customers}
             caption="Customers with segment, health, CLV, and risk level"
-            riskLabel={live ? "Inactivity" : "Churn risk"}
+            riskLabel={churnPredicted ? "Churn risk" : "Inactivity"}
           />
         </CardContent>
       </Card>

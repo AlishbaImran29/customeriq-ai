@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { DataErrorState, DataSourceBanner, NoDataState, PageSkeleton, load } from "@/components/data-state";
+import { DataErrorState, DataSourceBanner, ModelNote, NoDataState, PageSkeleton, load } from "@/components/data-state";
 import { NotAvailableCell, NotAvailableValue } from "@/components/not-available";
 import { PageHeader } from "@/components/page-header";
 import { ClvBySegmentChart } from "@/components/charts/dashboard-charts";
@@ -35,6 +35,7 @@ async function ClvContent() {
   const { meta, averageClv, averagePredictedClv, segments, customers } = result.data;
   if (meta.source === "live" && !meta.asOf) return <NoDataState />;
   const live = meta.source === "live";
+  const predicted = meta.models.clv.status === "available";
   const portfolioGrowth =
     averageClv && averagePredictedClv !== null ? ((averagePredictedClv - averageClv) / averageClv) * 100 : null;
   const rows = customers
@@ -47,6 +48,17 @@ async function ClvContent() {
   return (
     <>
       <DataSourceBanner meta={meta} />
+      <ModelNote model={meta.models.clv} title="Predicted CLV" />
+      {!predicted ? (
+        <p className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+          <strong className="text-slate-900">Predicted CLV is not available.</strong>{" "}
+          {meta.models.clv.reason} Current CLV below is actual revenue to date.
+        </p>
+      ) : live ? (
+        <p className="text-xs text-slate-500">
+          Predicted CLV = revenue to date + the model&apos;s estimate of spend over the next 6 months.
+        </p>
+      ) : null}
 
       <section aria-label="CLV summary" className="grid gap-4 sm:grid-cols-3">
         <Card className="p-4">
@@ -57,7 +69,7 @@ async function ClvContent() {
         <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Average predicted CLV</p>
           {averagePredictedClv === null ? (
-            <NotAvailableValue />
+            <NotAvailableValue reason={meta.models.clv.reason ?? undefined} />
           ) : (
             <>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(averagePredictedClv)}</p>
@@ -68,7 +80,7 @@ async function ClvContent() {
         <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Portfolio growth potential</p>
           {portfolioGrowth === null ? (
-            <NotAvailableValue />
+            <NotAvailableValue reason={meta.models.clv.reason ?? undefined} />
           ) : (
             <>
               <p className="mt-2 text-2xl font-semibold tabular-nums text-emerald-700">{formatSignedPercent(portfolioGrowth)}</p>
@@ -80,11 +92,13 @@ async function ClvContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{live ? "Average CLV by segment" : "Current vs predicted CLV by segment"}</CardTitle>
+          <CardTitle>{predicted ? "Current vs predicted CLV by segment" : "Average CLV by segment"}</CardTitle>
           <CardDescription>
-            {live
-              ? "Revenue to date per customer in each segment. Predicted CLV will be added once a model is trained (Phase 4)."
-              : "Champions and Potential Loyalists are expanding; At-Risk and Lost customers are contracting."}
+            {!live
+              ? "Champions and Potential Loyalists are expanding; At-Risk and Lost customers are contracting."
+              : predicted
+                ? "Average revenue to date per customer in each segment, next to the model's predicted CLV."
+                : "Revenue to date per customer in each segment."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,11 +112,11 @@ async function ClvContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{live ? "Customer CLV" : "Customer CLV forecast"}</CardTitle>
+          <CardTitle>{predicted ? "Customer CLV forecast" : "Customer CLV"}</CardTitle>
           <CardDescription>
-            {live
-              ? `Highest value first${customers.length < meta.customerCount ? ` (top ${formatNumber(customers.length)} of ${formatNumber(meta.customerCount)})` : ""}.`
-              : "Sorted by growth potential. Negative growth flags customers to retain."}
+            {predicted
+              ? "Sorted by growth potential. Negative growth flags customers to retain."
+              : `Highest value first${customers.length < meta.customerCount ? ` (top ${formatNumber(customers.length)} of ${formatNumber(meta.customerCount)})` : ""}.`}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -28,9 +28,12 @@ Rules:
   about this business, and never invent numbers, customers, or trends.
 - If the summary does not contain what is needed, say so plainly and suggest what data
   or feature would be required.
-- Items under "notAvailable" are not available. Never estimate them. For example,
-  for churn questions use the rule-based inactivity levels and say they describe
-  behaviour rather than predict it.
+- Items under "notAvailable" are not available. Never estimate them. If churn
+  probability is listed there, use the rule-based inactivity levels instead and say they
+  describe behaviour rather than predict it.
+- Figures under "predictions" are MODEL ESTIMATES, not facts. Call them estimates,
+  mention how well the model did on unseen data (its "validation"), and never state them
+  with certainty. Keep actual figures and estimates clearly separate.
 - Mention the data date (dataAsOf) when giving figures. Use the definitions provided.
 - Customers are identified by customerId only. You have no names or contact details.
 - Be concise: a short answer, then up to 4 bullet points with figures, then one
@@ -113,7 +116,11 @@ class ClaudeModel:
                 503, "assistant_unreachable", "Could not reach the AI provider. Check the internet connection."
             ) from exc
         except anthropic.APIStatusError as exc:
-            if exc.type == "billing_error":
+            # Type and status only: enough to diagnose, never message content.
+            logger.warning("Anthropic API error: status=%s type=%s", exc.status_code, exc.type)
+            # Low credit balance can arrive as 402 billing_error or as a 400
+            # invalid_request_error whose message names the credit balance.
+            if exc.type == "billing_error" or "credit balance" in exc.message.lower():
                 raise ApiError(
                     503, "assistant_quota_exceeded",
                     "The Anthropic account has no remaining credits. Add credits in the Claude Console (Billing).",

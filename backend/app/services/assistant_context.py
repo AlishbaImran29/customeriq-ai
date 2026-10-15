@@ -7,15 +7,13 @@ customers appear only by their imported customer_id with aggregate figures.
 from typing import Any
 
 from app.services import analytics as a
+from app.services import predictions as pr
 
 TOP_ROWS = 5
 TOP_CUSTOMERS = 10
 RECENT_MONTHS = 13
 
-NOT_AVAILABLE = [
-    "churn probability (needs a trained model)",
-    "predicted CLV (needs a trained model)",
-    "revenue forecast (needs a trained model)",
+ALWAYS_NOT_AVAILABLE = [
     "growth score (no agreed formula yet)",
     "profit or margins (no cost data is imported)",
 ]
@@ -29,7 +27,72 @@ DEFINITIONS = {
     "inactivityLevel": "Rule-based: days since last order divided by the customer's usual gap. Not a prediction.",
     "revenueAtRisk": "Last-12-month spend of customers now At-Risk or Lost. Historical, not a predicted loss.",
     "healthScore": "0–100 from purchase frequency, spending, engagement and activity trend.",
+    "churnProbability": "Model estimate of the chance a customer places no order in the next 90 days. Not a certainty.",
+    "predictedClv": "Model estimate: revenue to date plus predicted spend over the next 180 days.",
+    "revenueForecast": "Model estimate of monthly revenue with an 80% prediction range; seasonality is not modelled.",
 }
+
+
+def _not_available(preds: pr.Predictions) -> list[str]:
+    missing = list(ALWAYS_NOT_AVAILABLE)
+    for name, label in (("churn", "churn probability"), ("clv", "predicted CLV"), ("forecast", "revenue forecast")):
+        model = getattr(preds, name)
+        if not model.available:
+            missing.append(f"{label} ({model.reason})")
+    return missing
+
+
+def _model_summary(model: pr.ModelResult) -> dict[str, Any]:
+    return {
+        "status": model.status,
+        "reason": model.reason,
+        # How well it did when tested on a period it was not trained on.
+        "validation": dict(model.metrics) if model.available else None,
+    }
+
+
+def _prediction_details(snapshot: a.Snapshot, preds: pr.Predictions) -> dict[str, Any]:
+    details: dict[str, Any] = {
+        "models": {
+            "churn": _model_summary(preds.churn),
+            "clv": _model_summary(preds.clv),
+            "revenueForecast": _model_summary(preds.forecast),
+        }
+    }
+    if preds.churn.available:
+        levels = {level: 0 for level in a.INACTIVITY_LEVELS}
+        for c in snapshot.customers:
+            probability = preds.churn_probability.get(c.customer_id)
+            if probability is not None:
+                levels[pr.risk_level_from_probability(probability)] += 1
+        at_risk = sorted(
+            snapshot.customers,
+            key=lambda c: preds.churn_probability.get(c.customer_id, 0.0) * c.revenue_12m,
+            reverse=True,
+        )[:TOP_CUSTOMERS]
+        details["churn"] = {
+            "averageChurnRiskPct": _r(pr.churn_kpi(snapshot, preds), 1),
+            "customersByRiskLevel": levels,
+            "highestExpectedRevenueLoss": [
+                {
+                    "customerId": c.customer_id,
+                    "churnProbabilityPct": round(preds.churn_probability.get(c.customer_id, 0.0) * 100, 1),
+                    "spendLast12Months": round(c.revenue_12m, 2),
+                    "daysSinceLastOrder": c.recency_days,
+                }
+                for c in at_risk
+            ],
+        }
+    if preds.clv.available and snapshot.customers:
+        details["clv"] = {
+            "averagePredictedClv": round(
+                sum(c.revenue + preds.predicted_spend.get(c.customer_id, 0.0) for c in snapshot.customers)
+                / len(snapshot.customers), 2,
+            )
+        }
+    if preds.forecast.available:
+        details["revenueForecast"] = preds.forecast_points
+    return details
 
 
 def _r(value: float | None, digits: int = 2) -> float | None:
@@ -37,7 +100,9 @@ def _r(value: float | None, digits: int = 2) -> float | None:
 
 
 def build_context(snapshot: a.Snapshot) -> dict[str, Any]:
+    preds = pr.get_predictions(snapshot)
     values, deltas = a.kpis(snapshot)
+    values["churnRisk"] = pr.churn_kpi(snapshot, preds)
     drivers = a.revenue_drivers(snapshot)
     attention = sorted(
         (c for c in snapshot.customers if c.segment == "At-Risk Customers"),
@@ -83,6 +148,7 @@ def build_context(snapshot: a.Snapshot) -> dict[str, Any]:
             }
             for c in attention
         ],
+        "predictions": _prediction_details(snapshot, preds),
         "definitions": DEFINITIONS,
-        "notAvailable": NOT_AVAILABLE,
+        "notAvailable": _not_available(preds),
     }

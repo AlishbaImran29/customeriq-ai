@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
-import { Database, FileUp, Info } from "lucide-react";
+import { Database, FileUp, FlaskConical, Info } from "lucide-react";
 import { RetryButton } from "@/components/retry-button";
 import { EmptyState, ErrorState } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/config";
-import type { DataMeta } from "@/lib/types";
+import type { DataMeta, ModelInfo } from "@/lib/types";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export type LoadResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -45,9 +45,46 @@ export function DataSourceBanner({ meta }: { meta: DataMeta }) {
         <strong>Live data</strong> from your database
         {meta.asOf ? <> · as of {formatDate(meta.asOf)} (latest order)</> : null} ·{" "}
         {formatNumber(meta.customerCount)} customers. Figures are calculated with fixed formulas;
-        predictions are not available yet.
+        predictions appear only when a model passed its accuracy test (shown where used).
       </p>
     </div>
+  );
+}
+
+/** The reason a value is not shown, from the response's `unavailable` list. */
+export function reasonFor(meta: DataMeta, field: string): string | undefined {
+  return meta.unavailable.find((item) => item.field === field)?.reason;
+}
+
+/**
+ * Labels model estimates and shows how the model did on data it had not seen.
+ * Renders nothing in demo mode or when the model is unavailable.
+ */
+export function ModelNote({
+  model,
+  title,
+  className,
+}: {
+  model: ModelInfo;
+  title: string;
+  className?: string;
+}) {
+  if (model.status !== "available" || model.metrics.length === 0) return null;
+  return (
+    <details className={`rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900 ${className ?? ""}`}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 font-medium">
+        <FlaskConical className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {title}: model estimates, not facts. Tested on unseen data. <span className="font-normal underline">Details</span>
+      </summary>
+      <dl className="mt-2 grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+        {model.metrics.map((metric) => (
+          <div key={metric.label} className="flex justify-between gap-3">
+            <dt className="text-sky-800">{metric.label}</dt>
+            <dd className="font-medium tabular-nums">{metric.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }
 

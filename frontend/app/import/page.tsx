@@ -23,7 +23,8 @@ const pipeline = [
   { step: "Clean values; reject rows with missing required data", done: live },
   { step: "Skip duplicate order IDs in a file; update existing orders", done: live },
   { step: "Engineer features (recency, frequency, monetary)", done: false },
-  { step: "Run segmentation, churn, CLV, and health models", done: false },
+  { step: "Segmentation and health scores calculated from your data", done: live },
+  { step: "Churn, CLV, and forecast models retrain automatically (only shown if accurate enough)", done: live },
 ];
 
 export default function ImportPage() {

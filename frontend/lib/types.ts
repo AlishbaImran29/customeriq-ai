@@ -2,7 +2,8 @@
 // They mirror the FastAPI response shapes (backend/app/schemas/analytics.py).
 //
 // `null` means "not available": predictions (churn probability, predicted CLV,
-// forecasts, growth score) stay null until trained models exist (Phase 4).
+// forecasts) are only present when their model passed a quality gate (see
+// `DataMeta.models`); the growth score stays null (no agreed formula).
 
 export type SegmentName =
   | "Champions"
@@ -15,6 +16,17 @@ export type RiskLevel = "Low" | "Medium" | "High" | "Critical";
 
 export type DataSource = "demo" | "live";
 
+/** Whether a prediction model is available, and how it did on unseen data. */
+export type ModelInfo = {
+  status: "available" | "unavailable";
+  /** Why it is unavailable (not enough data, or not better than a simple rule). */
+  reason: string | null;
+  /** Validation results: tested on a later period the model was not trained on. */
+  metrics: { label: string; value: string }[];
+};
+
+export type ModelsMeta = { churn: ModelInfo; clv: ModelInfo; forecast: ModelInfo };
+
 /** Context returned with every analytics response. */
 export type DataMeta = {
   source: DataSource;
@@ -23,6 +35,7 @@ export type DataMeta = {
   customerCount: number;
   /** False when there are too few customers to segment. */
   segmented: boolean;
+  models: ModelsMeta;
   /** Values that cannot be shown yet, with the reason. */
   unavailable: { field: string; reason: string }[];
 };
@@ -49,10 +62,11 @@ export type Customer = {
   /** Revenue to date (historical CLV). */
   currentClv: number;
   predictedClv: number | null;
-  /** 0–100; null until a churn model exists. */
+  /** 0–100; null unless the churn model passed its quality gate. */
   churnProbability: number | null;
   /**
-   * Demo data: sample churn risk. Live data: rule-based inactivity level
+   * Demo data: sample churn risk. Live data: from the churn probability when a
+   * churn model is available, otherwise the rule-based inactivity level
    * (days since last order ÷ usual gap between orders) — not a prediction.
    */
   riskLevel: RiskLevel;

@@ -55,8 +55,9 @@ export default function AssistantPage() {
                   API key stays on the server and is never sent to your browser.
                 </p>
                 <p>
-                  Predictions (churn probability, predicted CLV, forecasts) are not available yet, so
-                  the assistant will say so instead of guessing.
+                  Predictions (churn probability, predicted CLV, forecasts) are included only when
+                  their model passed an accuracy test on unseen data. The assistant presents them as
+                  estimates, and says so when one is not available instead of guessing.
                 </p>
               </CardContent>
             </Card>

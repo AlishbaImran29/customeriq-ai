@@ -21,7 +21,8 @@ The project specification is in [`docs/specification.pdf`](docs/specification.pd
 | Dashboard KPIs, RFM segments, health scores, revenue trends and drivers | ✅ Calculated from your data with fixed formulas |
 | Inactivity levels, revenue at risk, recommendations, executive summary | ✅ Rule-based (described as such in the UI) |
 | AI Business Assistant | ✅ Real once `ANTHROPIC_API_KEY` is set; answers only from your summary figures |
-| Churn probability, predicted CLV, revenue forecast, growth score | ⏳ Not available — needs trained models (Phase 4). Shown as "Not available yet". |
+| Churn probability, predicted CLV, 3-month revenue forecast | ✅ Trained models (scikit-learn), **shown only if they pass an accuracy test** on data they were not trained on. Otherwise "Not available" with the reason. Details below. |
+| Growth score | ⏳ Not available — there is no agreed formula for it yet |
 | Sign-in / user accounts | ⏳ Not built. The header shows a "Demo workspace" placeholder. |
 | Shopify orders export (CSV) | ✅ Detected automatically and converted on the server |
 | Shopify / WooCommerce API sync | ⏳ Not built. Use the Shopify CSV export (or a standard CSV) for now. |
@@ -147,6 +148,29 @@ it is recognised automatically:
   Partially refunded orders count `Total − Refunded Amount`.
 - Shopify exports do not include product categories or engagement, so those
   dashboard parts show "Not specified" / use the re-weighted health score.
+
+### Predictions (trained models)
+
+Three models retrain **automatically whenever your imported data changes**:
+
+| Model | What it estimates | Needs at least |
+| --- | --- | --- |
+| Churn probability | The chance a customer places **no order in the next 90 days** | ~9 months of orders and 200+ customers with history 6 months ago |
+| Predicted CLV | Revenue to date **plus** estimated spend over the next 6 months | ~15 months of orders and 200+ customers with history 12 months ago |
+| Revenue forecast | The next 3 months, with an 80% range (straight-line trend, no seasonality) | 12+ complete months of orders |
+
+How they are kept honest:
+
+- Each model learns from an **older period** and is **tested on a later period it
+  never saw**. The test results appear next to the predictions (the blue
+  "model estimates, not facts" note).
+- A model is shown only if it beats a simple rule of thumb (for churn: "longer
+  since last order = riskier"; for CLV: "spend what you spent in the last 6
+  months"; for the forecast: "repeat the recent average"). Otherwise the page
+  says why it is not available.
+- Missing engagement is never treated as zero.
+- Predictions are **estimates**. They are only as good as the data: models
+  trained on the synthetic test data prove the code works, nothing more.
 
 ### Test data (synthetic)
 

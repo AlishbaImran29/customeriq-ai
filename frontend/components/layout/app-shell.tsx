@@ -188,7 +188,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </p>
             <p className="mt-1">
               {LIVE
-                ? "Dashboards use your imported data. ML predictions and the AI assistant are not connected yet."
+                ? "Dashboards use your imported data. Predictions appear only when a model passed its accuracy test."
                 : "No backend configured. Dashboards show sample data."}
             </p>
           </div>
