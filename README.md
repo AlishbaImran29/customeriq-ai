@@ -277,6 +277,10 @@ names or emails.
 
 ---
 
+## Putting it on the internet
+
+Step-by-step guide (GitHub, Supabase, Railway, Vercel): [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
 ## Checks
 
 ```powershell
