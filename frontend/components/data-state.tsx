@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { redirect, unstable_rethrow } from "next/navigation";
-import { Database, FileUp, FlaskConical, Info } from "lucide-react";
+import { Database, FlaskConical, Info } from "lucide-react";
 import { RetryButton } from "@/components/retry-button";
-import { EmptyState, ErrorState } from "@/components/states";
+import { ErrorState } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/config";
 import type { DataMeta, ModelInfo } from "@/lib/types";
@@ -93,23 +92,7 @@ export function ModelNote({
 }
 
 /** Shown in live mode when nothing has been imported yet. */
-export function NoDataState() {
-  return (
-    <EmptyState
-      icon={FileUp}
-      title="No customer data yet"
-      description="Import a CSV or Excel file of orders to see this page with your own data."
-      action={
-        <Link
-          href="/import"
-          className="inline-flex items-center rounded-xl bg-teal-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-teal-700"
-        >
-          Import data
-        </Link>
-      }
-    />
-  );
-}
+export { NoDataState } from "@/components/no-data-state";
 
 export function DataErrorState({ error }: { error: ApiError }) {
   const hint =

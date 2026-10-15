@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { CurrencyMenu } from "@/components/layout/currency-menu";
+import { LanguageToggle } from "@/components/layout/language-toggle";
+import { useLanguage } from "@/lib/i18n";
 import { API_MODE } from "@/lib/api/config";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +74,7 @@ function useIsDesktop() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -115,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         href="#main-content"
         className="sr-only z-50 rounded-lg bg-white px-3 py-2 text-sm font-medium text-teal-800 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
-        Skip to content
+        {t("Skip to content")}
       </a>
       <div className="flex min-h-screen">
         {open ? (
@@ -155,7 +158,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 pb-3">
             {navGroups.map((group) => (
-              <div key={group.label}>
+              <div key={t(group.label)}>
                 <p className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">
                   {group.label}
                 </p>
@@ -176,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           )}
                         >
                           <item.icon className="h-4 w-4" aria-hidden="true" />
-                          {item.label}
+                          {t(item.label)}
                         </Link>
                       </li>
                     );
@@ -188,12 +191,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="m-3 rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400">
             <p className="flex items-center gap-1 font-medium text-slate-200">
               <Sparkles className="h-3.5 w-3.5 text-teal-400" aria-hidden="true" />
-              {LIVE ? "Live workspace" : "Demo workspace"}
+              {t(LIVE ? "Live workspace" : "Demo workspace")}
             </p>
             <p className="mt-1">
-              {LIVE
-                ? "Dashboards use your imported data. Predictions appear only when a model passed its accuracy test."
-                : "No backend configured. Dashboards show sample data."}
+              {t(LIVE ? "Dashboards use your imported data. Predictions appear only when a model passed its accuracy test." : "No backend configured. Dashboards show sample data.")}
             </p>
           </div>
         </aside>
@@ -210,9 +211,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <p className="truncate text-sm font-medium text-slate-900 lg:hidden">{currentLabel}</p>
+            <p className="truncate text-sm font-medium text-slate-900 lg:hidden">{t(currentLabel)}</p>
             <p className="hidden text-sm text-slate-500 lg:block">
-              E-commerce growth copilot for Shopify, WooCommerce, and Magento
+              {t("E-commerce growth copilot for Shopify, WooCommerce, and Magento")}
             </p>
             <div className="ml-auto flex items-center gap-3">
               <span
@@ -221,8 +222,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   LIVE ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800",
                 )}
               >
-                {LIVE ? "Live data" : "Demo data"}
+                {t(LIVE ? "Live data" : "Demo data")}
               </span>
+              <LanguageToggle />
               <CurrencyMenu />
               <AccountMenu />
             </div>

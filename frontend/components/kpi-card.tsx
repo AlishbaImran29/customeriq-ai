@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { T } from "@/components/t";
 import { cn, formatPercent } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
@@ -32,15 +33,15 @@ export function KpiCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            {label}
+            <T>{label}</T>
           </p>
           {value === null ? (
             <>
               <p className="mt-2 text-lg font-semibold tracking-tight text-slate-400">
-                Not available yet
+                <T>Not available yet</T>
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                {unavailableReason ?? "Not available yet."}
+                <T>{unavailableReason ?? "Not available yet."}</T>
               </p>
             </>
           ) : (
@@ -49,7 +50,7 @@ export function KpiCard({
                 {value}
               </p>
               {delta === null ? (
-                <p className="mt-1 text-xs text-slate-500">{note ?? "Not enough history to compare"}</p>
+                <p className="mt-1 text-xs text-slate-500"><T>{note ?? "Not enough history to compare"}</T></p>
               ) : (
                 <p
                   className={cn(
@@ -58,7 +59,7 @@ export function KpiCard({
                   )}
                 >
                   {delta > 0 ? "+" : ""}
-                  {deltaUnit === "%" ? formatPercent(delta) : `${delta.toFixed(1)} pts`} vs last period
+                  {deltaUnit === "%" ? formatPercent(delta) : `${delta.toFixed(1)} pts`} <T>vs last period</T>
                 </p>
               )}
             </>

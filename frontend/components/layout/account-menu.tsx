@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { KeyRound, Loader2, LogOut, UserRound } from "lucide-react";
 import { getMe, initialsOf, signOut, type AuthUser } from "@/lib/api/auth";
 import { API_MODE } from "@/lib/api/config";
+import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Header avatar: the signed-in person (live mode) or a demo placeholder (demo mode). */
@@ -32,6 +33,7 @@ function DemoAvatar() {
 
 function SignedInMenu() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -123,7 +125,7 @@ function SignedInMenu() {
           className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 disabled:opacity-60"
         >
           {signingOut ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <LogOut className="h-4 w-4" aria-hidden="true" />}
-          {signingOut ? "Signing out…" : "Sign out"}
+          {signingOut ? "Signing out…" : t("Sign out")}
         </button>
       </div>
     </div>
