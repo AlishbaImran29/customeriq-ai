@@ -25,6 +25,10 @@ class ImportJob(TimestampMixin, Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     filename: Mapped[str] = mapped_column(String(255))
     file_type: Mapped[str] = mapped_column(String(10))
+    # Detected layout: "standard" columns or a store export such as "shopify".
+    file_format: Mapped[str] = mapped_column(String(20), default="standard", server_default="standard")
+    # Non-empty data rows in the file (Shopify: one per line item, grouped into orders).
+    rows_in_file: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     status: Mapped[ImportStatus] = mapped_column(
         Enum(
             ImportStatus,

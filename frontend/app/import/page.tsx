@@ -11,7 +11,8 @@ const live = API_MODE === "live";
 const sources = [
   { name: "CSV upload", status: live ? "Connected" : "Preview only (demo)", ok: live },
   { name: "Excel (.xlsx)", status: live ? "Connected" : "Needs backend", ok: live },
-  { name: "Shopify", status: "Not built yet", ok: false },
+  { name: "Shopify orders export (CSV)", status: live ? "Supported" : "Needs backend", ok: live },
+  { name: "Shopify API sync", status: "Not built yet", ok: false },
   { name: "WooCommerce", status: "Not built yet", ok: false },
   { name: "CRM integrations", status: "Not built yet", ok: false },
 ];

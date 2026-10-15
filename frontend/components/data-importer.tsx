@@ -338,7 +338,7 @@ function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: 
   const listed = result.errors.slice(0, MAX_LISTED_ERRORS);
   const hiddenErrors = result.errorCount - listed.length;
   const stats = [
-    { label: "Rows received", value: result.rowsReceived },
+    { label: result.fileFormat === "shopify" ? "Orders received" : "Rows received", value: result.rowsReceived },
     { label: "New orders", value: result.rowsImported },
     { label: "Updated orders", value: result.rowsUpdated },
     { label: "Rejected rows", value: result.rowsRejected },
@@ -358,6 +358,9 @@ function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: 
           </CardTitle>
           <CardDescription>
             {result.filename} · processed on the server.
+            {result.fileFormat === "shopify"
+              ? ` Shopify export: ${formatNumber(result.rowsInFile)} line-item rows grouped into ${formatNumber(result.rowsReceived)} orders.`
+              : ""}
             {result.rowsRejected > 0
               ? " Fix the rejected rows and upload the file again — orders already saved will be updated, not duplicated."
               : ""}
@@ -461,6 +464,15 @@ function CsvResult({
               {blocking ? "Fix required" : "Ready to import"}
             </Badge>
           </div>
+          {analysis.format === "shopify" ? (
+            <ul className="space-y-2">
+              <CheckRow
+                ok
+                label="Shopify orders export detected"
+                detail="The server groups line-item rows into orders, uses the customer's email as their ID, skips canceled, voided, and fully refunded orders, and subtracts partial refunds."
+              />
+            </ul>
+          ) : (
           <ul className="space-y-2">
             <CheckRow
               ok={!blocking}
@@ -482,6 +494,7 @@ function CsvResult({
               label={`${formatNumber(analysis.invalidOrderValues)} non-numeric order values`}
             />
           </ul>
+          )}
           <p className="mt-3 text-xs text-slate-500">
             Quick browser check only — the server re-checks every row when you import.
           </p>

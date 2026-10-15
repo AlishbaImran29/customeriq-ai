@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Customer, ImportJob, ImportStatus, Order
 from app.services.import_files import parse_file
+from app.services.import_formats import convert
 from app.services.import_validation import OrderRow, validate_rows
 
 logger = logging.getLogger(__name__)
@@ -33,19 +34,23 @@ def safe_filename(filename: str | None) -> str:
 def run_import(db: Session, filename: str, file_type: str, content: bytes) -> ImportJob:
     """Validate and import a file. File-level problems raise ApiError (no job saved)."""
     parsed = parse_file(content, file_type)
-    result = validate_rows(parsed)
+    converted = convert(parsed)  # e.g. Shopify line items -> one row per order
+    result = validate_rows(converted.parsed)
+    problems = sorted(converted.skipped + result.errors, key=lambda e: e.row or 0)
 
     job = ImportJob(
         id=uuid.uuid4(),
         filename=filename,
         file_type=file_type,
+        file_format=converted.file_format,
+        rows_in_file=len(parsed.rows),
         status=ImportStatus.PROCESSING,
-        rows_received=len(parsed.rows),
+        rows_received=len(converted.parsed.rows) + len(converted.skipped),
         rows_imported=0,
         rows_updated=0,
-        rows_rejected=result.rejected_rows,
-        error_count=len(result.errors),
-        errors=[e.as_dict() for e in result.errors[:MAX_STORED_ERRORS]],
+        rows_rejected=result.rejected_rows + len(converted.skipped),
+        error_count=len(problems),
+        errors=[e.as_dict() for e in problems[:MAX_STORED_ERRORS]],
     )
     db.add(job)
     db.commit()
@@ -69,8 +74,9 @@ def run_import(db: Session, filename: str, file_type: str, content: bytes) -> Im
 
     # Counts only — never log file contents or customer values.
     logger.info(
-        "Import %s completed: received=%d inserted=%d updated=%d rejected=%d",
-        job.id, job.rows_received, job.rows_imported, job.rows_updated, job.rows_rejected,
+        "Import %s (%s) completed: received=%d inserted=%d updated=%d rejected=%d",
+        job.id, job.file_format, job.rows_received, job.rows_imported, job.rows_updated,
+        job.rows_rejected,
     )
     return job
 

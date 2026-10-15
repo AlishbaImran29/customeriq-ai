@@ -25,6 +25,8 @@ class ImportJobOut(CamelModel):
     id: uuid.UUID
     filename: str
     file_type: str
+    file_format: str
+    rows_in_file: int
     status: ImportStatus
     rows_received: int
     rows_imported: int
@@ -43,6 +45,8 @@ class ImportJobSummary(CamelModel):
     id: uuid.UUID
     filename: str
     file_type: str
+    file_format: str
+    rows_in_file: int
     status: ImportStatus
     rows_received: int
     rows_imported: int

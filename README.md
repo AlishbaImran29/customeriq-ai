@@ -23,7 +23,8 @@ The project specification is in [`docs/specification.pdf`](docs/specification.pd
 | AI Business Assistant | ✅ Real once `ANTHROPIC_API_KEY` is set; answers only from your summary figures |
 | Churn probability, predicted CLV, revenue forecast, growth score | ⏳ Not available — needs trained models (Phase 4). Shown as "Not available yet". |
 | Sign-in / user accounts | ⏳ Not built. The header shows a "Demo workspace" placeholder. |
-| Shopify / WooCommerce API sync | ⏳ Not built. Use their CSV export with the Import page for now. |
+| Shopify orders export (CSV) | ✅ Detected automatically and converted on the server |
+| Shopify / WooCommerce API sync | ⏳ Not built. Use the Shopify CSV export (or a standard CSV) for now. |
 
 ## Demo mode vs live mode
 
@@ -132,6 +133,20 @@ Stop either server with **Ctrl+C** in its terminal.
 2. Open the dashboards. Segments need at least 20 customers; retention and
    comparisons need at least 180 days of history.
 3. Re-uploading a file is safe: existing order IDs are updated, not duplicated.
+
+### Importing from Shopify
+
+In Shopify Admin go to **Orders → Export**, choose the orders (or all), and
+export as **Plain CSV file**. Upload that file unchanged on the Import page —
+it is recognised automatically:
+
+- Shopify writes one row per product line; rows are grouped into one order each.
+- Shopify has no customer ID column, so the customer's **email** is their ID.
+  Orders without an email (e.g. some POS sales) are rejected and listed.
+- Canceled, voided, and fully refunded orders are **skipped** and listed.
+  Partially refunded orders count `Total − Refunded Amount`.
+- Shopify exports do not include product categories or engagement, so those
+  dashboard parts show "Not specified" / use the re-weighted health score.
 
 ### Test data (synthetic)
 

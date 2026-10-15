@@ -83,6 +83,13 @@ Rules:
   never 0.
 - Logs record counts only, never file contents or customer details.
 
+- **Shopify orders export** (Admin → Orders → Export, CSV) is detected by its
+  headers and converted on the server (`app/services/import_formats.py`):
+  line items are grouped by order `Name`; the lower-cased `Email` is the
+  customer ID; canceled/voided/fully refunded orders are skipped and listed;
+  partial refunds are subtracted. The response reports `fileFormat` and
+  `rowsInFile` (line-item rows) alongside `rowsReceived` (orders).
+
 A made-up sample file for trying the import: `tests/fixtures/sample_orders.csv`
 (its last row is intentionally invalid). Delete those `DEMO-` rows afterwards if
 you upload it to a real database.

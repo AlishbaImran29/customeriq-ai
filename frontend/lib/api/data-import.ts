@@ -78,7 +78,14 @@ export function parseCsv(text: string): string[][] {
   return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
 }
 
+/** "shopify" = Shopify orders export (Admin → Orders → Export), converted on the server. */
+export type FileFormat = "standard" | "shopify";
+
+// Must match _SHOPIFY_MARKERS in backend/app/services/import_formats.py.
+const SHOPIFY_MARKERS = ["name", "email", "created_at", "total", "financial_status"];
+
 export type CsvAnalysis = {
+  format: FileFormat;
   headers: string[];
   rows: string[][];
   missingColumns: string[];
@@ -96,6 +103,21 @@ export function analyseCsv(table: string[][]): CsvAnalysis {
   const headers = rawHeaders.map(normalise);
   const index = (name: string) => headers.indexOf(name);
   const known: string[] = [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS];
+
+  if (!headers.includes("order_id") && SHOPIFY_MARKERS.every((m) => headers.includes(m))) {
+    // Shopify rows are line items (order numbers repeat), so the standard
+    // checks do not apply; the server groups and validates them.
+    return {
+      format: "shopify",
+      headers: rawHeaders.map((h) => h.trim()),
+      rows,
+      missingColumns: [],
+      recognisedColumns: [],
+      emptyRequiredCells: 0,
+      duplicateOrderIds: 0,
+      invalidOrderValues: 0,
+    };
+  }
 
   let emptyRequiredCells = 0;
   for (const column of REQUIRED_COLUMNS) {
@@ -126,6 +148,7 @@ export function analyseCsv(table: string[][]): CsvAnalysis {
         }).length;
 
   return {
+    format: "standard",
     headers,
     rows,
     missingColumns: REQUIRED_COLUMNS.filter((c) => index(c) === -1),
@@ -151,6 +174,9 @@ export type ImportResult = {
   id: string;
   filename: string;
   fileType: "csv" | "xlsx";
+  fileFormat: FileFormat;
+  /** Data rows in the file (Shopify: one per line item, grouped into orders). */
+  rowsInFile: number;
   status: ImportStatus;
   rowsReceived: number;
   /** New orders saved. */
