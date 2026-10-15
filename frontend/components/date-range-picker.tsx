@@ -9,7 +9,7 @@ import {
   dayCount,
   formatRange,
   lastDays,
-  monthTitle,
+  monthNames,
   monthWeeks,
   presets,
   previousRange,
@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_DAYS = 90;
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const MONTHS = monthNames();
+const YEARS_BACK = 15;
+const selectClass =
+  "rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40";
 
 /**
  * Calendar for choosing the period behind the revenue, retention and growth figures.
@@ -68,6 +72,12 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
       return { year: Math.floor(index / 12), month: ((index % 12) + 12) % 12 };
     });
   }
+
+  const last = viewOf(asOf); // the calendar cannot go past the month of the last data day
+  const atLastMonth = view.year * 12 + view.month >= last.year * 12 + last.month;
+  const years = Array.from({ length: YEARS_BACK + 1 }, (_, i) => last.year - i);
+  if (!years.includes(view.year)) years.push(view.year);
+  years.sort((a, b) => b - a);
 
   const complete = draft.to !== null ? ({ from: draft.from, to: draft.to } satisfies DateRange) : null;
   const tooLong = complete ? dayCount(complete) > MAX_RANGE_DAYS : false;
@@ -139,14 +149,42 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               </button>
-              <p className="text-sm font-semibold text-slate-900" aria-live="polite">
-                {monthTitle(view.year, view.month)}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <select
+                  aria-label="Month"
+                  value={view.month}
+                  onChange={(event) => setView((v) => ({ ...v, month: Number(event.target.value) }))}
+                  className={selectClass}
+                >
+                  {MONTHS.map((name, month) => (
+                    <option key={name} value={month} disabled={view.year === last.year && month > last.month}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Year"
+                  value={view.year}
+                  onChange={(event) => {
+                    const year = Number(event.target.value);
+                    // Keep the month, but never land after the last month of data.
+                    setView((v) => ({ year, month: year === last.year ? Math.min(v.month, last.month) : v.month }));
+                  }}
+                  className={selectClass}
+                >
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <button
                 type="button"
                 onClick={() => shiftMonth(1)}
+                disabled={atLastMonth}
                 aria-label="Next month"
-                className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>

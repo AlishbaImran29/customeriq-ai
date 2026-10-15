@@ -99,6 +99,12 @@ export function rangeFromParams(from: unknown, to: unknown): DateRange | null {
   return { from, to };
 }
 
+/** Month names for a dropdown (index 0 = January). */
+export function monthNames(): string[] {
+  const format = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" });
+  return Array.from({ length: 12 }, (_, month) => format.format(new Date(Date.UTC(2000, month, 1))));
+}
+
 export function viewOf(iso: string): { year: number; month: number } {
   const d = parse(iso);
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() };
