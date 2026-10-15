@@ -2,9 +2,9 @@
 
 FastAPI + PostgreSQL API for the CustomerIQ AI dashboard.
 
-**Status:** Phase 1 (skeleton). Implemented: settings, database connection,
-tables + migration, consistent error responses, and `GET /api/v1/health`.
-Not implemented yet: imports, analytics endpoints, ML predictions, AI assistant.
+**Status:** Phase 2. Implemented: settings, database connection, tables +
+migrations, consistent error responses, `GET /api/v1/health`, and CSV/XLSX
+imports. Not implemented yet: analytics endpoints, ML predictions, AI assistant.
 
 ## Requirements
 
@@ -52,6 +52,36 @@ Database tests are skipped automatically until `.env` is configured.
 | `DATABASE_URL` | Optional full URL (`postgresql+psycopg://…`) for hosted databases; overrides the fields above. |
 | `FRONTEND_ORIGINS` | Comma-separated browser origins allowed by CORS. |
 | `OPENAI_API_KEY` | Phase 5 only. Server-side; never expose it to the frontend. |
+
+## Imports
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/imports` | Upload one file (multipart field `file`). Returns `201` with the import result. |
+| `GET /api/v1/imports?limit=20` | Recent imports, newest first (no row errors). |
+| `GET /api/v1/imports/{id}` | One import, including its row errors. |
+
+Rules:
+
+- **Files:** `.csv` (UTF-8 or Windows-1252) or `.xlsx` (first sheet), up to 10 MB
+  and 50,000 data rows. `.xls` is rejected with a "save as .xlsx" message.
+- **Required columns:** `customer_id, email, order_id, order_date, order_value`.
+  Optional: `first_name, last_name, country, product_category, channel, engagement`.
+  Header names ignore case, spaces, and dashes.
+- **File-level problems** (wrong type, too large, empty, missing/duplicate
+  columns) return an error and save nothing.
+- **Row-level problems** reject only that row. Valid rows are saved; the
+  response lists up to 200 problems as `{row, column, message}`. Row numbers
+  match Excel (header = row 1). Messages never repeat the cell values.
+- **Existing `order_id`** → the order is updated with the new values
+  (`rowsUpdated`). Blank optional cells keep the previous value.
+- **`engagement`** must be 0–100. Blank means "not provided" (stored as NULL),
+  never 0.
+- Logs record counts only, never file contents or customer details.
+
+A made-up sample file for trying the import: `tests/fixtures/sample_orders.csv`
+(its last row is intentionally invalid). Delete those `DEMO-` rows afterwards if
+you upload it to a real database.
 
 ## Error format
 

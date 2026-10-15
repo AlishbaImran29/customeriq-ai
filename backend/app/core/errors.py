@@ -6,7 +6,10 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.core.config import DatabaseNotConfiguredError
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +74,29 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=422,
             content=error_body("validation_error", "Request validation failed.", details),
+        )
+
+    @app.exception_handler(DatabaseNotConfiguredError)
+    async def handle_db_not_configured(_: Request, __: Exception) -> JSONResponse:
+        return JSONResponse(
+            status_code=503,
+            content=error_body(
+                "database_not_configured",
+                "The database is not configured on the server.",
+            ),
+        )
+
+    @app.exception_handler(OperationalError)
+    async def handle_db_unavailable(request: Request, exc: OperationalError) -> JSONResponse:
+        logger.warning(
+            "Database unavailable on %s %s: %s",
+            request.method, request.url.path, type(exc.orig).__name__,
+        )
+        return JSONResponse(
+            status_code=503,
+            content=error_body(
+                "database_unavailable", "The database is temporarily unavailable."
+            ),
         )
 
     @app.exception_handler(Exception)

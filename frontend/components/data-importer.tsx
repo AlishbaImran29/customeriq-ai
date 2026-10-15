@@ -6,6 +6,7 @@ import {
   Download,
   FileSpreadsheet,
   Loader2,
+  RotateCcw,
   UploadCloud,
   X,
   XCircle,
@@ -14,6 +15,7 @@ import { EmptyState, ErrorState } from "@/components/states";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApiError } from "@/lib/api/config";
 import {
   ACCEPTED_EXTENSIONS,
   IMPORT_ENDPOINT_AVAILABLE,
@@ -22,7 +24,9 @@ import {
   TEMPLATE_CSV,
   analyseCsv,
   parseCsv,
+  uploadImport,
   type CsvAnalysis,
+  type ImportResult,
 } from "@/lib/api/data-import";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -33,7 +37,14 @@ type ImportState =
   | { status: "csv"; file: File; analysis: CsvAnalysis }
   | { status: "excel"; file: File };
 
+type UploadState =
+  | { status: "idle" }
+  | { status: "uploading" }
+  | { status: "done"; result: ImportResult }
+  | { status: "failed"; message: string; hint?: string };
+
 const PREVIEW_ROWS = 8;
+const MAX_LISTED_ERRORS = 50;
 
 function extensionOf(name: string) {
   const dot = name.lastIndexOf(".");
@@ -46,13 +57,42 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function describeUploadError(error: unknown): { message: string; hint?: string } {
+  if (error instanceof ApiError) {
+    const missing = (error.details as { missingColumns?: string[] } | undefined)?.missingColumns;
+    if (missing?.length) {
+      return {
+        message: error.message,
+        hint: "Add the missing columns to the header row and upload again. Nothing was saved.",
+      };
+    }
+    if (error.code === "network_error") {
+      return { message: error.message, hint: "Start the backend (see backend/README.md) and try again." };
+    }
+    if (error.status === 503) {
+      return { message: error.message, hint: "The server could not reach its database. Nothing was saved." };
+    }
+    return { message: error.message };
+  }
+  return { message: "The upload failed for an unknown reason. Check the import history before retrying." };
+}
+
 export function DataImporter() {
   const [state, setState] = useState<ImportState>({ status: "idle" });
+  const [upload, setUpload] = useState<UploadState>({ status: "idle" });
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
+    setUpload({ status: "idle" });
     const ext = extensionOf(file.name);
+    if (ext === ".xls") {
+      setState({
+        status: "error",
+        message: `"${file.name}" is an old Excel .xls file. In Excel choose File → Save As → Excel Workbook (.xlsx), or export as CSV.`,
+      });
+      return;
+    }
     if (!(ACCEPTED_EXTENSIONS as readonly string[]).includes(ext)) {
       setState({ status: "error", message: `"${file.name}" is not a CSV or Excel file. Accepted formats: ${ACCEPTED_EXTENSIONS.join(", ")}.` });
       return;
@@ -84,7 +124,17 @@ export function DataImporter() {
 
   function reset() {
     setState({ status: "idle" });
+    setUpload({ status: "idle" });
     if (inputRef.current) inputRef.current.value = "";
+  }
+
+  async function startUpload(file: File) {
+    setUpload({ status: "uploading" });
+    try {
+      setUpload({ status: "done", result: await uploadImport(file) });
+    } catch (error) {
+      setUpload({ status: "failed", ...describeUploadError(error) });
+    }
   }
 
   function downloadTemplate() {
@@ -96,6 +146,8 @@ export function DataImporter() {
     URL.revokeObjectURL(url);
   }
 
+  const selectedFile = state.status === "csv" || state.status === "excel" ? state.file : null;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -103,7 +155,7 @@ export function DataImporter() {
           <div>
             <CardTitle>Upload customer and order data</CardTitle>
             <CardDescription>
-              CSV, XLSX, or XLS up to {formatBytes(MAX_IMPORT_BYTES)}. One row per order.
+              CSV or XLSX up to {formatBytes(MAX_IMPORT_BYTES)}. One row per order.
             </CardDescription>
           </div>
           <Button variant="secondary" onClick={downloadTemplate} className="mt-3 sm:mt-0">
@@ -152,12 +204,12 @@ export function DataImporter() {
         </CardContent>
       </Card>
 
-      <div aria-live="polite">
+      <div aria-live="polite" className="space-y-6">
         {state.status === "idle" ? (
           <EmptyState
             icon={FileSpreadsheet}
             title="No file selected"
-            description="Choose a file to validate its columns and preview the rows before importing."
+            description="Choose a file to check its columns and preview the rows before importing."
           />
         ) : null}
 
@@ -176,22 +228,49 @@ export function DataImporter() {
           />
         ) : null}
 
+        {upload.status === "done" ? <ImportResultCard result={upload.result} onReset={reset} /> : null}
+
+        {upload.status === "failed" ? (
+          <ErrorState
+            title="Import failed"
+            description={upload.hint ? `${upload.message} ${upload.hint}` : upload.message}
+            action={
+              selectedFile ? (
+                <Button variant="secondary" onClick={() => startUpload(selectedFile)}>
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                  Try again
+                </Button>
+              ) : null
+            }
+          />
+        ) : null}
+
         {state.status === "excel" ? (
           <Card>
             <FileHeader file={state.file} onRemove={reset} />
             <CardContent>
               <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900">
-                Excel files are parsed by the import service on the server. Column validation and
-                preview will be available once the import API is connected. To preview now, export
-                the sheet as CSV.
+                Excel files are read and checked on the server when you import, so there is no
+                preview here. The first sheet is used. To preview first, export the sheet as CSV.
               </p>
-              <ImportActions />
+              <ImportActions upload={upload} onImport={() => startUpload(state.file)} />
             </CardContent>
           </Card>
         ) : null}
 
         {state.status === "csv" ? (
-          <CsvResult file={state.file} analysis={state.analysis} onRemove={reset} />
+          <CsvResult
+            file={state.file}
+            analysis={state.analysis}
+            onRemove={reset}
+            actions={
+              <ImportActions
+                upload={upload}
+                disabled={state.analysis.missingColumns.length > 0}
+                onImport={() => startUpload(state.file)}
+              />
+            }
+          />
         ) : null}
       </div>
     </div>
@@ -217,19 +296,124 @@ function FileHeader({ file, onRemove }: { file: File; onRemove: () => void }) {
   );
 }
 
-function ImportActions({ disabled = false }: { disabled?: boolean }) {
+function ImportActions({
+  upload,
+  onImport,
+  disabled = false,
+}: {
+  upload: UploadState;
+  onImport: () => void;
+  disabled?: boolean;
+}) {
+  if (upload.status === "done") return null;
+  const uploading = upload.status === "uploading";
   return (
     <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-      <Button disabled={disabled || !IMPORT_ENDPOINT_AVAILABLE} aria-describedby="import-status">
-        <UploadCloud className="h-4 w-4" aria-hidden="true" />
-        Import customers
+      <Button
+        disabled={disabled || uploading || !IMPORT_ENDPOINT_AVAILABLE}
+        aria-describedby="import-status"
+        onClick={onImport}
+      >
+        {uploading ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <UploadCloud className="h-4 w-4" aria-hidden="true" />
+        )}
+        {uploading ? "Importing…" : "Import customers"}
       </Button>
       <p id="import-status" className="text-xs text-slate-500">
-        {IMPORT_ENDPOINT_AVAILABLE
-          ? "Data will be cleaned, de-duplicated, and scored after import."
-          : "Import is unavailable until the backend import API is connected. No data has left your browser."}
+        {!IMPORT_ENDPOINT_AVAILABLE
+          ? "Demo mode: no backend is configured (NEXT_PUBLIC_API_BASE_URL), so import is disabled. No data has left your browser."
+          : uploading
+            ? "Uploading and checking every row on the server…"
+            : "The server checks every row, saves valid rows, updates existing order IDs, and lists rejected rows."}
       </p>
     </div>
+  );
+}
+
+function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: () => void }) {
+  const failed = result.status === "failed";
+  const saved = result.rowsImported + result.rowsUpdated;
+  const listed = result.errors.slice(0, MAX_LISTED_ERRORS);
+  const hiddenErrors = result.errorCount - listed.length;
+  const stats = [
+    { label: "Rows received", value: result.rowsReceived },
+    { label: "New orders", value: result.rowsImported },
+    { label: "Updated orders", value: result.rowsUpdated },
+    { label: "Rejected rows", value: result.rowsRejected },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            {failed || saved === 0 ? (
+              <XCircle className="h-4 w-4 text-rose-600" aria-hidden="true" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+            )}
+            {failed ? "Import failed" : saved > 0 ? "Import complete" : "Import finished — no rows saved"}
+          </CardTitle>
+          <CardDescription>
+            {result.filename} · processed on the server.
+            {result.rowsRejected > 0
+              ? " Fix the rejected rows and upload the file again — orders already saved will be updated, not duplicated."
+              : ""}
+          </CardDescription>
+        </div>
+        <Button variant="secondary" onClick={onReset} className="mt-3 sm:mt-0">
+          Import another file
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="rounded-xl border border-slate-100 p-3">
+              <dt className="text-xs text-slate-500">{stat.label}</dt>
+              <dd className="mt-1 text-xl font-semibold tabular-nums text-slate-900">{formatNumber(stat.value)}</dd>
+            </div>
+          ))}
+        </dl>
+        {listed.length > 0 ? (
+          <div>
+            <p className="mb-2 text-sm font-medium text-slate-900">
+              Problems found ({formatNumber(result.errorCount)})
+            </p>
+            <div className="max-h-80 overflow-auto rounded-xl border border-slate-100">
+              <table className="w-full text-left text-xs">
+                <caption className="sr-only">Rows rejected by the server and why</caption>
+                <thead className="sticky top-0 bg-slate-50 text-slate-500">
+                  <tr>
+                    <th scope="col" className="px-3 py-2 font-medium">Row</th>
+                    <th scope="col" className="px-3 py-2 font-medium">Column</th>
+                    <th scope="col" className="px-3 py-2 font-medium">Problem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {listed.map((error, i) => (
+                    <tr key={`${error.row}-${error.column}-${i}`} className="border-t border-slate-100">
+                      <td className="px-3 py-2 tabular-nums text-slate-700">{error.row ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        <code className="text-slate-700">{error.column ?? "—"}</code>
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">{error.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {hiddenErrors > 0 ? (
+              <p className="mt-2 text-xs text-slate-500">
+                {formatNumber(hiddenErrors)} more problem{hiddenErrors === 1 ? "" : "s"} not shown.
+                Fix the ones above and upload again to see the rest.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -254,10 +438,12 @@ function CsvResult({
   file,
   analysis,
   onRemove,
+  actions,
 }: {
   file: File;
   analysis: CsvAnalysis;
   onRemove: () => void;
+  actions: React.ReactNode;
 }) {
   const { headers, rows, missingColumns } = analysis;
   const blocking = missingColumns.length > 0;
@@ -284,19 +470,22 @@ function CsvResult({
             <CheckRow
               ok={analysis.emptyRequiredCells === 0}
               label={`${formatNumber(analysis.emptyRequiredCells)} empty values in required columns`}
-              detail="Rows with missing values are handled during server-side cleaning."
+              detail="Rows with missing required values are rejected by the server and listed."
             />
             <CheckRow
               ok={analysis.duplicateOrderIds === 0}
               label={`${formatNumber(analysis.duplicateOrderIds)} duplicate order IDs`}
-              detail="Duplicates are removed before analysis."
+              detail="Only the first row for each order ID in a file is imported."
             />
             <CheckRow
               ok={analysis.invalidOrderValues === 0}
               label={`${formatNumber(analysis.invalidOrderValues)} non-numeric order values`}
             />
           </ul>
-          <ImportActions disabled={blocking} />
+          <p className="mt-3 text-xs text-slate-500">
+            Quick browser check only — the server re-checks every row when you import.
+          </p>
+          {actions}
         </CardContent>
       </Card>
 

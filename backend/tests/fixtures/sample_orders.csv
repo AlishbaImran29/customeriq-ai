@@ -1,0 +1,7 @@
+customer_id,email,order_id,order_date,order_value,first_name,last_name,country,product_category,channel,engagement
+DEMO-001,amelia.demo@example.com,DEMO-ORD-1001,2026-07-02,142.50,Amelia,Demo,US,Skincare,Shopify,82
+DEMO-001,amelia.demo@example.com,DEMO-ORD-1002,2026-08-15,96.00,Amelia,Demo,US,Haircare,Shopify,85
+DEMO-002,noah.demo@example.com,DEMO-ORD-1003,2026-06-20,58.75,Noah,Demo,UK,Haircare,WooCommerce,
+DEMO-003,liam.demo@example.com,DEMO-ORD-1004,2026-09-01,210.00,Liam,Demo,DE,Bundles,Magento,64
+DEMO-004,sofia.demo@example.com,DEMO-ORD-1005,2026-03-11,34.20,Sofia,Demo,ES,Skincare,Shopify,21
+DEMO-005,not-an-email,DEMO-ORD-1006,2026-09-30,not-a-number,Maya,Demo,IN,Skincare,Shopify,

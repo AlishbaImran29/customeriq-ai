@@ -34,8 +34,13 @@ class ImportJob(TimestampMixin, Base):
         default=ImportStatus.PENDING,
     )
     rows_received: Mapped[int] = mapped_column(Integer, default=0)
+    # New orders inserted by this import.
     rows_imported: Mapped[int] = mapped_column(Integer, default=0)
+    # Existing orders (same order_id) overwritten with this file's values.
+    rows_updated: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     rows_rejected: Mapped[int] = mapped_column(Integer, default=0)
+    # Total problems found; `errors` stores only the first ones (see MAX_STORED_ERRORS).
+    error_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     # Row-level problems as [{"row", "column", "message"}]. Messages describe the
     # problem only and must not copy customer values (emails, names, amounts).
     errors: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)

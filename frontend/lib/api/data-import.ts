@@ -1,14 +1,18 @@
 // Customer data import service.
 //
-// Files are validated and CSVs are parsed in the browser for preview only.
-// Nothing is uploaded: the import endpoint (POST /api/v1/imports) does not
-// exist yet. Excel parsing will happen server-side once it does.
+// CSVs are parsed in the browser for a quick preview. The authoritative checks
+// (file type, size, columns, every row) run on the server in
+// POST /api/v1/imports, which also saves the valid rows. Excel files are only
+// read on the server. In demo mode (no API configured) nothing is uploaded.
 
-export const IMPORT_ENDPOINT_AVAILABLE = false;
+import { API_MODE, apiGet, apiPostForm } from "@/lib/api/config";
 
+export const IMPORT_ENDPOINT_AVAILABLE = API_MODE === "live";
+
+/** Must match MAX_FILE_BYTES in backend/app/services/import_files.py. */
 export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
-export const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls"] as const;
+export const ACCEPTED_EXTENSIONS = [".csv", ".xlsx"] as const;
 
 export const REQUIRED_COLUMNS = [
   "customer_id",
@@ -24,12 +28,13 @@ export const OPTIONAL_COLUMNS = [
   "country",
   "product_category",
   "channel",
+  "engagement",
 ] as const;
 
 export const TEMPLATE_CSV = [
   [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS].join(","),
-  "CUS-1042,amelia.chen@example.com,ORD-88120,2026-10-08,142.50,Amelia,Chen,US,Skincare,Shopify",
-  "CUS-1188,noah.patel@example.com,ORD-88121,2026-09-29,89.00,Noah,Patel,UK,Haircare,WooCommerce",
+  "CUS-1042,amelia.chen@example.com,ORD-88120,2026-10-08,142.50,Amelia,Chen,US,Skincare,Shopify,82",
+  "CUS-1188,noah.patel@example.com,ORD-88121,2026-09-29,89.00,Noah,Patel,UK,Haircare,WooCommerce,",
 ].join("\n");
 
 /** Minimal RFC 4180 CSV parser (quoted fields, escaped quotes, CRLF). */
@@ -129,4 +134,46 @@ export function analyseCsv(table: string[][]): CsvAnalysis {
     duplicateOrderIds,
     invalidOrderValues,
   };
+}
+// --- Server import (POST /api/v1/imports) ----------------------------------
+
+export type ImportStatus = "pending" | "processing" | "completed" | "failed";
+
+export type ImportRowError = {
+  /** Row number as shown in Excel (header is row 1). */
+  row: number | null;
+  column: string | null;
+  message: string;
+};
+
+/** Response of POST /api/v1/imports and GET /api/v1/imports/{id}. */
+export type ImportResult = {
+  id: string;
+  filename: string;
+  fileType: "csv" | "xlsx";
+  status: ImportStatus;
+  rowsReceived: number;
+  /** New orders saved. */
+  rowsImported: number;
+  /** Existing orders (same order_id) overwritten with this file's values. */
+  rowsUpdated: number;
+  rowsRejected: number;
+  errorCount: number;
+  errors: ImportRowError[];
+  /** True when more errors exist than are listed in `errors`. */
+  errorsTruncated: boolean;
+  createdAt: string;
+  completedAt: string | null;
+};
+
+export type ImportSummary = Omit<ImportResult, "errors" | "errorsTruncated">;
+
+export function uploadImport(file: File): Promise<ImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiPostForm<ImportResult>("/api/v1/imports", form);
+}
+
+export function listImports(limit = 10): Promise<ImportSummary[]> {
+  return apiGet<ImportSummary[]>(`/api/v1/imports?limit=${limit}`);
 }
