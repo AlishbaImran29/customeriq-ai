@@ -1,0 +1,112 @@
+import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
+import { Database, FileUp, Info } from "lucide-react";
+import { RetryButton } from "@/components/retry-button";
+import { EmptyState, ErrorState } from "@/components/states";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ApiError } from "@/lib/api/config";
+import type { DataMeta } from "@/lib/types";
+import { formatDate, formatNumber } from "@/lib/utils";
+
+export type LoadResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
+
+/**
+ * Run a data loader and turn API failures into a value the page can render as
+ * an error state. Next.js internal signals are re-thrown; anything unexpected
+ * goes to the route's error boundary. Never substitutes sample data.
+ */
+export async function load<T>(loader: () => Promise<T>): Promise<LoadResult<T>> {
+  try {
+    return { ok: true, data: await loader() };
+  } catch (error) {
+    unstable_rethrow(error);
+    if (error instanceof ApiError) return { ok: false, error };
+    throw error;
+  }
+}
+
+/** Says whether the page shows sample data or live data, and as of when. */
+export function DataSourceBanner({ meta }: { meta: DataMeta }) {
+  if (meta.source === "demo") {
+    return (
+      <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <p>
+          <strong>Demo data.</strong> These are realistic sample figures, not your business. No
+          backend is configured (<code>NEXT_PUBLIC_API_BASE_URL</code>).
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+      <Database className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <p>
+        <strong>Live data</strong> from your database
+        {meta.asOf ? <> · as of {formatDate(meta.asOf)} (latest order)</> : null} ·{" "}
+        {formatNumber(meta.customerCount)} customers. Figures are calculated with fixed formulas;
+        predictions are not available yet.
+      </p>
+    </div>
+  );
+}
+
+/** Shown in live mode when nothing has been imported yet. */
+export function NoDataState() {
+  return (
+    <EmptyState
+      icon={FileUp}
+      title="No customer data yet"
+      description="Import a CSV or Excel file of orders to see this page with your own data."
+      action={
+        <Link
+          href="/import"
+          className="inline-flex items-center rounded-xl bg-teal-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-teal-700"
+        >
+          Import data
+        </Link>
+      }
+    />
+  );
+}
+
+export function DataErrorState({ error }: { error: ApiError }) {
+  const hint =
+    error.code === "network_error"
+      ? "Start the backend (see backend/README.md), then retry."
+      : error.status === 503
+        ? "The backend could not reach its database."
+        : undefined;
+  return (
+    <ErrorState
+      title="Couldn't load live data"
+      description={hint ? `${error.message} ${hint}` : error.message}
+      action={<RetryButton />}
+    />
+  );
+}
+
+// Full class names so Tailwind can find them.
+const SKELETON_COLUMNS: Record<number, string> = {
+  3: "xl:grid-cols-3",
+  4: "xl:grid-cols-4",
+  5: "xl:grid-cols-5",
+  6: "xl:grid-cols-3",
+};
+
+/** Loading placeholder for a page's data section. */
+export function PageSkeleton({ cards = 3 }: { cards?: number }) {
+  return (
+    <div className="space-y-6" role="status" aria-live="polite">
+      <span className="sr-only">Loading…</span>
+      <Skeleton className="h-10 rounded-xl" />
+      <div className={`grid gap-4 sm:grid-cols-2 ${SKELETON_COLUMNS[cards] ?? "xl:grid-cols-3"}`}>
+        {Array.from({ length: cards }).map((_, index) => (
+          <Skeleton key={index} className="h-28 rounded-2xl" />
+        ))}
+      </div>
+      <Skeleton className="h-80 rounded-2xl" />
+      <Skeleton className="h-64 rounded-2xl" />
+    </div>
+  );
+}

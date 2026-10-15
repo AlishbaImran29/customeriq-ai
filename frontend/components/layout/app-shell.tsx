@@ -17,7 +17,10 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { API_MODE } from "@/lib/api/config";
 import { cn } from "@/lib/utils";
+
+const LIVE = API_MODE === "live";
 
 const navGroups = [
   {
@@ -180,10 +183,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="m-3 rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400">
             <p className="flex items-center gap-1 font-medium text-slate-200">
               <Sparkles className="h-3.5 w-3.5 text-teal-400" aria-hidden="true" />
-              Sample workspace
+              {LIVE ? "Live workspace" : "Demo workspace"}
             </p>
             <p className="mt-1">
-              Backend, ML models, and AI assistant are not connected yet. Metrics use sample data.
+              {LIVE
+                ? "Dashboards use your imported data. ML predictions and the AI assistant are not connected yet."
+                : "No backend configured. Dashboards show sample data."}
             </p>
           </div>
         </aside>
@@ -205,8 +210,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               E-commerce growth copilot for Shopify, WooCommerce, and Magento
             </p>
             <div className="ml-auto flex items-center gap-3">
-              <span className="hidden rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 sm:inline">
-                Sample data
+              <span
+                className={cn(
+                  "hidden rounded-full px-2.5 py-1 text-xs font-medium sm:inline",
+                  LIVE ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800",
+                )}
+              >
+                {LIVE ? "Live data" : "Demo data"}
               </span>
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-xs font-semibold text-white"

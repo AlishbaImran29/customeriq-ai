@@ -77,9 +77,11 @@ function ChartFrame({
 }
 
 export function RevenueForecastChart({ data }: { data: RevenuePoint[] }) {
+  // Forecast series are only drawn when the data contains a forecast.
+  const hasForecast = data.some((p) => p.forecast !== undefined);
   return (
     <ChartFrame
-      label="Monthly revenue with a three-month forecast and confidence range"
+      label={hasForecast ? "Monthly revenue with a three-month forecast and confidence range" : "Monthly revenue"}
       height={300}
     >
       <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -94,6 +96,7 @@ export function RevenueForecastChart({ data }: { data: RevenuePoint[] }) {
         />
         <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} />
         <Legend iconType="plainline" wrapperStyle={{ fontSize: 12 }} />
+        {hasForecast ? (
         <Area
           dataKey="range"
           name="Forecast range"
@@ -104,6 +107,7 @@ export function RevenueForecastChart({ data }: { data: RevenuePoint[] }) {
           activeDot={false}
           isAnimationActive={false}
         />
+        ) : null}
         <Line
           dataKey="actual"
           name="Actual revenue"
@@ -112,15 +116,17 @@ export function RevenueForecastChart({ data }: { data: RevenuePoint[] }) {
           dot={false}
           activeDot={{ r: 4 }}
         />
-        <Line
-          dataKey="forecast"
-          name="Forecast"
-          stroke={SERIES_2}
-          strokeWidth={2}
-          strokeDasharray="5 4"
-          dot={false}
-          activeDot={{ r: 4 }}
-        />
+        {hasForecast ? (
+          <Line
+            dataKey="forecast"
+            name="Forecast"
+            stroke={SERIES_2}
+            strokeWidth={2}
+            strokeDasharray="5 4"
+            dot={false}
+            activeDot={{ r: 4 }}
+          />
+        ) : null}
       </ComposedChart>
     </ChartFrame>
   );
@@ -188,8 +194,13 @@ export function ClvBySegmentChart({ data }: { data: SegmentSummary[] }) {
     current: s.avgClv,
     predicted: s.avgPredictedClv,
   }));
+  // Predicted CLV is only drawn when a model has produced it.
+  const hasPredicted = data.some((s) => s.avgPredictedClv !== null);
   return (
-    <ChartFrame label="Average current versus predicted CLV by segment" height={300}>
+    <ChartFrame
+      label={hasPredicted ? "Average current versus predicted CLV by segment" : "Average current CLV by segment"}
+      height={300}
+    >
       <BarChart data={rows} barGap={2} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
         <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={false} interval={0} />
@@ -203,7 +214,9 @@ export function ClvBySegmentChart({ data }: { data: SegmentSummary[] }) {
         <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "#f1f5f9" }} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
         <Bar dataKey="current" name="Current CLV" fill={SERIES_1} radius={[4, 4, 0, 0]} />
-        <Bar dataKey="predicted" name="Predicted CLV" fill={SERIES_2} radius={[4, 4, 0, 0]} />
+        {hasPredicted ? (
+          <Bar dataKey="predicted" name="Predicted CLV" fill={SERIES_2} radius={[4, 4, 0, 0]} />
+        ) : null}
       </BarChart>
     </ChartFrame>
   );

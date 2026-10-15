@@ -10,13 +10,14 @@ import type {
   Kpis,
   Recommendation,
   RevenueAtRiskPoint,
-  RevenueDriver,
   RevenuePoint,
   RiskBucket,
   RiskLevel,
   SegmentName,
   SegmentSummary,
+  ShareRow,
 } from "@/lib/types";
+import { SEGMENT_META } from "@/lib/segments";
 
 /** Weights used by the sample health score (mirrors the planned backend formula). */
 export const healthWeights: Record<keyof HealthFactors, number> = {
@@ -29,7 +30,7 @@ export const healthWeights: Record<keyof HealthFactors, number> = {
 function healthScoreFrom(factors: HealthFactors) {
   return Math.round(
     (Object.keys(healthWeights) as (keyof HealthFactors)[]).reduce(
-      (total, key) => total + factors[key] * healthWeights[key],
+      (total, key) => total + (factors[key] ?? 0) * healthWeights[key],
       0,
     ),
   );
@@ -46,98 +47,98 @@ type CustomerSeed = Omit<Customer, "riskLevel" | "healthScore">;
 
 const customerSeeds: CustomerSeed[] = [
   {
-    id: "CUS-1042", name: "Amelia Chen", email: "amelia.chen@example.com", store: "Shopify",
+    id: "CUS-1042", name: "Amelia Chen", email: "amelia.chen@example.com", channel: "Shopify",
     segment: "Champions", orders: 28, revenue: 6420, currentClv: 1840, predictedClv: 2460,
     churnProbability: 8, lastPurchase: "2026-10-08",
     healthFactors: { purchaseFrequency: 96, spendingBehavior: 94, engagement: 91, activityTrend: 92 },
     recommendedAction: "Invite to VIP early-access drop",
   },
   {
-    id: "CUS-1608", name: "Ethan Brooks", email: "ethan.brooks@example.com", store: "WooCommerce",
+    id: "CUS-1608", name: "Ethan Brooks", email: "ethan.brooks@example.com", channel: "WooCommerce",
     segment: "Champions", orders: 21, revenue: 5120, currentClv: 1610, predictedClv: 1980,
     churnProbability: 11, lastPurchase: "2026-10-11",
     healthFactors: { purchaseFrequency: 90, spendingBehavior: 92, engagement: 84, activityTrend: 88 },
     recommendedAction: "Upsell annual replenishment plan",
   },
   {
-    id: "CUS-1955", name: "Grace Muller", email: "grace.muller@example.com", store: "Magento",
+    id: "CUS-1955", name: "Grace Muller", email: "grace.muller@example.com", channel: "Magento",
     segment: "Champions", orders: 24, revenue: 5860, currentClv: 1720, predictedClv: 2140,
     churnProbability: 9, lastPurchase: "2026-10-05",
     healthFactors: { purchaseFrequency: 93, spendingBehavior: 95, engagement: 79, activityTrend: 86 },
     recommendedAction: "Offer referral rewards for top advocates",
   },
   {
-    id: "CUS-1188", name: "Noah Patel", email: "noah.patel@example.com", store: "WooCommerce",
+    id: "CUS-1188", name: "Noah Patel", email: "noah.patel@example.com", channel: "WooCommerce",
     segment: "Loyal Customers", orders: 16, revenue: 3180, currentClv: 920, predictedClv: 1280,
     churnProbability: 18, lastPurchase: "2026-09-29",
     healthFactors: { purchaseFrequency: 84, spendingBehavior: 78, engagement: 80, activityTrend: 82 },
     recommendedAction: "Cross-sell complementary bundle",
   },
   {
-    id: "CUS-1830", name: "Omar Haddad", email: "omar.haddad@example.com", store: "Magento",
+    id: "CUS-1830", name: "Omar Haddad", email: "omar.haddad@example.com", channel: "Magento",
     segment: "Loyal Customers", orders: 14, revenue: 2740, currentClv: 740, predictedClv: 910,
     churnProbability: 22, lastPurchase: "2026-09-22",
     healthFactors: { purchaseFrequency: 80, spendingBehavior: 72, engagement: 76, activityTrend: 74 },
     recommendedAction: "Request referral after next order",
   },
   {
-    id: "CUS-2017", name: "Isabella Rossi", email: "isabella.rossi@example.com", store: "Shopify",
+    id: "CUS-2017", name: "Isabella Rossi", email: "isabella.rossi@example.com", channel: "Shopify",
     segment: "Loyal Customers", orders: 12, revenue: 2310, currentClv: 680, predictedClv: 820,
     churnProbability: 27, lastPurchase: "2026-09-14",
     healthFactors: { purchaseFrequency: 74, spendingBehavior: 70, engagement: 66, activityTrend: 62 },
     recommendedAction: "Introduce loyalty tier upgrade",
   },
   {
-    id: "CUS-1411", name: "Liam Okafor", email: "liam.okafor@example.com", store: "Magento",
+    id: "CUS-1411", name: "Liam Okafor", email: "liam.okafor@example.com", channel: "Magento",
     segment: "Potential Loyalists", orders: 5, revenue: 890, currentClv: 240, predictedClv: 610,
     churnProbability: 34, lastPurchase: "2026-09-18",
     healthFactors: { purchaseFrequency: 58, spendingBehavior: 60, engagement: 72, activityTrend: 70 },
     recommendedAction: "Nurture with second-purchase incentive",
   },
   {
-    id: "CUS-2104", name: "Chloe Martin", email: "chloe.martin@example.com", store: "Shopify",
+    id: "CUS-2104", name: "Chloe Martin", email: "chloe.martin@example.com", channel: "Shopify",
     segment: "Potential Loyalists", orders: 4, revenue: 640, currentClv: 210, predictedClv: 540,
     churnProbability: 29, lastPurchase: "2026-10-02",
     healthFactors: { purchaseFrequency: 55, spendingBehavior: 52, engagement: 78, activityTrend: 76 },
     recommendedAction: "Recommend products from browsing history",
   },
   {
-    id: "CUS-2231", name: "Daniel Nguyen", email: "daniel.nguyen@example.com", store: "WooCommerce",
+    id: "CUS-2231", name: "Daniel Nguyen", email: "daniel.nguyen@example.com", channel: "WooCommerce",
     segment: "Potential Loyalists", orders: 3, revenue: 470, currentClv: 180, predictedClv: 420,
     churnProbability: 41, lastPurchase: "2026-08-27",
     healthFactors: { purchaseFrequency: 46, spendingBehavior: 50, engagement: 61, activityTrend: 58 },
     recommendedAction: "Day-30 nurture journey with free shipping",
   },
   {
-    id: "CUS-1304", name: "Sofia Alvarez", email: "sofia.alvarez@example.com", store: "Shopify",
+    id: "CUS-1304", name: "Sofia Alvarez", email: "sofia.alvarez@example.com", channel: "Shopify",
     segment: "At-Risk Customers", orders: 9, revenue: 1470, currentClv: 410, predictedClv: 290,
     churnProbability: 72, lastPurchase: "2026-06-12",
     healthFactors: { purchaseFrequency: 42, spendingBehavior: 48, engagement: 30, activityTrend: 24 },
     recommendedAction: "Launch 20% win-back campaign",
   },
   {
-    id: "CUS-1722", name: "Hana Kim", email: "hana.kim@example.com", store: "Shopify",
+    id: "CUS-1722", name: "Hana Kim", email: "hana.kim@example.com", channel: "Shopify",
     segment: "At-Risk Customers", orders: 7, revenue: 980, currentClv: 265, predictedClv: 180,
     churnProbability: 64, lastPurchase: "2026-07-01",
     healthFactors: { purchaseFrequency: 45, spendingBehavior: 44, engagement: 38, activityTrend: 36 },
     recommendedAction: "Re-engagement email with loyalty points",
   },
   {
-    id: "CUS-2368", name: "Lucas Silva", email: "lucas.silva@example.com", store: "WooCommerce",
+    id: "CUS-2368", name: "Lucas Silva", email: "lucas.silva@example.com", channel: "WooCommerce",
     segment: "At-Risk Customers", orders: 11, revenue: 1890, currentClv: 520, predictedClv: 340,
     churnProbability: 58, lastPurchase: "2026-07-19",
     healthFactors: { purchaseFrequency: 52, spendingBehavior: 58, engagement: 34, activityTrend: 30 },
     recommendedAction: "Personal outreach from customer success",
   },
   {
-    id: "CUS-1520", name: "Maya Singh", email: "maya.singh@example.com", store: "Shopify",
+    id: "CUS-1520", name: "Maya Singh", email: "maya.singh@example.com", channel: "Shopify",
     segment: "Lost Customers", orders: 3, revenue: 210, currentClv: 88, predictedClv: 40,
     churnProbability: 91, lastPurchase: "2026-02-03",
     healthFactors: { purchaseFrequency: 18, spendingBehavior: 20, engagement: 12, activityTrend: 8 },
     recommendedAction: "Recovery survey + exclusive restart offer",
   },
   {
-    id: "CUS-2479", name: "Jonas Berg", email: "jonas.berg@example.com", store: "Magento",
+    id: "CUS-2479", name: "Jonas Berg", email: "jonas.berg@example.com", channel: "Magento",
     segment: "Lost Customers", orders: 2, revenue: 160, currentClv: 64, predictedClv: 25,
     churnProbability: 87, lastPurchase: "2026-01-21",
     healthFactors: { purchaseFrequency: 14, spendingBehavior: 18, engagement: 16, activityTrend: 10 },
@@ -147,7 +148,7 @@ const customerSeeds: CustomerSeed[] = [
 
 export const customers: Customer[] = customerSeeds.map((seed) => ({
   ...seed,
-  riskLevel: riskLevelFrom(seed.churnProbability),
+  riskLevel: riskLevelFrom(seed.churnProbability ?? 0),
   healthScore: healthScoreFrom(seed.healthFactors),
 }));
 
@@ -173,33 +174,23 @@ export const kpiDeltas: Kpis = {
 export const segmentSummary: SegmentSummary[] = [
   {
     name: "Champions", customers: 2140, revenue: 892400, avgClv: 1248, avgPredictedClv: 1512,
-    color: "#2a78d6",
-    definition: "Bought recently, buy often, and spend the most.",
-    strategy: "Reward, request reviews and referrals, offer early access.",
+    ...SEGMENT_META["Champions"],
   },
   {
     name: "Loyal Customers", customers: 4860, revenue: 764200, avgClv: 542, avgPredictedClv: 668,
-    color: "#eb6834",
-    definition: "Purchase regularly and respond well to promotions.",
-    strategy: "Upsell higher-value products and loyalty tiers.",
+    ...SEGMENT_META["Loyal Customers"],
   },
   {
     name: "Potential Loyalists", customers: 5210, revenue: 498650, avgClv: 286, avgPredictedClv: 431,
-    color: "#1baf7a",
-    definition: "Recent customers with above-average spend and 2–5 orders.",
-    strategy: "Nurture toward repeat purchase with timed incentives.",
+    ...SEGMENT_META["Potential Loyalists"],
   },
   {
     name: "At-Risk Customers", customers: 3680, revenue: 246800, avgClv: 198, avgPredictedClv: 142,
-    color: "#eda100",
-    definition: "Previously active, but no purchase in 60+ days.",
-    strategy: "Personalised win-back offers before they lapse.",
+    ...SEGMENT_META["At-Risk Customers"],
   },
   {
     name: "Lost Customers", customers: 2530, revenue: 85600, avgClv: 74, avgPredictedClv: 31,
-    color: "#e87ba4",
-    definition: "Lowest recency, frequency, and spend; inactive 180+ days.",
-    strategy: "Low-cost recovery offer and feedback survey.",
+    ...SEGMENT_META["Lost Customers"],
   },
 ];
 
@@ -234,13 +225,13 @@ export const revenueAtRiskBySegment: { segment: SegmentName; atRisk: number; cus
   { segment: "Loyal Customers", atRisk: 16900, customers: 4860 },
 ];
 
-export const revenueDrivers: RevenueDriver[] = [
-  { driver: "Repeat Champion orders", impact: 312000, share: 28 },
-  { driver: "Loyal customer replenishment", impact: 246000, share: 22 },
-  { driver: "New Potential Loyalist conversions", impact: 188000, share: 17 },
-  { driver: "Seasonal campaign revenue", impact: 154000, share: 14 },
-  { driver: "Upsell / cross-sell", impact: 121000, share: 11 },
-  { driver: "Recovered at-risk customers", impact: 89000, share: 8 },
+export const revenueDrivers: ShareRow[] = [
+  { name: "Repeat Champion orders", revenue: 312000, share: 28 },
+  { name: "Loyal customer replenishment", revenue: 246000, share: 22 },
+  { name: "New Potential Loyalist conversions", revenue: 188000, share: 17 },
+  { name: "Seasonal campaign revenue", revenue: 154000, share: 14 },
+  { name: "Upsell / cross-sell", revenue: 121000, share: 11 },
+  { name: "Recovered at-risk customers", revenue: 89000, share: 8 },
 ];
 
 export const recommendations: Recommendation[] = [

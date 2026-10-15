@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -14,13 +15,18 @@ requires_database = pytest.mark.skipif(
 
 @pytest.fixture
 def db_session():
-    """A session whose work is always rolled back, even after session.commit().
+    """A session on empty tables whose work is always rolled back.
 
     Each commit only releases a SAVEPOINT inside an outer transaction, so tests
-    never leave data in the real database.
+    never change the real database, and existing data cannot affect results.
     """
     connection = get_engine().connect()
     outer = connection.begin()
+    # Start every test from empty tables. This is part of the outer transaction,
+    # so the real data reappears when it is rolled back.
+    connection.execute(text("DELETE FROM orders"))
+    connection.execute(text("DELETE FROM customers"))
+    connection.execute(text("DELETE FROM import_jobs"))
     session = Session(
         bind=connection,
         join_transaction_mode="create_savepoint",

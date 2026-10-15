@@ -25,10 +25,13 @@ export function CustomerExplorer({
   customers,
   caption,
   initialRisk = "all",
+  riskLabel = "Churn risk",
 }: {
   customers: Customer[];
   caption: string;
   initialRisk?: RiskFilter;
+  /** "Inactivity" for live data, where risk is rule-based. */
+  riskLabel?: string;
 }) {
   const [query, setQuery] = useState("");
   const [segment, setSegment] = useState<SegmentName | "all">("all");
@@ -48,7 +51,7 @@ export function CustomerExplorer({
   }, [customers, query, segment, risk]);
 
   const riskOptions = [
-    { value: "all" as const, label: "All risk", count: customers.length },
+    { value: "all" as const, label: `All (${riskLabel.toLowerCase()})`, count: customers.length },
     ...riskLevels.map((level) => ({
       value: level,
       label: level,
@@ -93,18 +96,18 @@ export function CustomerExplorer({
             ))}
           </Select>
         </div>
-        <FilterPills label="Filter by churn risk" options={riskOptions} value={risk} onChange={setRisk} />
+        <FilterPills label={`Filter by ${riskLabel.toLowerCase()}`} options={riskOptions} value={risk} onChange={setRisk} />
       </div>
       <p className="text-xs text-slate-500" aria-live="polite">
         Showing {filtered.length} of {customers.length} customers
       </p>
       {filtered.length > 0 ? (
-        <CustomersTable rows={filtered} caption={caption} />
+        <CustomersTable rows={filtered} caption={caption} riskLabel={riskLabel} />
       ) : (
         <EmptyState
           icon={SearchX}
           title="No customers match these filters"
-          description="Try a different search term, segment, or risk level."
+          description={`Try a different search term, segment, or ${riskLabel.toLowerCase()} level.`}
           action={
             <Button variant="secondary" onClick={reset}>
               Clear filters

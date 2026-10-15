@@ -69,10 +69,23 @@ export function RecommendationBoard({ items }: { items: Recommendation[] }) {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Est. revenue</dt>
-                      <dd className="mt-0.5 font-medium tabular-nums text-emerald-700">
-                        +{formatCompactCurrency(item.estimatedRevenue)}
-                      </dd>
+                      {item.estimatedRevenue !== null ? (
+                        <>
+                          <dt className="text-slate-500">Est. revenue</dt>
+                          <dd className="mt-0.5 font-medium tabular-nums text-emerald-700">
+                            +{formatCompactCurrency(item.estimatedRevenue)}
+                          </dd>
+                        </>
+                      ) : (
+                        <>
+                          <dt className="text-slate-500" title="What this audience actually spent in the last 12 months. Not a forecast.">
+                            Spent (12 mo)
+                          </dt>
+                          <dd className="mt-0.5 font-medium tabular-nums text-slate-800">
+                            {formatCompactCurrency(item.historicalRevenue ?? 0)}
+                          </dd>
+                        </>
+                      )}
                     </div>
                   </dl>
                   <div className="mt-auto pt-4">

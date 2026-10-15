@@ -16,10 +16,10 @@ export type ApiMode = "demo" | "live";
 export const API_MODE: ApiMode = API_BASE_URL ? "live" : "demo";
 
 /**
- * Where the dashboard analytics currently come from. The analytics endpoints
- * are not built yet (Phase 3), so they use sample data even in live mode.
+ * Where the dashboard analytics come from: the API in live mode, sample data
+ * from `lib/mock` in demo mode.
  */
-export const DATA_SOURCE: "mock" | "api" = "mock";
+export const DATA_SOURCE: "mock" | "api" = API_MODE === "live" ? "api" : "mock";
 
 /** Error raised for failed API calls, carrying the backend's error code. */
 export class ApiError extends Error {
