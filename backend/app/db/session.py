@@ -21,9 +21,12 @@ DatabaseStatus = Literal["ok", "not_configured", "unavailable"]
 
 @lru_cache
 def get_engine() -> Engine:
+    settings = get_settings()
     return create_engine(
-        get_settings().sqlalchemy_url(),
+        settings.sqlalchemy_url(),
         pool_pre_ping=True,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
         connect_args={"connect_timeout": 5},
     )
 

@@ -55,3 +55,10 @@ def test_plain_postgresql_urls_are_switched_to_the_psycopg_driver():
     for scheme in ("postgresql", "postgres", "postgresql+psycopg"):
         url = make_settings(database_url=f"{scheme}://u:pw@db.example:5432/app?sslmode=require").sqlalchemy_url()
         assert url.drivername == "postgresql+psycopg" and url.query == {"sslmode": "require"}
+
+
+def test_pool_size_defaults_and_overrides():
+    default = make_settings()
+    assert (default.db_pool_size, default.db_max_overflow) == (5, 10)
+    small = make_settings(db_pool_size=1, db_max_overflow=1)
+    assert (small.db_pool_size, small.db_max_overflow) == (1, 1)

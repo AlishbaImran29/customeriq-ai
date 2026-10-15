@@ -1,165 +1,145 @@
-# Putting CustomerIQ AI on the internet
+# Putting CustomerIQ AI on the internet (free: Vercel + Supabase)
 
 > **Optional.** The app runs fine on your own computer with `start-customeriq.bat` (see the
-> README). This guide is only for the day you want a public website. It was written for
-> Railway, but a free combination (Vercel for the site, Render for the API, Supabase for the
-> database) also works: use the backend's `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
-> `DB_PASSWORD` and `DB_SSLMODE=require` settings instead of building a `DATABASE_URL`.
+> README). Follow this guide only if you want a public website. It needs **no credit card**.
 
-This guide takes the app from your computer to a public website, step by step. Three
-services each run one part, and **GitHub** holds the code that feeds them:
+You will end up with three parts, all free for personal projects:
 
 ```text
- You → Vercel (website) ──forwards /api/…──▶ Railway (Python API) ──▶ Supabase (database)
-                 ▲                                   ▲
-                 └──────── both rebuild from your GitHub repository ────────┘
+ Browser ──▶ Vercel project 1: the website ──forwards /api/…──▶ Vercel project 2: the API ──▶ Supabase database
+                                  ▲                                      ▲
+                                  └──── both are built from your GitHub repository ────┘
 ```
 
-Screens change over time, so button names below may look slightly different. The
-*ideas* (what to create, which values to copy where) stay the same.
+Screens change over time, so a button may look slightly different. The *ideas* (what to
+create and which values to copy where) stay the same.
 
-## 0. Before you start
+## 0. What you need before you start
 
 | You need | Notes |
 | --- | --- |
-| A **GitHub** account | Connected to VS Code. |
-| A **Supabase** account | Free plan is enough to start. Hosts the PostgreSQL database. |
-| A **Railway** account | Hosts the Python API. It has a short free trial, then a small monthly cost: check its pricing page. A card may be needed. |
-| A **Vercel** account | "Hobby" plan is free for personal projects. Hosts the website. Sign up with GitHub. |
-| About 45 minutes | |
+| **GitHub** repository with the latest code | The code must be pushed (step 1). |
+| **Supabase** project | You already created `customeriq`. Keep its 5 connection values (host, port, database, user, password) in a private note. |
+| **Vercel** account | Sign up with GitHub. The free *Hobby* plan is for personal, non-commercial use. |
+| A **setup code** | Invent one (three random words). It protects "Create your account" on the public site. |
 
-**Golden rules while doing this**
+**Golden rules**
 
-- **Never** paste a password, API key or database address into a chat, a GitHub file or
-  an email. Type or paste them only into the service's own settings page (Railway,
-  Vercel) as instructed.
-- Use a **password manager** (or paper) for the database password. Supabase shows it
-  once.
-- Deploy with the **public test dataset first** (see the README), not real customer data.
+- **Never** paste a password or key into a chat, a GitHub file, or an email. Type or paste
+  them only into the service's own settings page.
+- Use the **public test dataset** first (see the README), not real customer data. Free
+  hosting is not meant for confidential business data.
 
-## 1. Publish the code to GitHub (private)
+## 1. Push the latest code to GitHub
 
-1. In VS Code open **Source Control** (the branch icon on the left).
-2. Click **Publish to GitHub** (or press `Ctrl+Shift+P` and run *Git: Publish to GitHub*).
-3. Name it `customeriq-ai` and choose **Private repository**. Keep `docs/`, `backend/`
-   and `frontend/` ticked, and leave `.env` files unticked if VS Code lists them (they
-   are ignored by git and never uploaded).
-4. Open the repository on github.com and check the file list: you should see
-   `backend`, `frontend`, `docs`, `README.md` and **no** `.env` file and **no** `data`
-   folder.
+In VS Code open **Source Control** and click **Sync Changes**. Then open your repository on
+github.com and check that `backend`, `frontend` and `docs` are there and that no `.env` file is.
 
-*Why private?* Every commit carries your name and email, and a private repo keeps them
-(and the project) out of public view. You can still give Vercel and Railway access.
+## 2. Create the tables in Supabase (once)
 
-## 2. Database (Supabase)
+On your own computer, in the `backend` folder:
 
-1. Create a new **project** (name `customeriq`, choose a region near you). Set a **strong
-   database password** and save it in your password manager.
-2. Wait until the project is ready, then click **Connect** (top of the project page).
-3. Choose the **Session pooler** connection string (it works on every network). It
-   looks like `postgresql://postgres.xxxx:[YOUR-PASSWORD]@aws-0-…pooler.supabase.com:5432/postgres`.
-4. Prepare it for the app. In a private note (not in the repo):
-   - replace `[YOUR-PASSWORD]` with the real password;
-   - change the start `postgresql://` to **`postgresql+psycopg://`**;
-   - add `?sslmode=require` at the very end.
-5. Keep this finished address handy: it becomes the `DATABASE_URL` in step 3.
+```powershell
+cd D:\CustomerIQ.AI\backend
+.\.venv\Scripts\python.exe scripts\migrate_remote.py
+```
 
-## 3. The API (Railway)
+It asks for the **host**, **port**, **database**, **user** and **password** (the password is
+typed hidden and never saved). It shows where it is about to write and waits for you to type
+`YES`. At the end it lists the tables: `customers`, `import_jobs`, `orders`, `sessions`,
+`users`, `alembic_version`. Run it again after any future update that changes the database.
 
-1. **New Project → Deploy from GitHub repo** and pick `customeriq-ai`. Allow Railway
-   to read the repository when asked.
-2. Open the service's **Settings**:
-   - **Root Directory**: `backend`
-   - **Start Command**:
-     `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-     (the first part creates or updates the database tables, the second starts the API)
-   - **Healthcheck path** (if offered): `/api/v1/health`
-3. Open **Variables** and add these (paste the values yourself):
+## 3. Deploy the API (Vercel project 1)
 
-   | Variable | Value |
+1. In Vercel: **Add New → Project**, then import your `customeriq-ai` repository.
+2. Set **Root Directory** to **`backend`**. Vercel detects **FastAPI** by itself.
+3. Open **Environment Variables** and add these (paste the values yourself):
+
+   | Name | Value |
    | --- | --- |
-   | `DATABASE_URL` | the finished address from step 2 |
+   | `DB_HOST` | your Supabase host (contains `pooler.supabase.com`) |
+   | `DB_PORT` | `5432` |
+   | `DB_NAME` | `postgres` |
+   | `DB_USER` | your Supabase user (like `postgres.abcdefghij`) |
+   | `DB_PASSWORD` | your Supabase database password |
+   | `DB_SSLMODE` | `require` |
+   | `DB_POOL_SIZE` | `1` |
+   | `DB_MAX_OVERFLOW` | `1` |
    | `APP_ENV` | `production` |
-   | `SETUP_CODE` | a code you invent, e.g. three random words. Needed once, to create the first account |
-   | `FRONTEND_ORIGINS` | leave for now; you set it in step 5 |
-   | `ANTHROPIC_API_KEY` | optional: your Claude key, for the AI assistant (needs API credits) |
-   | `AI_PROVIDER` | `anthropic` (default) |
+   | `SETUP_CODE` | your invented setup code |
+   | `FRONTEND_ORIGINS` | `https://placeholder.example` (you set the real value in step 5) |
 
-4. **Settings → Networking → Generate Domain** to get the API's public address
-   (something like `https://customeriq-api-production.up.railway.app`).
-5. Open `<that address>/api/v1/health` in your browser. You should see
-   `{"status":"ok","database":"ok"}`. If `database` says `unavailable`, re-check
-   `DATABASE_URL` (password, the `+psycopg`, the `?sslmode=require`).
+   Optional: `ANTHROPIC_API_KEY` (needs paid API credits; without it the assistant says "AI not configured").
+4. Click **Deploy**. When it finishes, copy the project's address, for example
+   `https://customeriq-api.vercel.app` (use the **production domain**, not a long preview link).
+5. Open `<that address>/api/v1/health`. You should see `{"status":"ok","database":"ok"}`.
 
-If the build uses an old Python version, add the variable `NIXPACKS_PYTHON_VERSION` =
-`3.13` (the repo also contains `backend/.python-version`).
+If Vercel shows its own sign-in page instead: open the API project → **Settings → Deployment
+Protection** and turn **Vercel Authentication** off for production, then try again.
 
-## 4. The website (Vercel)
+## 4. Deploy the website (Vercel project 2)
 
-1. **Add New → Project**, import `customeriq-ai`.
-2. Set **Root Directory** to `frontend` (framework: Next.js is detected).
-3. Under **Environment Variables** add:
+1. **Add New → Project**, import the **same** repository again.
+2. Set **Root Directory** to **`frontend`** (Next.js is detected).
+3. Add one environment variable:
 
-   | Variable | Value |
+   | Name | Value |
    | --- | --- |
-   | `NEXT_PUBLIC_API_BASE_URL` | the Railway address from step 3.4, **no trailing slash** |
+   | `NEXT_PUBLIC_API_BASE_URL` | the API address from step 3.4, **no trailing slash** |
 
-   This value is baked in when the site is built. If you change it later, **redeploy**.
-4. Click **Deploy**. When finished, Vercel shows the site's address, e.g.
-   `https://customeriq-ai.vercel.app`.
+   This is baked in when the site is built: if you change it later, **redeploy** the website.
+4. Click **Deploy**, and copy the website's address, for example `https://customeriq.vercel.app`.
 
-## 5. Connect the two (one more setting)
+## 5. Connect the two
 
-The API must know which website is allowed to talk to it.
-
-1. Back in Railway → **Variables**, set `FRONTEND_ORIGINS` to the exact Vercel address,
-   for example `https://customeriq-ai.vercel.app` (no trailing slash, no path).
-2. Railway redeploys automatically.
-
-*(Preview addresses that Vercel makes for branches are different websites, so they are
-refused on purpose. Use the main address.)*
+The API only accepts requests from your website. In the **API project → Settings → Environment
+Variables**, change `FRONTEND_ORIGINS` to the website address exactly (for example
+`https://customeriq.vercel.app`, no trailing slash, no path). Then **redeploy the API**
+(**Deployments →** the latest one **→ Redeploy**), because changes only apply to new deployments.
 
 ## 6. First run
 
-1. Open your Vercel address. You land on **Create your account**.
-2. Enter your name, email, a password (10+ characters), and the **setup code** from step
-   3. You are signed in.
-3. Go to **Import Data** and upload `public_uci_online_retail_ii.csv` (see the README
-   for how to create it; it is about 3.3 MB). Check the dashboards fill in.
-4. Anyone who opens the address now sees the sign-in page and nothing else. Once you
-   have your account, the setup form no longer works.
-5. To add a teammate or reset a password, use the Railway service's shell or run
-   `manage_users.py` on your own computer **with `DATABASE_URL` pointing at the same
-   database** (see the README).
+1. Open the website address. You land on **Create your account**: enter your name, email, a
+   password (10+ characters) and the **setup code**. You are signed in.
+2. Go to **Import Data** and upload `public_uci_online_retail_ii.csv` (see the README; about
+   3.3 MB). Open the dashboards.
+3. Anyone else who visits sees only the sign-in page. After your account exists, the setup form
+   no longer works.
 
-## 7. After it is live
+## Good to know
 
-- **Updating:** commit and push in VS Code. Vercel and Railway rebuild by themselves.
-- **Cost watch:** check the Railway usage page now and then; Vercel Hobby and Supabase
-  free plans have limits (free Supabase projects can pause after a week of inactivity).
-- **Real data:** only after you are happy with the test run, delete the test data
-  (`delete_synthetic_data.py --source public`) and import your own export. Anyone
-  with an account sees all data; roles are not built.
-- **AI assistant:** needs `ANTHROPIC_API_KEY` and API credits. Without them it says
-  "AI not configured".
+- **Region:** both projects run in Singapore (`sin1`, set in `backend/vercel.json` and
+  `frontend/vercel.json`) because that is where we suggested creating Supabase. If your Supabase
+  project is elsewhere, change both files to the nearest Vercel region (for example `bom1` Mumbai,
+  `fra1` Frankfurt, `iad1` Washington), push, and redeploy. A wrong region only makes it slower.
+- **Free limits:** a request body can be at most **4.5 MB** on Vercel, so CSV files above that
+  fail to upload (the public test file is 3.3 MB; split bigger files). Supabase free projects
+  **pause after a week without use**; open the Supabase dashboard to resume. Hobby is for
+  personal, non-commercial use only.
+- **Slow first load:** the API starts on demand, so the first visit after a quiet spell can take
+  a few seconds.
+- **Updating:** push to GitHub and Vercel rebuilds both projects by itself. If an update changes
+  the database, run `migrate_remote.py` again.
+- **Passwords and accounts:** teammates and password resets use `manage_users.py`; point it at the
+  hosted database the same way as `migrate_remote.py` (ask for help before doing this).
 
 ## Troubleshooting
 
 | You see | Likely cause and fix |
 | --- | --- |
-| Railway build fails on `pip install` | Python version: set `NIXPACKS_PYTHON_VERSION=3.13` and redeploy. |
-| `/api/v1/health` says `"database":"unavailable"` | `DATABASE_URL` is wrong: check password, `postgresql+psycopg://`, `?sslmode=require`, and that the Supabase project is not paused. |
-| The site says **"We can't reach the server"** | `NEXT_PUBLIC_API_BASE_URL` is missing or wrong (then redeploy Vercel), or the Railway service is down. |
-| Sign-in works but you bounce back to the sign-in page | The API is not in production/HTTPS mode, or the Vercel address is not in `FRONTEND_ORIGINS`. |
-| Errors like *"This request came from a website that is not allowed"* | `FRONTEND_ORIGINS` does not exactly match the address in the browser bar. |
-| **"That setup code is not correct"** | Use the value of `SETUP_CODE` from Railway exactly. |
-| Uploading a CSV fails on the live site but works on your computer | Large uploads pass through Vercel, which may limit request size (about 4.5 MB). The public test file (3.3 MB) fits; for bigger files split the CSV or tell me and we will add a direct upload route. |
-| The assistant says **no remaining credits** | Add API credits in the Claude Console. A Claude Pro subscription does not include them. |
+| `/api/v1/health` says `"database":"unavailable"` | A `DB_*` value is wrong (host must contain `pooler.supabase.com`), the tables were not created (step 2), or the Supabase project is paused. |
+| Vercel build of the API fails on install | Check the build log; the project needs Python 3.13 (set by `backend/.python-version`). Tell me the last lines of the log. |
+| The site says **"We couldn't reach the server"** | `NEXT_PUBLIC_API_BASE_URL` is missing or wrong (then redeploy the website), or the API address answers with a Vercel sign-in page (see step 3). |
+| Sign-in works, then you are sent back to sign in | The API is not in production mode, or the website address is not exactly `FRONTEND_ORIGINS`. |
+| *"This request came from a website that is not allowed"* | `FRONTEND_ORIGINS` does not match the address in the browser bar. Fix it and redeploy the API. |
+| **"That setup code is not correct"** | Use the value of `SETUP_CODE` from the API project's settings. |
+| CSV upload fails on the live site only | The file is over 4.5 MB (see "Free limits"). |
+| The assistant says **no remaining credits** | Add API credits in the Claude Console (a Claude Pro subscription does not include them). |
 
 ## Security checklist before real customer data
 
 - [ ] The GitHub repository is **private**.
-- [ ] `APP_ENV=production` and a `SETUP_CODE` are set on Railway.
-- [ ] You created the first account yourself, then confirmed `Create your account` no longer appears.
-- [ ] No keys or passwords are in the repository (`git log` has none; the `.env` files stay local).
-- [ ] Your customers know their data is processed here, and you have the right to use it.
+- [ ] `APP_ENV=production` and a `SETUP_CODE` are set on the API project.
+- [ ] You created the first account yourself and confirmed "Create your account" no longer appears.
+- [ ] No keys or passwords are in the repository.
+- [ ] You have the right to use your customers' data, and you are not on a plan that forbids business use (Vercel Hobby is non-commercial).

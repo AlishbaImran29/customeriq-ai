@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     db_password: SecretStr | None = None
     # Hosted databases (e.g. Supabase) need an encrypted connection: set to "require".
     db_sslmode: Literal["disable", "prefer", "require", "verify-ca", "verify-full"] | None = None
+    # Connection pool. On serverless hosts (Vercel) every running copy of the API keeps its own
+    # pool, and a free database allows few connections in total: use a small pool there.
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
 
     # Comma-separated list of browser origins allowed by CORS.
     frontend_origins: str = "http://localhost:3000,http://localhost:3001"
