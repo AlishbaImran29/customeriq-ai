@@ -305,8 +305,9 @@ def _in(d: date, window: tuple[date, date]) -> bool:
     return window[0] <= d <= window[1]
 
 
-def kpis(snapshot: Snapshot, days: int = WINDOW_DAYS) -> tuple[dict, dict]:
-    """Return (values, deltas) for `days`-long periods. Deltas are None when history is too short."""
+def kpis(snapshot: Snapshot, days: int = WINDOW_DAYS, end: date | None = None) -> tuple[dict, dict]:
+    """Return (values, deltas) for a `days`-long period ending on `end` (default: the last data date),
+    compared with the equally long period before it. Deltas are None when history is too short."""
     keys = ["totalCustomers", "revenue", "averageClv", "retentionRate", "churnRisk", "growthScore"]
     values: dict[str, float | None] = dict.fromkeys(keys)
     deltas: dict[str, float | None] = dict.fromkeys(keys)
@@ -315,16 +316,21 @@ def kpis(snapshot: Snapshot, days: int = WINDOW_DAYS) -> tuple[dict, dict]:
 
     as_of = snapshot.as_of
     assert as_of is not None
+    end = min(end, as_of) if end else as_of
     first_date = min(o.order_date for o in snapshot.orders)
-    current, previous, older = _window(as_of, 0, days), _window(as_of, 1, days), _window(as_of, 2, days)
+    current, previous, older = _window(end, 0, days), _window(end, 1, days), _window(end, 2, days)
     covers_previous = first_date <= previous[0]
     covers_older = first_date <= older[0]
 
     customers = snapshot.customers
-    total_revenue = sum(c.revenue for c in customers)
-    values["totalCustomers"] = len(customers)
+    # "To date" figures are as of the end of the chosen period.
+    known = [c for c in customers if c.first_order <= end]
+    if not known:
+        return values, deltas  # the period ends before the first order
+    total_revenue = sum(float(o.value) for o in snapshot.orders if o.order_date <= end)
+    values["totalCustomers"] = len(known)
     values["revenue"] = sum(float(o.value) for o in snapshot.orders if _in(o.order_date, current))
-    values["averageClv"] = total_revenue / len(customers)
+    values["averageClv"] = total_revenue / len(known)
 
     if covers_previous:
         cutoff = previous[1]
@@ -333,14 +339,14 @@ def kpis(snapshot: Snapshot, days: int = WINDOW_DAYS) -> tuple[dict, dict]:
         previous_revenue = sum(
             float(o.value) for o in snapshot.orders if _in(o.order_date, previous)
         )
-        deltas["totalCustomers"] = pct_change(len(customers), customers_then)
+        deltas["totalCustomers"] = pct_change(len(known), customers_then)
         deltas["revenue"] = pct_change(values["revenue"], previous_revenue)
         if customers_then:
             deltas["averageClv"] = pct_change(values["averageClv"], revenue_then / customers_then)
-        values["retentionRate"] = retention_rate(customers, previous, current)
+        values["retentionRate"] = retention_rate(known, previous, current)
 
     if covers_older and values["retentionRate"] is not None:
-        earlier = retention_rate(customers, older, previous)
+        earlier = retention_rate(known, older, previous)
         if earlier is not None:
             deltas["retentionRate"] = values["retentionRate"] - earlier  # points
     return values, deltas
@@ -683,15 +689,21 @@ def recommendations(snapshot: Snapshot) -> list[dict]:
     return sorted(items, key=lambda r: (order[r["impact"]], -r["historicalRevenue"]))
 
 
-def executive_summary(snapshot: Snapshot, values: dict, deltas: dict, days: int = WINDOW_DAYS) -> dict:
+def executive_summary(
+    snapshot: Snapshot, values: dict, deltas: dict, days: int = WINDOW_DAYS, end: date | None = None
+) -> dict:
     if snapshot.empty:
         return {"headline": "No data imported yet.", "bullets": [], "method": "rules"}
     assert snapshot.as_of is not None
     bullets = []
     if deltas["revenue"] is not None:
         direction = "up" if deltas["revenue"] >= 0 else "down"
+        if end is None or end >= snapshot.as_of:
+            when = f"in the last {days} days"
+        else:
+            when = f"from {end - timedelta(days=days - 1):%d %b %Y} to {end:%d %b %Y}"
         headline = (
-            f"Revenue in the last {days} days is {direction} {abs(deltas['revenue']):.1f}% "
+            f"Revenue {when} is {direction} {abs(deltas['revenue']):.1f}% "
             f"on the previous {days} days."
         )
     else:

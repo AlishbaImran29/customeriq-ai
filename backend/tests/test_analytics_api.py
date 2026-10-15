@@ -96,4 +96,17 @@ def test_cohorts_and_overview_period_with_data(db_client):
     short = db_client.get("/api/v1/dashboard/overview?days=30").json()
     default = db_client.get("/api/v1/dashboard/overview").json()
     assert short["kpis"]["revenue"] <= default["kpis"]["revenue"]
-    assert db_client.get("/api/v1/dashboard/overview?days=2").status_code == 422
+    assert db_client.get("/api/v1/dashboard/overview?days=0").status_code == 422
+
+
+@requires_database
+def test_overview_accepts_a_date_range(db_client):
+    import_customers(db_client, 30)
+    full = db_client.get("/api/v1/dashboard/overview").json()
+    as_of = full["meta"]["asOf"]
+    first = (date.fromisoformat(as_of) - timedelta(days=1000)).isoformat()  # about 2.7 years, within the limit
+    ranged = db_client.get(f"/api/v1/dashboard/overview?start={first}&end={as_of}")
+    assert ranged.status_code == 200
+    assert ranged.json()["kpis"]["revenue"] >= full["kpis"]["revenue"]  # a longer period covers more
+    assert db_client.get("/api/v1/dashboard/overview?start=2030-01-02&end=2030-01-01").status_code == 422
+    assert db_client.get("/api/v1/dashboard/overview?start=1990-01-01&end=2026-01-01").status_code == 422  # over 3 years

@@ -4,6 +4,7 @@
 // from `lib/mock`. Live mode: calls the FastAPI endpoints and maps the response.
 // A failed live request throws ApiError — it never falls back to sample data.
 
+import type { DateRange } from "@/lib/dates";
 import "server-only";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
@@ -72,8 +73,8 @@ export type Overview = {
 
 type OverviewResponse = Omit<Overview, "segments"> & { segments: SegmentStats[] };
 
-/** GET /api/v1/dashboard/overview */
-export async function getOverview(days = 90): Promise<Overview> {
+/** GET /api/v1/dashboard/overview (optionally for a chosen period; default: the last 90 days of data) */
+export async function getOverview(range?: DateRange): Promise<Overview> {
   if (API_MODE === "demo") {
     return {
       meta: DEMO_META,
@@ -87,7 +88,8 @@ export async function getOverview(days = 90): Promise<Overview> {
       growthScoreDetails: null,
     };
   }
-  const data = await live<OverviewResponse>(`/api/v1/dashboard/overview?days=${days}`);
+  const query = range ? `?start=${range.from}&end=${range.to}` : "";
+  const data = await live<OverviewResponse>(`/api/v1/dashboard/overview${query}`);
   return { ...data, segments: withSegmentMeta(data.segments) };
 }
 

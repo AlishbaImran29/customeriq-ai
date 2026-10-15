@@ -260,3 +260,24 @@ def test_cohort_retention_counts_customers_who_ordered_again_each_month():
     assert september["size"] == 1 and september["retention"][1] is None   # partial October
     assert result["partialMonth"] == "Oct 2026"
     assert result["averages"][0] == 100.0
+
+
+def test_kpis_for_a_past_period_use_only_data_up_to_its_end():
+    # 100 ten days ago, 200 sixty days ago, 400 two years ago.
+    snapshot = a.build_snapshot([order("A", 10, 100), order("B", 60, 200), order("C", 700, 400)])
+    end = AS_OF - timedelta(days=45)  # a period that ends before the 100 order
+    values, _ = a.kpis(snapshot, 30, end)
+    assert values["revenue"] == 200.0          # only the order 60 days ago falls in the 30 days to `end`
+    assert values["totalCustomers"] == 2       # A had not ordered yet by then
+    assert a.kpis(snapshot, 30, AS_OF + timedelta(days=500))[0]["revenue"] == 100.0  # later than the data is cut back
+    values, _ = a.kpis(snapshot, 30, AS_OF - timedelta(days=2000))
+    assert values["revenue"] is None           # the period ends before the first order
+
+
+def test_executive_summary_names_the_dates_of_a_past_period():
+    snapshot = a.build_snapshot([order("A", 10, 100), order("B", 60, 200), order("C", 700, 400)])
+    end = AS_OF - timedelta(days=45)
+    values, deltas = a.kpis(snapshot, 30, end)
+    deltas["revenue"] = 12.0
+    assert " to " in a.executive_summary(snapshot, values, deltas, 30, end)["headline"]
+    assert "last 30 days" in a.executive_summary(snapshot, values, deltas, 30)["headline"]

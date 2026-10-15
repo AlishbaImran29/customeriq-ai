@@ -20,8 +20,8 @@ import {
 } from "@/components/data-state";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
-import { PeriodPicker } from "@/components/period-picker";
-import { DEFAULT_PERIOD, PERIOD_OPTIONS } from "@/lib/period";
+import { DateRangePicker } from "@/components/date-range-picker";
+import { dayCount, formatRange, lastDays, rangeFromParams } from "@/lib/dates";
 import { RevenueForecastChart, SegmentDonutChart } from "@/components/charts/dashboard-charts";
 import { EmptyState } from "@/components/states";
 import { Badge, impactVariant, riskVariant } from "@/components/ui/badge";
@@ -72,7 +72,7 @@ function GrowthScoreExplainer({ details }: { details: GrowthScoreDetails }) {
   );
 }
 
-export default function OverviewPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+export default function OverviewPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   return (
     <div className="space-y-6">
       <PageHeader
@@ -86,10 +86,10 @@ export default function OverviewPage({ searchParams }: { searchParams: Promise<{
   );
 }
 
-async function OverviewContent({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  const requested = Number((await searchParams).days);
-  const days = (PERIOD_OPTIONS as readonly number[]).includes(requested) ? requested : DEFAULT_PERIOD;
-  const result = await load(() => getOverview(days));
+async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+  const params = await searchParams;
+  const range = rangeFromParams(params.from, params.to);
+  const result = await load(() => getOverview(range ?? undefined));
   if (!result.ok) return <DataErrorState error={result.error} />;
   const {
     meta,
@@ -113,11 +113,7 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ days?
     <>
       <DataSourceBanner meta={meta} />
 
-      {live ? (
-        <Suspense fallback={null}>
-          <PeriodPicker current={days} />
-        </Suspense>
-      ) : null}
+      {live && meta.asOf ? <DateRangePicker asOf={meta.asOf} current={range ?? lastDays(meta.asOf, 90)} /> : null}
 
       <ModelNote model={meta.models.churn} title="Churn model" />
       <ModelNote model={meta.models.forecast} title="Revenue forecast" />
@@ -125,7 +121,7 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ days?
       <section aria-label="Key metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard label="Total Customers" value={value(kpis.totalCustomers, formatNumber)} delta={kpiDeltas.totalCustomers} icon={Users} />
         <KpiCard
-          label={live ? `Revenue (last ${days} days)` : "Revenue"}
+          label={live ? (range ? `Revenue (${formatRange(range)})` : "Revenue (last 90 days)") : "Revenue"}
           value={value(kpis.revenue, money)}
           delta={kpiDeltas.revenue}
           icon={TrendingUp}
@@ -137,7 +133,7 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ days?
           icon={Wallet}
         />
         <KpiCard
-          label={live ? `Retention Rate (${days} days)` : "Retention Rate"}
+          label={live ? (range ? `Retention Rate (${dayCount(range)} days)` : "Retention Rate (90 days)") : "Retention Rate"}
           value={value(kpis.retentionRate, formatPercent)}
           delta={kpiDeltas.retentionRate}
           deltaUnit="pts"

@@ -4,7 +4,9 @@ Prediction fields come from trained models (services/predictions.py) and are
 null unless the model passed its quality gate; `meta.models` explains why.
 """
 
-from fastapi import APIRouter, Depends, Query
+from datetime import date, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -34,6 +36,7 @@ from app.services.analytics_data import load_snapshot
 router = APIRouter(tags=["analytics"])
 
 DEFAULT_LIMIT = 500
+MAX_PERIOD_DAYS = 1095  # three years
 MAX_LIMIT = 2000
 
 # Which trained model produces each prediction field.
@@ -163,12 +166,22 @@ def _revenue_series(snapshot: a.Snapshot, preds: pr.Predictions) -> list[dict]:
 
 @router.get("/dashboard/overview", response_model=OverviewOut)
 def overview(
-    days: int = Query(a.WINDOW_DAYS, ge=7, le=365, description="Length of the KPI period in days."),
+    start: date | None = Query(None, description="First day of the KPI period (with `end`)."),
+    end: date | None = Query(None, description="Last day of the KPI period; later than the data is cut back."),
+    days: int = Query(a.WINDOW_DAYS, ge=1, le=MAX_PERIOD_DAYS, description="Period length when `start` is not given."),
     db: Session = Depends(get_db),
 ) -> OverviewOut:
     snapshot = load_snapshot(db)
     preds = pr.get_predictions(snapshot)
-    values, deltas = a.kpis(snapshot, days)
+    if snapshot.as_of is not None:
+        end = min(end, snapshot.as_of) if end else snapshot.as_of
+        if start is not None:
+            if start > end:
+                raise HTTPException(status_code=422, detail="The start date must be on or before the end date.")
+            days = (end - start).days + 1
+            if days > MAX_PERIOD_DAYS:
+                raise HTTPException(status_code=422, detail=f"Choose a period of at most {MAX_PERIOD_DAYS} days.")
+    values, deltas = a.kpis(snapshot, days, end)
     values["churnRisk"] = pr.churn_kpi(snapshot, preds)
     growth = a.growth_score(snapshot, values, deltas, days)
     values["growthScore"] = growth["score"] if growth else None
@@ -193,7 +206,7 @@ def overview(
         kpis=Kpis.model_validate(values),
         kpi_deltas=Kpis.model_validate(deltas),
         growth_score_details=growth,
-        executive_summary=a.executive_summary(snapshot, values, deltas, days),
+        executive_summary=a.executive_summary(snapshot, values, deltas, days, end),
         revenue_series=_revenue_series(snapshot, preds),
         segments=a.segment_summaries(snapshot, preds.predicted_spend if preds.clv.available else None),
         top_recommendations=[r for r in recs if r["impact"] == "High"][:3] or recs[:3],
