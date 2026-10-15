@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatNumber } from "@/lib/utils";
 
 export type CalculatorDefaults = {
   /** Customers considered at risk. */
@@ -61,7 +62,7 @@ export function RevenueAtRiskCalculator({ defaults }: { defaults: CalculatorDefa
             onChange={(event) => setYearlySpend(Number(event.target.value))}
             className="mt-2 w-full accent-teal-600"
           />
-          <span className="text-xs text-slate-500">{formatCurrency(yearlySpend)}</span>
+          <span className="text-xs text-slate-500"><Money value={yearlySpend} /></span>
         </label>
         <label className="block text-sm">
           <span className="text-slate-600">Share of them expected to leave</span>
@@ -80,9 +81,9 @@ export function RevenueAtRiskCalculator({ defaults }: { defaults: CalculatorDefa
       </div>
       <div className="rounded-2xl bg-slate-950 p-5 text-white" aria-live="polite">
         <p className="text-xs uppercase tracking-wide text-slate-400">Yearly revenue at risk in this scenario</p>
-        <p className="mt-2 text-3xl font-semibold">{formatCurrency(atRisk)}</p>
+        <p className="mt-2 text-3xl font-semibold"><Money value={atRisk} /></p>
         <p className="mt-3 text-sm text-slate-300">
-          = {formatNumber(customers)} customers × {formatCurrency(yearlySpend)} a year × {share}% leaving. A
+          = {formatNumber(customers)} customers × <Money value={yearlySpend} /> a year × {share}% leaving. A
           &ldquo;what if&rdquo; tool, not a forecast.
         </p>
       </div>

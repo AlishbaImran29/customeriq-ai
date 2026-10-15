@@ -6,7 +6,8 @@ import { SegmentDonutChart, SegmentRevenueBars } from "@/components/charts/dashb
 import { EmptyState } from "@/components/states";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCustomers, getSegments } from "@/lib/api/customer-intelligence";
-import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatNumber, formatPercent } from "@/lib/utils";
 
 export default function SegmentationPage() {
   return (
@@ -58,11 +59,11 @@ async function SegmentationContent() {
                 <dl className="mt-3 space-y-1 text-xs">
                   <div className="flex justify-between gap-2">
                     <dt className="text-slate-500">Revenue</dt>
-                    <dd className="font-medium tabular-nums">{formatCurrency(segment.revenue)}</dd>
+                    <dd className="font-medium tabular-nums"><Money value={segment.revenue} /></dd>
                   </div>
                   <div className="flex justify-between gap-2">
                     <dt className="text-slate-500">Avg CLV</dt>
-                    <dd className="font-medium tabular-nums">{formatCurrency(segment.avgClv)}</dd>
+                    <dd className="font-medium tabular-nums"><Money value={segment.avgClv} /></dd>
                   </div>
                 </dl>
                 <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-600">{segment.definition}</p>

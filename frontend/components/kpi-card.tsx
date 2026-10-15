@@ -13,8 +13,8 @@ export function KpiCard({
   icon: Icon,
 }: {
   label: string;
-  /** Formatted value, or null when the metric is not available. */
-  value: string | null;
+  /** Formatted value (text, or a <Money> amount), or null when the metric is not available. */
+  value: React.ReactNode | null;
   /** Change vs the previous period; null when there is not enough history. */
   delta: number | null;
   /** "%" for relative change, "pts" for change in a rate or score. */

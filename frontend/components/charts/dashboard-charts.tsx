@@ -24,7 +24,12 @@ import type {
   RiskLevel,
   SegmentSummary,
 } from "@/lib/types";
-import { formatCompactCurrency, formatCurrency, formatNumber } from "@/lib/utils";
+import { formatMoney, getCurrencyState, useCurrency } from "@/lib/currency";
+import { formatNumber } from "@/lib/utils";
+
+// Read the current choice at call time; each currency chart calls useCurrency() so it redraws on change.
+const formatCurrency = (value: number) => formatMoney(getCurrencyState(), value);
+const formatCompactCurrency = (value: number) => formatMoney(getCurrencyState(), value, true);
 
 // Validated categorical slots (see dataviz palette): series 1 and 2.
 const SERIES_1 = "#2a78d6";
@@ -77,6 +82,7 @@ function ChartFrame({
 }
 
 export function RevenueForecastChart({ data }: { data: RevenuePoint[] }) {
+  useCurrency();
   // Forecast series are only drawn when the data contains a forecast.
   const hasForecast = data.some((p) => p.forecast !== undefined);
   return (
@@ -160,6 +166,7 @@ export function SegmentDonutChart({ data }: { data: SegmentSummary[] }) {
 }
 
 export function SegmentRevenueBars({ data }: { data: SegmentSummary[] }) {
+  useCurrency();
   return (
     <ChartFrame label="Revenue by customer segment" height={280}>
       <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
@@ -191,6 +198,7 @@ export function SegmentRevenueBars({ data }: { data: SegmentSummary[] }) {
 }
 
 export function ClvBySegmentChart({ data }: { data: SegmentSummary[] }) {
+  useCurrency();
   const rows = data.map((s) => ({
     name: s.name.replace(" Customers", ""),
     current: s.avgClv,
@@ -225,6 +233,7 @@ export function ClvBySegmentChart({ data }: { data: SegmentSummary[] }) {
 }
 
 export function RevenueAtRiskChart({ data }: { data: RevenueAtRiskPoint[] }) {
+  useCurrency();
   return (
     <ChartFrame label="Monthly revenue at risk" height={300}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>

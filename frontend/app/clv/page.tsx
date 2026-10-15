@@ -7,7 +7,8 @@ import { EmptyState } from "@/components/states";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getClvOverview } from "@/lib/api/customer-intelligence";
-import { formatCurrency, formatNumber, formatSignedPercent } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatNumber, formatSignedPercent } from "@/lib/utils";
 
 function growthLabel(growth: number) {
   if (growth >= 25) return { label: "High potential", variant: "success" as const };
@@ -63,7 +64,7 @@ async function ClvContent() {
       <section aria-label="CLV summary" className="grid gap-4 sm:grid-cols-3">
         <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Average current CLV</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{averageClv === null ? "—" : formatCurrency(averageClv)}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">{averageClv === null ? "—" : <Money value={averageClv} />}</p>
           <p className="text-xs text-slate-500">{live ? "Revenue to date per customer" : "Weighted across all segments"}</p>
         </Card>
         <Card className="p-4">
@@ -72,7 +73,7 @@ async function ClvContent() {
             <NotAvailableValue reason={meta.models.clv.reason ?? undefined} />
           ) : (
             <>
-              <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(averagePredictedClv)}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums"><Money value={averagePredictedClv} /></p>
               <p className="text-xs text-slate-500">12-month forward forecast</p>
             </>
           )}
@@ -140,9 +141,9 @@ async function ClvContent() {
                     <tr key={row.id} className="border-b border-slate-100 last:border-0">
                       <td className="px-3 py-3 font-medium text-slate-900">{row.name}</td>
                       <td className="px-3 py-3 text-slate-700">{row.segment ?? <span className="text-slate-400">Not segmented</span>}</td>
-                      <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(row.currentClv)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums"><Money value={row.currentClv} /></td>
                       <td className="px-3 py-3 text-right tabular-nums">
-                        {row.predictedClv === null ? <NotAvailableCell /> : formatCurrency(row.predictedClv)}
+                        {row.predictedClv === null ? <NotAvailableCell /> : <Money value={row.predictedClv} />}
                       </td>
                       <td
                         className={

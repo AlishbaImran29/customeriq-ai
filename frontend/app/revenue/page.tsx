@@ -8,7 +8,8 @@ import { EmptyState } from "@/components/states";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getRevenueOverview } from "@/lib/api/customer-intelligence";
-import { formatCurrency, formatPercent, formatSignedPercent } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatPercent, formatSignedPercent } from "@/lib/utils";
 
 export default function RevenuePage() {
   return (
@@ -65,7 +66,7 @@ async function RevenueContent() {
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
             {latest ? `Last full month (${latest.month})` : "Last full month"}
           </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{latest?.actual !== undefined ? formatCurrency(latest.actual) : "—"}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">{latest?.actual !== undefined ? <Money value={latest.actual} /> : "—"}</p>
           {monthChange !== null ? (
             <p className={monthChange >= 0 ? "text-xs font-medium text-emerald-700" : "text-xs font-medium text-rose-700"}>
               {formatSignedPercent(monthChange)} vs previous month
@@ -80,7 +81,7 @@ async function RevenueContent() {
             <NotAvailableValue reason={reasonFor(meta, "revenueForecast")} />
           ) : (
             <>
-              <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(forecastTotal)}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums"><Money value={forecastTotal} /></p>
               <p className="text-xs text-slate-500">{live ? "Model estimate (see range on the chart)" : "Includes holiday peak"}</p>
             </>
           )}
@@ -89,25 +90,25 @@ async function RevenueContent() {
           <>
             <Card className="p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">At-Risk + Lost revenue (12 mo)</p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums text-rose-700">{formatCurrency(totalAtRisk)}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-rose-700"><Money value={totalAtRisk} /></p>
               <p className="text-xs text-slate-500">What these customers spent — historical, not a predicted loss</p>
             </Card>
             <Card className="p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Share of 12-month revenue</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{formatPercent(revenue12m ? (totalAtRisk / revenue12m) * 100 : 0)}</p>
-              <p className="text-xs text-slate-500">of {formatCurrency(revenue12m)} in the last 12 months</p>
+              <p className="text-xs text-slate-500">of <Money value={revenue12m} /> in the last 12 months</p>
             </Card>
           </>
         ) : (
           <>
             <Card className="p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Revenue at risk (month)</p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums text-rose-700">{formatCurrency(currentAtRisk)}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-rose-700"><Money value={currentAtRisk} /></p>
               <p className="text-xs text-slate-500">{formatPercent(latest?.actual ? (currentAtRisk / latest.actual) * 100 : 0)} of monthly revenue</p>
             </Card>
             <Card className="p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">12-month exposure</p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(totalAtRisk)}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums"><Money value={totalAtRisk} /></p>
               <p className="text-xs text-slate-500">Predicted loss if at-risk cohorts churn</p>
             </Card>
           </>
@@ -159,7 +160,7 @@ async function RevenueContent() {
                 <div key={item.segment}>
                   <div className="mb-1.5 flex justify-between gap-2 text-sm">
                     <span className="text-slate-700">{item.segment} · {item.customers} customers</span>
-                    <span className="font-medium tabular-nums">{formatCurrency(item.atRisk)}</span>
+                    <span className="font-medium tabular-nums"><Money value={item.atRisk} /></span>
                   </div>
                   <Progress value={item.atRisk} max={totalAtRisk || 1} tone="critical" label={`${item.segment} revenue at risk`} />
                 </div>
@@ -187,7 +188,7 @@ async function RevenueContent() {
                       <div className="mb-1.5 flex justify-between gap-2 text-sm">
                         <span className="text-slate-700">{item.name}</span>
                         <span className="shrink-0 font-medium tabular-nums">
-                          {formatCurrency(item.revenue)} · {formatPercent(item.share, 0)}
+                          <Money value={item.revenue} /> · {formatPercent(item.share, 0)}
                         </span>
                       </div>
                       <Progress value={item.revenue} max={max} label={`${item.name} revenue`} />

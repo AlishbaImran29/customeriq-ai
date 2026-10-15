@@ -5,7 +5,8 @@ import { RecommendationBoard } from "@/components/recommendation-board";
 import { EmptyState } from "@/components/states";
 import { Card } from "@/components/ui/card";
 import { getRecommendations } from "@/lib/api/customer-intelligence";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatNumber } from "@/lib/utils";
 
 export default function RecommendationsPage() {
   return (
@@ -59,7 +60,7 @@ async function RecommendationsContent() {
                 {live ? "Spent by target audiences (12 mo)" : "Estimated revenue opportunity"}
               </p>
               <p className={live ? "mt-2 text-2xl font-semibold tabular-nums" : "mt-2 text-2xl font-semibold tabular-nums text-emerald-700"}>
-                {formatCurrency(totalRevenue)}
+                <Money value={totalRevenue} />
               </p>
               {live ? <p className="text-xs text-slate-500">Historical spend, not a forecast</p> : null}
             </Card>

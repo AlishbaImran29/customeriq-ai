@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
+import { CurrencyMenu } from "@/components/layout/currency-menu";
 import { API_MODE } from "@/lib/api/config";
 import { cn } from "@/lib/utils";
 
@@ -222,6 +223,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 {LIVE ? "Live data" : "Demo data"}
               </span>
+              <CurrencyMenu />
               <AccountMenu />
             </div>
           </header>

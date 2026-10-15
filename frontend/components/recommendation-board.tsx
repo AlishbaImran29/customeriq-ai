@@ -7,7 +7,8 @@ import { Badge, impactVariant } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { FilterPills } from "@/components/ui/filter-pills";
 import type { Recommendation, RecommendationCategory } from "@/lib/types";
-import { formatCompactCurrency, formatNumber } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatNumber } from "@/lib/utils";
 
 const categories: RecommendationCategory[] = [
   "Retention Campaign",
@@ -73,7 +74,7 @@ export function RecommendationBoard({ items }: { items: Recommendation[] }) {
                         <>
                           <dt className="text-slate-500">Est. revenue</dt>
                           <dd className="mt-0.5 font-medium tabular-nums text-emerald-700">
-                            +{formatCompactCurrency(item.estimatedRevenue)}
+                            +<Money value={item.estimatedRevenue} compact />
                           </dd>
                         </>
                       ) : (
@@ -82,7 +83,7 @@ export function RecommendationBoard({ items }: { items: Recommendation[] }) {
                             Spent (12 mo)
                           </dt>
                           <dd className="mt-0.5 font-medium tabular-nums text-slate-800">
-                            {formatCompactCurrency(item.historicalRevenue ?? 0)}
+                            <Money value={item.historicalRevenue ?? 0} compact />
                           </dd>
                         </>
                       )}

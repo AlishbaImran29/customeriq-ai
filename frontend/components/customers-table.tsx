@@ -1,6 +1,7 @@
 import { NotAvailableCell } from "@/components/not-available";
 import { Badge, riskVariant } from "@/components/ui/badge";
-import { formatCurrency, formatDate, formatPercent } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatDate, formatPercent } from "@/lib/utils";
 import type { Customer } from "@/lib/types";
 
 export function CustomersTable({
@@ -44,9 +45,9 @@ export function CustomersTable({
                 {row.segment ?? <span className="text-slate-400">Not segmented</span>}
               </td>
               <td className="px-3 py-3 font-medium tabular-nums">{row.healthScore}</td>
-              <td className="px-3 py-3 tabular-nums">{formatCurrency(row.currentClv)}</td>
+              <td className="px-3 py-3 tabular-nums"><Money value={row.currentClv} /></td>
               <td className="px-3 py-3 tabular-nums">
-                {row.predictedClv === null ? <NotAvailableCell /> : formatCurrency(row.predictedClv)}
+                {row.predictedClv === null ? <NotAvailableCell /> : <Money value={row.predictedClv} />}
               </td>
               <td className="px-3 py-3">
                 <div className="flex items-center gap-2">

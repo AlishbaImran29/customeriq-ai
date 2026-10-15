@@ -9,7 +9,8 @@ import { Badge, riskVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getChurnOverview } from "@/lib/api/customer-intelligence";
-import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatNumber, formatPercent } from "@/lib/utils";
 
 export default function ChurnPage() {
   return (
@@ -123,7 +124,7 @@ async function ChurnContent() {
               ) : (
                 <>
                   <p className="mt-4 text-3xl font-semibold tabular-nums">{customer.daysSinceLastOrder ?? "—"}</p>
-                  <p className="text-xs text-slate-500">days since last order · {formatCurrency(customer.revenue)} spent</p>
+                  <p className="text-xs text-slate-500">days since last order · <Money value={customer.revenue} /> spent</p>
                 </>
               )}
               <div className="mt-3">

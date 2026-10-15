@@ -26,7 +26,8 @@ import { Badge, impactVariant, riskVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOverview } from "@/lib/api/customer-intelligence";
 import type { GrowthScoreDetails } from "@/lib/types";
-import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
+import { Money } from "@/components/money";
+import { formatNumber, formatPercent } from "@/lib/utils";
 
 
 function GrowthScoreExplainer({ details }: { details: GrowthScoreDetails }) {
@@ -101,7 +102,8 @@ async function OverviewContent() {
   const live = meta.source === "live";
   const churnPredicted = meta.models.churn.status === "available";
   const forecastPredicted = meta.models.forecast.status === "available";
-  const value = (v: number | null, format: (n: number) => string) => (v === null ? null : format(v));
+  const value = (v: number | null, format: (n: number) => React.ReactNode) => (v === null ? null : format(v));
+  const money = (n: number) => <Money value={n} />;
 
   return (
     <>
@@ -114,13 +116,13 @@ async function OverviewContent() {
         <KpiCard label="Total Customers" value={value(kpis.totalCustomers, formatNumber)} delta={kpiDeltas.totalCustomers} icon={Users} />
         <KpiCard
           label={live ? "Revenue (last 90 days)" : "Revenue"}
-          value={value(kpis.revenue, formatCurrency)}
+          value={value(kpis.revenue, money)}
           delta={kpiDeltas.revenue}
           icon={TrendingUp}
         />
         <KpiCard
           label={live ? "Customer Lifetime Value (to date)" : "Customer Lifetime Value"}
-          value={value(kpis.averageClv, formatCurrency)}
+          value={value(kpis.averageClv, money)}
           delta={kpiDeltas.averageClv}
           icon={Wallet}
         />
@@ -268,7 +270,7 @@ async function OverviewContent() {
                       <span className="text-sm font-semibold tabular-nums">
                         {customer.churnProbability !== null
                           ? formatPercent(customer.churnProbability, 0)
-                          : formatCurrency(customer.revenue)}
+                          : <Money value={customer.revenue} />}
                       </span>
                       <Badge variant={riskVariant(customer.riskLevel)}>{customer.riskLevel}</Badge>
                     </div>
