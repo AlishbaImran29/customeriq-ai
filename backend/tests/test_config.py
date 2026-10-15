@@ -43,3 +43,15 @@ def test_database_url_overrides_fields():
 def test_cors_origins_parsed_from_comma_list():
     settings = make_settings(frontend_origins=" http://a.test , http://b.test ,")
     assert settings.cors_origins == ["http://a.test", "http://b.test"]
+
+
+def test_sslmode_is_added_to_the_connection_when_set():
+    url = make_settings(db_name="db", db_user="user", db_password="pw", db_sslmode="require").sqlalchemy_url()
+    assert url.query == {"sslmode": "require"}
+    assert make_settings(db_name="db", db_user="user", db_password="pw").sqlalchemy_url().query == {}
+
+
+def test_plain_postgresql_urls_are_switched_to_the_psycopg_driver():
+    for scheme in ("postgresql", "postgres", "postgresql+psycopg"):
+        url = make_settings(database_url=f"{scheme}://u:pw@db.example:5432/app?sslmode=require").sqlalchemy_url()
+        assert url.drivername == "postgresql+psycopg" and url.query == {"sslmode": "require"}

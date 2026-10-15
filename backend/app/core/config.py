@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     db_name: str | None = None
     db_user: str | None = None
     db_password: SecretStr | None = None
+    # Hosted databases (e.g. Supabase) need an encrypted connection: set to "require".
+    db_sslmode: Literal["disable", "prefer", "require", "verify-ca", "verify-full"] | None = None
 
     # Comma-separated list of browser origins allowed by CORS.
     frontend_origins: str = "http://localhost:3000,http://localhost:3001"
@@ -81,7 +83,11 @@ class Settings(BaseSettings):
     def sqlalchemy_url(self) -> URL:
         """Build the connection URL. Its repr/str masks the password."""
         if self.database_url is not None and self.database_url.get_secret_value().strip():
-            return make_url(self.database_url.get_secret_value().strip())
+            url = make_url(self.database_url.get_secret_value().strip())
+            # Hosts hand out "postgresql://..."; this app uses the psycopg 3 driver.
+            if url.drivername in ("postgresql", "postgres"):
+                url = url.set(drivername="postgresql+psycopg")
+            return url
         if not self.database_configured:
             raise DatabaseNotConfiguredError()
         assert self.db_password is not None
@@ -92,6 +98,7 @@ class Settings(BaseSettings):
             host=self.db_host,
             port=self.db_port,
             database=self.db_name,
+            query={"sslmode": self.db_sslmode} if self.db_sslmode else {},
         )
 
 
