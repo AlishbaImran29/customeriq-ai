@@ -255,5 +255,6 @@ def test_mail_failure_gives_a_friendly_error_without_leaking_details(monkeypatch
     with pytest.raises(ApiError) as caught:
         mailer.send_verification_code(Settings(_env_file=None, **MAIL), "person@example.com", "Ali", "123456", 15)
     assert caught.value.status_code == 503 and caught.value.code == "email_send_failed"
+    assert caught.value.details == {"reason": "login_refused"}  # a coarse label, never the server's own text
     assert "app-password" not in caught.value.message and "535" not in caught.value.message
     FakeSMTP.fail = False

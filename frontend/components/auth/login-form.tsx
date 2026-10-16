@@ -45,10 +45,25 @@ const SERVER_FIELDS: Record<string, Field> = {
   code: "code",
 };
 
+// Why an email could not be sent (sent by the server as a short code), in words for the site owner.
+const EMAIL_FAILURE_HINTS: Record<string, string> = {
+  login_refused: "The email account refused the login. (Site owner: check SMTP_USER and the App Password.)",
+  sender_refused: "The email account refused to send from this address. (Site owner: check SMTP_USER and SMTP_FROM.)",
+  address_refused: "The email address was refused. Please check it for typing mistakes.",
+  timeout: "The email service did not answer in time. Please try again.",
+  disconnected: "The email service closed the connection. (Site owner: check SMTP_HOST and SMTP_PORT.)",
+  unreachable: "The server could not reach the email service. (Site owner: check SMTP_HOST and SMTP_PORT.)",
+  smtp_error: "The email service reported an error.",
+};
+
 function describe(error: unknown): FormError {
   if (error instanceof ApiError) {
-    const field = (error.details as { field?: string } | null)?.field;
-    return { message: error.message, field: field ? SERVER_FIELDS[field] : undefined };
+    const details = error.details as { field?: string; reason?: string } | null;
+    const hint = error.code === "email_send_failed" && details?.reason ? EMAIL_FAILURE_HINTS[details.reason] : undefined;
+    return {
+      message: hint ? `${error.message} ${hint}` : error.message,
+      field: details?.field ? SERVER_FIELDS[details.field] : undefined,
+    };
   }
   return { message: "Something went wrong. Please try again." };
 }

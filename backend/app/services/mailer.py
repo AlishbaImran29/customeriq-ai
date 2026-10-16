@@ -24,6 +24,23 @@ def _single_line(value: str) -> str:
     return " ".join(value.split())
 
 
+def _failure_reason(exc: Exception) -> str:
+    """A coarse, safe label for why sending failed (never includes the server's own text)."""
+    if isinstance(exc, smtplib.SMTPAuthenticationError):
+        return "login_refused"
+    if isinstance(exc, smtplib.SMTPSenderRefused):
+        return "sender_refused"
+    if isinstance(exc, smtplib.SMTPRecipientsRefused):
+        return "address_refused"
+    if isinstance(exc, TimeoutError):
+        return "timeout"
+    if isinstance(exc, smtplib.SMTPServerDisconnected | smtplib.SMTPConnectError):
+        return "disconnected"
+    if isinstance(exc, OSError):
+        return "unreachable"
+    return "smtp_error"
+
+
 def send_email(settings: Settings, to: str, subject: str, text: str, html: str) -> None:
     sender = settings.smtp_from or settings.smtp_user
     assert settings.smtp_host and sender and settings.smtp_password
@@ -48,10 +65,12 @@ def send_email(settings: Settings, to: str, subject: str, text: str, html: str) 
                 client.login(settings.smtp_user, settings.smtp_password.get_secret_value())
             client.send_message(message)
     except (smtplib.SMTPException, OSError) as exc:
-        logger.warning("Could not send email: %s", type(exc).__name__)
+        reason = _failure_reason(exc)
+        logger.warning("Could not send email: %s (%s)", type(exc).__name__, reason)
         raise ApiError(
             503, "email_send_failed",
             "We couldn't send the email just now. Please try again in a moment.",
+            {"reason": reason},
         ) from exc
 
 
