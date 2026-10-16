@@ -47,7 +47,8 @@ cd D:\CustomerIQ.AI\backend
 It asks for the **host**, **port**, **database**, **user** and **password** (the password is
 typed hidden and never saved). It shows where it is about to write and waits for you to type
 `yes`. At the end it lists the tables: `customers`, `import_jobs`, `orders`, `sessions`,
-`users`, `alembic_version`. Run it again after any future update that changes the database.
+`users`, `alembic_version`. **Run it again after any update that changes the database**: the
+email-verification update added columns to `users`, so run it before deploying that version.
 
 ## 3. Deploy the API (Vercel project 1)
 
@@ -67,6 +68,10 @@ typed hidden and never saved). It shows where it is about to write and waits for
    | `DB_MAX_OVERFLOW` | `1` |
    | `APP_ENV` | `production` |
    | `SETUP_CODE` | your invented setup code |
+   | `SMTP_HOST` | `smtp.gmail.com` (see "Email codes" below; leave all `SMTP_*` out to skip email) |
+   | `SMTP_PORT` | `587` |
+   | `SMTP_USER` | your Gmail address |
+   | `SMTP_PASSWORD` | your Gmail **App Password** (not your normal password) |
    | `FRONTEND_ORIGINS` | `https://placeholder.example` (you set the real value in step 5) |
 
    Optional: `ANTHROPIC_API_KEY` (needs paid API credits; without it the assistant says "AI not configured").
@@ -76,6 +81,29 @@ typed hidden and never saved). It shows where it is about to write and waits for
 
 If Vercel shows its own sign-in page instead: open the API project → **Settings → Deployment
 Protection** and turn **Vercel Authentication** off for production, then try again.
+
+### Email codes (so people must use a real email address)
+
+When the `SMTP_*` variables are set, every new account must **confirm its email address** with a
+6-digit code before it can sign in, and **anyone with a real email address can create an account**
+(set `ALLOW_SIGNUP=false` on the API project to turn public sign-up off again). Without them, accounts
+are created without a code and only the owner account can be created on the site.
+
+To use Gmail (free, no card):
+
+1. Open your Google account → **Security** and turn on **2-Step Verification**.
+2. Open <https://myaccount.google.com/apppasswords>, create an app password named `CustomerIQ`, and
+   copy the 16 letters. Treat it like a password: paste it only into the Vercel variable (or
+   `backend/.env`), never into a chat or a file in the repository.
+3. Add the four `SMTP_*` variables from the table above, then **redeploy the API**.
+
+Gmail allows roughly 500 emails a day, which is plenty for sign-up codes. Codes expire after 15 minutes,
+allow 5 wrong tries, and one address can be sent at most one code a minute and 5 an hour.
+
+> **Important:** the app shows **one shared set of customer data to every signed-in user**; accounts do
+> not get separate data. With public sign-up on, anyone who confirms an email can see everything you
+> imported. Use **public test data only** (or set `ALLOW_SIGNUP=false` and create teammates yourself with
+> `manage_users.py`) before importing real customers.
 
 ## 4. Deploy the website (Vercel project 2)
 
@@ -132,6 +160,8 @@ Variables**, change `FRONTEND_ORIGINS` to the website address exactly (for examp
 | The site says **"We couldn't reach the server"** | `NEXT_PUBLIC_API_BASE_URL` is missing or wrong (then redeploy the website), or the API address answers with a Vercel sign-in page (see step 3). |
 | Sign-in works, then you are sent back to sign in | The API is not in production mode, or the website address is not exactly `FRONTEND_ORIGINS`. |
 | *"This request came from a website that is not allowed"* | `FRONTEND_ORIGINS` does not match the address in the browser bar. Fix it and redeploy the API. |
+| No email arrives | Check the spam folder first. Then check the `SMTP_*` variables (an **App Password**, 2-Step Verification on, the same Gmail in `SMTP_USER`), and redeploy the API. The page says "We couldn't send the email" if Gmail refuses. |
+| "Create an account" does not appear | Sign-up needs the `SMTP_*` variables, and `ALLOW_SIGNUP` must not be `false`. The owner account must already exist and be confirmed. |
 | **"That setup code is not correct"** | Use the value of `SETUP_CODE` from the API project's settings. |
 | CSV upload fails on the live site only | The file is over 4.5 MB (see "Free limits"). |
 | The assistant says **no remaining credits** | Add API credits in the Claude Console (a Claude Pro subscription does not include them). |
@@ -140,6 +170,7 @@ Variables**, change `FRONTEND_ORIGINS` to the website address exactly (for examp
 
 - [ ] The GitHub repository is **private**.
 - [ ] `APP_ENV=production` and a `SETUP_CODE` are set on the API project.
+- [ ] You know that every confirmed account sees all imported data (see the note under "Email codes").
 - [ ] You created the first account yourself and confirmed "Create your account" no longer appears.
 - [ ] No keys or passwords are in the repository.
 - [ ] You have the right to use your customers' data, and you are not on a plan that forbids business use (Vercel Hobby is non-commercial).

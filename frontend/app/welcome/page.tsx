@@ -197,7 +197,7 @@ export default function WelcomePage() {
             <Link href="/login" className="rounded-xl px-3.5 py-2 text-sm font-medium text-slate-200 hover:text-white">
               Sign in
             </Link>
-            <Link href="/login" className="rounded-xl bg-teal-500 px-3.5 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400">
+            <Link href="/login?mode=signup" className="rounded-xl bg-teal-500 px-3.5 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400">
               Get started
             </Link>
           </div>
@@ -225,7 +225,7 @@ export default function WelcomePage() {
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
-                  href="/login"
+                  href="/login?mode=signup"
                   className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-teal-500/20 hover:bg-teal-400"
                 >
                   Get started
@@ -321,7 +321,7 @@ export default function WelcomePage() {
             <Lock className="h-6 w-6 text-teal-200" aria-hidden="true" />
             <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Ready to see your customers clearly?</h2>
             <p className="mt-3 max-w-xl text-teal-50">Sign in, import your orders, and your dashboards fill in within moments.</p>
-            <Link href="/login" className="mt-7 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-teal-800 shadow-lg hover:bg-teal-50">
+            <Link href="/login?mode=signup" className="mt-7 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-teal-800 shadow-lg hover:bg-teal-50">
               Get started
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>

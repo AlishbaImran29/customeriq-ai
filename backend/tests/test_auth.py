@@ -50,6 +50,7 @@ def test_data_endpoints_need_sign_in_but_health_does_not(db_client):
 def test_status_before_and_after_setup(db_client):
     assert db_client.get("/api/v1/auth/status").json() == {
         "setupRequired": True, "setupCodeRequired": False, "authenticated": False, "user": None,
+        "signupOpen": False, "verificationEnabled": False,
     }
     assert sign_up(db_client).status_code == 201
     body = db_client.get("/api/v1/auth/status").json()

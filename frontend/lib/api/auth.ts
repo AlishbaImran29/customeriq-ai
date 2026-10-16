@@ -17,7 +17,17 @@ export type AuthStatus = {
   setupCodeRequired: boolean;
   authenticated: boolean;
   user: AuthUser | null;
+  /** Anyone with a real email address may create an account. */
+  signupOpen: boolean;
+  /** New accounts confirm their email with a 6-digit code. */
+  verificationEnabled: boolean;
 };
+
+/** The account exists, but the email still has to be confirmed with the code we sent. */
+export type VerificationPending = { verificationRequired: true; email: string };
+
+export const needsVerification = (result: AuthUser | VerificationPending): result is VerificationPending =>
+  "verificationRequired" in result;
 
 export const getAuthStatus = () => apiGet<AuthStatus>("/api/v1/auth/status");
 
@@ -31,7 +41,15 @@ export const createAccount = (input: {
   email: string;
   password: string;
   setupCode?: string;
-}) => apiPostJson<AuthUser>("/api/v1/auth/setup", { ...input, remember: true });
+}) => apiPostJson<AuthUser | VerificationPending>("/api/v1/auth/setup", { ...input, remember: true });
+
+export const signUp = (input: { name: string; email: string; password: string }) =>
+  apiPostJson<VerificationPending>("/api/v1/auth/signup", input);
+
+export const verifyEmail = (email: string, code: string, remember: boolean) =>
+  apiPostJson<AuthUser>("/api/v1/auth/verify", { email, code, remember });
+
+export const resendCode = (email: string) => apiPostJson<VerificationPending>("/api/v1/auth/resend", { email });
 
 export const signOut = () => apiPostJson<void>("/api/v1/auth/logout", {});
 

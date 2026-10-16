@@ -40,6 +40,16 @@ class Settings(BaseSettings):
     # Optional code required to create the FIRST account through the website. Set it
     # on a public deployment so a stranger cannot claim the owner account.
     setup_code: SecretStr | None = None
+    # Email (SMTP), used to send sign-up verification codes. When it is not configured, accounts
+    # are created without verification and public sign-up stays closed (only the owner account).
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_from: str | None = None  # defaults to smtp_user (Gmail only sends as the account itself)
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    # Lets anyone with a real email address create an account (only works with email configured).
+    allow_signup: bool = True
     session_cookie_name: str = "ciq_session"
     session_hours: int = 24            # login without "remember me"
     remember_session_days: int = 30    # login with "remember me"
@@ -47,6 +57,20 @@ class Settings(BaseSettings):
     @property
     def cookie_secure(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def email_configured(self) -> bool:
+        has_password = bool(self.smtp_password and self.smtp_password.get_secret_value().strip())
+        return bool(self.smtp_host and (self.smtp_from or self.smtp_user) and has_password)
+
+    @property
+    def email_verification_required(self) -> bool:
+        """New accounts must confirm their email with a code (needs email to be set up)."""
+        return self.email_configured
+
+    @property
+    def signup_open(self) -> bool:
+        return self.email_verification_required and self.allow_signup
 
     @property
     def setup_code_required(self) -> bool:

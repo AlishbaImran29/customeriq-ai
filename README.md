@@ -146,6 +146,12 @@ is visible, and the API refuses every request, until someone is signed in.
 - **First time:** open the site. With no accounts yet it shows **Create your
   account**: your name, email and a password (10+ characters; a few unrelated
   words like "blue tractor sings loudly" work well). You are signed in straight away.
+- **Real emails only (optional):** put your email settings in `backend/.env` (see `SMTP_*` in
+  `backend/.env.example`; for Gmail you need an **App Password**). Then every new account, including
+  yours, must type a **6-digit code** that is emailed to it before it can sign in, and a
+  **Create an account** link appears so other people can sign up. Without email settings, accounts
+  are created without a code and only the owner account can be created on the site. All signed-in
+  users see the same data, so do not enable public sign-up for confidential data.
 - **Later:** **Sign in** with that email and password. "Keep me signed in on this
   device" keeps you signed in for 30 days; without it the session ends after 24 hours
   or when you close the browser.

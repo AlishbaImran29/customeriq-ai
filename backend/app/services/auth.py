@@ -1,6 +1,8 @@
 """Accounts and sessions: create users, check passwords, manage sign-in sessions."""
 
+import hashlib
 import hmac
+import secrets
 import threading
 import time
 from dataclasses import dataclass
@@ -21,6 +23,12 @@ from app.core.security import (
     verify_password,
 )
 from app.models import User, UserSession
+from app.services import mailer
+
+CODE_MINUTES = 15
+RESEND_COOLDOWN_SECONDS = 60
+MAX_CODES_PER_HOUR = 5
+MAX_CODE_ATTEMPTS = 5
 
 MAX_FAILED_LOGINS = 8
 LOCK_SECONDS = 15 * 60
@@ -87,8 +95,12 @@ def user_count(db: Session) -> int:
     return db.scalar(select(func.count()).select_from(User)) or 0
 
 
-def create_user(db: Session, *, email: str, name: str, password: str) -> User:
-    """Validate and create an account. Raises ApiError(422/409) with friendly messages."""
+def verified_user_count(db: Session) -> int:
+    """Accounts that count as real owners: those whose email is confirmed."""
+    return db.scalar(select(func.count()).select_from(User).where(User.email_verified_at.is_not(None))) or 0
+
+
+def _checked_details(email: str, name: str, password: str) -> tuple[str, str]:
     email = normalise_email(email)
     name = name.strip() or email.split("@")[0]
     if not is_valid_email(email):
@@ -98,12 +110,89 @@ def create_user(db: Session, *, email: str, name: str, password: str) -> User:
     problem = password_problem(password, email)
     if problem:
         raise ApiError(422, "weak_password", problem, {"field": "password"})
+    return email, name
+
+
+def create_user(db: Session, *, email: str, name: str, password: str, verified: bool = True) -> User:
+    """Validate and create an account. Raises ApiError(422/409) with friendly messages.
+
+    `verified=False` leaves the email unconfirmed until the person enters the code we send.
+    """
+    email, name = _checked_details(email, name, password)
     if db.scalar(select(User.id).where(User.email == email)) is not None:
         raise ApiError(409, "email_taken", "An account with this email already exists.", {"field": "email"})
-    user = User(email=email, name=name, password_hash=hash_password(password))
+    user = User(
+        email=email, name=name, password_hash=hash_password(password),
+        email_verified_at=datetime.now(UTC) if verified else None,
+    )
     db.add(user)
     db.flush()
     return user
+
+
+def refresh_unverified(db: Session, user: User, *, name: str, password: str) -> None:
+    """Someone signs up again with an address that never confirmed: keep the latest name and password."""
+    _, checked_name = _checked_details(user.email, name, password)
+    user.name = checked_name
+    user.password_hash = hash_password(password)
+    db.flush()
+
+
+def delete_unverified(db: Session) -> None:
+    """Drop accounts that never confirmed their email (used when the owner restarts setup)."""
+    db.execute(delete(User).where(User.email_verified_at.is_(None)))
+    db.flush()
+
+
+# --- email verification --------------------------------------------------------------------
+
+def _code_hash(user: User, code: str) -> str:
+    return hashlib.sha256(f"{user.id}:{code.strip()}".encode()).hexdigest()
+
+
+def issue_code(db: Session, user: User, settings: Settings) -> None:
+    """Create a fresh 6-digit code and email it. Limits how often one address can be mailed."""
+    now = datetime.now(UTC)
+    sent_at = user.verify_sent_at
+    if sent_at is not None and (now - sent_at).total_seconds() < RESEND_COOLDOWN_SECONDS:
+        wait = RESEND_COOLDOWN_SECONDS - int((now - sent_at).total_seconds())
+        raise ApiError(429, "code_cooldown", f"Please wait {wait} seconds before asking for another code.",
+                       {"retryAfterSeconds": wait})
+    count = user.verify_send_count if sent_at is not None and (now - sent_at) < timedelta(hours=1) else 0
+    if count >= MAX_CODES_PER_HOUR:
+        raise ApiError(429, "too_many_codes", "Too many codes were requested. Please try again in an hour.")
+    code = f"{secrets.randbelow(10**6):06d}"
+    user.verify_code_hash = _code_hash(user, code)
+    user.verify_expires_at = now + timedelta(minutes=CODE_MINUTES)
+    user.verify_attempts = 0
+    user.verify_sent_at = now
+    user.verify_send_count = count + 1
+    db.flush()
+    mailer.send_verification_code(settings, user.email, user.name, code, CODE_MINUTES)
+
+
+def check_code(db: Session, user: User, code: str) -> None:
+    """Mark the email as verified if the code is right. Wrong guesses are counted in the database."""
+    now = datetime.now(UTC)
+    if not user.verify_code_hash or user.verify_expires_at is None or user.verify_expires_at <= now:
+        raise ApiError(400, "code_expired", "That code has expired. Please ask for a new one.",
+                       {"field": "code"})
+    if user.verify_attempts >= MAX_CODE_ATTEMPTS:
+        raise ApiError(429, "too_many_attempts", "Too many wrong codes. Please ask for a new code.",
+                       {"field": "code"})
+    if not hmac.compare_digest(_code_hash(user, code), user.verify_code_hash):
+        user.verify_attempts += 1
+        db.commit()  # keep the count even though we raise
+        raise ApiError(400, "invalid_code", "That code is not correct.", {"field": "code"})
+    user.email_verified_at = now
+    user.verify_code_hash = None
+    user.verify_expires_at = None
+    user.verify_attempts = 0
+    db.flush()
+
+
+def user_by_email(db: Session, email: str) -> User | None:
+    return db.scalar(select(User).where(User.email == normalise_email(email)))
 
 
 def authenticate(db: Session, email: str, password: str) -> User:

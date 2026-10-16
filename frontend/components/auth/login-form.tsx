@@ -3,11 +3,21 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Circle, Eye, EyeOff, Info, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, Eye, EyeOff, Info, Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createAccount, getAuthStatus, safeNext, signIn, type AuthStatus } from "@/lib/api/auth";
+import {
+  createAccount,
+  getAuthStatus,
+  needsVerification,
+  resendCode,
+  safeNext,
+  signIn,
+  signUp,
+  verifyEmail,
+  type AuthStatus,
+} from "@/lib/api/auth";
 import { API_MODE, ApiError } from "@/lib/api/config";
 import { cn } from "@/lib/utils";
 
@@ -16,10 +26,13 @@ type View =
   | { kind: "unreachable"; message: string }
   | { kind: "ready"; status: AuthStatus };
 
-type Field = "name" | "email" | "password" | "confirm" | "setupCode";
+type Field = "name" | "email" | "password" | "confirm" | "setupCode" | "code";
+type Mode = "signin" | "signup" | "verify";
 type FormError = { message: string; field?: Field };
 
 const MIN_PASSWORD_LENGTH = 10;
+const CODE_LENGTH = 6;
+const RESEND_SECONDS = 60;
 const NOTICES: Record<string, string> = {
   expired: "Your session ended, so please sign in again to continue.",
   signedout: "You've been signed out. See you next time!",
@@ -29,6 +42,7 @@ const SERVER_FIELDS: Record<string, Field> = {
   password: "password",
   name: "name",
   setupCode: "setupCode",
+  code: "code",
 };
 
 function describe(error: unknown): FormError {
@@ -56,6 +70,17 @@ export function LoginForm() {
   const [error, setError] = useState<FormError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [mode, setMode] = useState<Mode>(params.get("mode") === "signup" ? "signup" : "signin");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+  const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setTimeout(() => setCooldown((seconds) => seconds - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
 
   useEffect(() => {
     if (API_MODE === "demo") return;
@@ -118,7 +143,51 @@ export function LoginForm() {
     );
   }
 
-  const { setupRequired, setupCodeRequired } = view.status;
+  const { setupRequired, setupCodeRequired, signupOpen, verificationEnabled } = view.status;
+  // "Creating" covers the owner's first account and ordinary sign-ups; sign-ins have fewer fields.
+  const creating = setupRequired || (mode === "signup" && signupOpen);
+
+  function startVerify(address: string) {
+    setPendingEmail(address);
+    setCode("");
+    setError(null);
+    setInfo(null);
+    setCooldown(RESEND_SECONDS);
+    setSubmitting(false);
+    setMode("verify");
+  }
+
+  async function onVerify(event: React.FormEvent) {
+    event.preventDefault();
+    if (submitting) return;
+    if (code.length !== CODE_LENGTH) {
+      setError({ message: `Please enter the ${CODE_LENGTH}-digit code from the email.`, field: "code" });
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    try {
+      await verifyEmail(pendingEmail, code, remember);
+      router.replace(next);
+      router.refresh();
+    } catch (cause) {
+      setError(describe(cause));
+      setSubmitting(false);
+    }
+  }
+
+  async function onResend() {
+    if (cooldown > 0) return;
+    setError(null);
+    setInfo(null);
+    setCooldown(RESEND_SECONDS);
+    try {
+      await resendCode(pendingEmail);
+      setInfo("If that address is waiting for confirmation, a new code is on its way.");
+    } catch (cause) {
+      setError(describe(cause));
+    }
+  }
 
   function validate(): FormError | null {
     const trimmed = email.trim();
@@ -126,12 +195,12 @@ export function LoginForm() {
       return { message: "Please enter your email address, for example name@company.com.", field: "email" };
     }
     if (!password) return { message: "Please enter your password.", field: "password" };
-    if (setupRequired) {
+    if (creating) {
       if (password.length < MIN_PASSWORD_LENGTH) {
         return { message: `Your password needs at least ${MIN_PASSWORD_LENGTH} characters.`, field: "password" };
       }
       if (password !== confirm) return { message: "The two passwords don't match yet.", field: "confirm" };
-      if (setupCodeRequired && !setupCode.trim()) {
+      if (setupRequired && setupCodeRequired && !setupCode.trim()) {
         return { message: "Please enter the setup code from the person who set up this site.", field: "setupCode" };
       }
     }
@@ -146,15 +215,24 @@ export function LoginForm() {
     if (problem) return;
     setSubmitting(true);
     try {
-      if (setupRequired) {
-        await createAccount({ name: name.trim(), email, password, setupCode: setupCode.trim() || undefined });
-      } else {
-        await signIn(email, password, remember);
+      const result = setupRequired
+        ? await createAccount({ name: name.trim(), email, password, setupCode: setupCode.trim() || undefined })
+        : creating
+          ? await signUp({ name: name.trim(), email, password })
+          : await signIn(email, password, remember);
+      if (needsVerification(result)) {
+        startVerify(result.email);
+        return;
       }
       // Keep the button busy while the next page loads, so it cannot be double-submitted.
       router.replace(next);
       router.refresh();
     } catch (cause) {
+      // Right password, but the email was never confirmed: we have just sent a new code.
+      if (cause instanceof ApiError && cause.code === "email_not_verified") {
+        startVerify((cause.details as { email?: string } | null)?.email ?? email.trim().toLowerCase());
+        return;
+      }
       setError(describe(cause));
       setSubmitting(false);
     }
@@ -163,16 +241,86 @@ export function LoginForm() {
   const fieldError = (field: Field) => (error?.field === field ? error.message : undefined);
   const generalError = error && !error.field ? error.message : undefined;
 
+  if (mode === "verify") {
+    return (
+      <Panel title="Check your email" subtitle={`We sent a ${CODE_LENGTH}-digit code to ${pendingEmail}.`}>
+        <form onSubmit={onVerify} noValidate className="space-y-4">
+          <FieldBox
+            id="code"
+            label="Verification code"
+            error={fieldError("code")}
+            hint="It can take a minute to arrive. Check your spam or junk folder too."
+          >
+            <Input
+              id="code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              placeholder="123456"
+              maxLength={CODE_LENGTH}
+              aria-invalid={fieldError("code") ? true : undefined}
+              className={cn("h-12 text-center text-2xl tracking-[0.4em]", fieldError("code") && "border-rose-400")}
+            />
+          </FieldBox>
+
+          {info ? (
+            <p className="flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900" role="status">
+              <MailCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              {info}
+            </p>
+          ) : null}
+          {generalError ? (
+            <p role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              {generalError}
+            </p>
+          ) : null}
+
+          <Button type="submit" disabled={submitting} className="h-11 w-full text-base">
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            {submitting ? "Checking…" : "Verify and continue"}
+          </Button>
+        </form>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm">
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={cooldown > 0}
+            className="font-medium text-teal-700 hover:text-teal-800 disabled:cursor-not-allowed disabled:text-slate-400"
+          >
+            {cooldown > 0 ? `Send a new code in ${cooldown}s` : "Send a new code"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode(setupRequired ? "signin" : "signup");
+              setError(null);
+              setInfo(null);
+            }}
+            className="text-slate-600 hover:text-slate-900"
+          >
+            Use a different email
+          </button>
+        </div>
+      </Panel>
+    );
+  }
+
   return (
     <Panel
-      title={setupRequired ? "Create your account" : "Welcome back"}
+      title={creating ? "Create your account" : "Welcome back"}
       subtitle={
         setupRequired
           ? "You're the first one here. Set up the account that will own this workspace."
-          : "Sign in to see your customer insights."
+          : creating
+            ? "Use a real email address. We'll send you a code to confirm it."
+            : "Sign in to see your customer insights."
       }
     >
-      {notice && !setupRequired ? (
+      {notice && !creating ? (
         <p className="mb-4 flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900" role="status">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {notice}
@@ -180,7 +328,7 @@ export function LoginForm() {
       ) : null}
 
       <form onSubmit={onSubmit} noValidate className="space-y-4">
-        {setupRequired ? (
+        {creating ? (
           <FieldBox id="name" label="Your name" optional error={fieldError("name")}>
             <Input
               id="name"
@@ -217,13 +365,13 @@ export function LoginForm() {
           id="password"
           label="Password"
           error={fieldError("password")}
-          hint={setupRequired ? <PasswordHint password={password} /> : undefined}
+          hint={creating ? <PasswordHint password={password} /> : undefined}
         >
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              autoComplete={setupRequired ? "new-password" : "current-password"}
+              autoComplete={creating ? "new-password" : "current-password"}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -243,7 +391,7 @@ export function LoginForm() {
           </div>
         </FieldBox>
 
-        {setupRequired ? (
+        {creating ? (
           <FieldBox id="confirm" label="Confirm password" error={fieldError("confirm")}>
             <Input
               id="confirm"
@@ -299,11 +447,27 @@ export function LoginForm() {
 
         <Button type="submit" disabled={submitting} className="h-11 w-full text-base">
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-          {submitting ? (setupRequired ? "Creating your account…" : "Signing in…") : setupRequired ? "Create account" : "Sign in"}
+          {submitting ? (creating ? "Creating your account…" : "Signing in…") : creating ? (verificationEnabled ? "Create account and send code" : "Create account") : "Sign in"}
         </Button>
       </form>
 
-      {!setupRequired ? (
+      {!setupRequired && signupOpen ? (
+        <p className="mt-5 text-center text-sm text-slate-600">
+          {creating ? "Already have an account?" : "New here?"}{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setMode(creating ? "signin" : "signup");
+              setError(null);
+            }}
+            className="font-medium text-teal-700 hover:text-teal-800"
+          >
+            {creating ? "Sign in" : "Create an account"}
+          </button>
+        </p>
+      ) : null}
+
+      {!creating ? (
         <details className="mt-5 text-sm text-slate-600">
           <summary className="cursor-pointer font-medium text-teal-700 hover:text-teal-800">
             Forgot your password?
