@@ -52,6 +52,9 @@ const EMAIL_FAILURE_HINTS: Record<string, string> = {
   address_refused: "The email address was refused. Please check it for typing mistakes.",
   timeout: "The email service did not answer in time. Please try again.",
   disconnected: "The email service closed the connection. (Site owner: check SMTP_HOST and SMTP_PORT.)",
+  host_not_found: "The email host name was not found. (Site owner: check SMTP_HOST, it should be smtp.gmail.com for Gmail.)",
+  port_closed: "The email service refused the connection on that port. (Site owner: check SMTP_PORT, try 587 or 465.)",
+  network_blocked: "This server has no network route to the email service. (Site owner: try SMTP_PORT=465 with SMTP_SECURITY=ssl.)",
   unreachable: "The server could not reach the email service. (Site owner: check SMTP_HOST and SMTP_PORT.)",
   smtp_error: "The email service reported an error.",
 };

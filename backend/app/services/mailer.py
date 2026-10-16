@@ -4,8 +4,10 @@ The password is read from settings and never logged. A failure is reported to th
 friendly error, without the server's own message, so no connection details leak.
 """
 
+import errno
 import logging
 import smtplib
+import socket
 import ssl
 from email.message import EmailMessage
 from email.utils import formataddr
@@ -36,6 +38,12 @@ def _failure_reason(exc: Exception) -> str:
         return "timeout"
     if isinstance(exc, smtplib.SMTPServerDisconnected | smtplib.SMTPConnectError):
         return "disconnected"
+    if isinstance(exc, socket.gaierror):
+        return "host_not_found"  # the host name does not exist (usually a typo in SMTP_HOST)
+    if isinstance(exc, ConnectionRefusedError):
+        return "port_closed"  # the host answered but nothing listens on that port
+    if isinstance(exc, OSError) and exc.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH):
+        return "network_blocked"  # this server has no route to the email service
     if isinstance(exc, OSError):
         return "unreachable"
     return "smtp_error"

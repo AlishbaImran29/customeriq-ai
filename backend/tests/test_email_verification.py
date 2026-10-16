@@ -258,3 +258,15 @@ def test_mail_failure_gives_a_friendly_error_without_leaking_details(monkeypatch
     assert caught.value.details == {"reason": "login_refused"}  # a coarse label, never the server's own text
     assert "app-password" not in caught.value.message and "535" not in caught.value.message
     FakeSMTP.fail = False
+
+
+def test_connection_problems_get_distinct_reasons():
+    import errno
+    import socket
+
+    assert mailer._failure_reason(socket.gaierror(-2, "Name or service not known")) == "host_not_found"
+    assert mailer._failure_reason(ConnectionRefusedError()) == "port_closed"
+    assert mailer._failure_reason(OSError(errno.ENETUNREACH, "Network is unreachable")) == "network_blocked"
+    assert mailer._failure_reason(TimeoutError()) == "timeout"
+    assert mailer._failure_reason(smtplib.SMTPAuthenticationError(535, b"x")) == "login_refused"
+    assert mailer._failure_reason(OSError("something else")) == "unreachable"
