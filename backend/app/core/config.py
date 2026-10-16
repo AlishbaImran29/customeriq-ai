@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # servers). `mail_from` must be a sender address verified in your Brevo account.
     brevo_api_key: SecretStr | None = None
     mail_from: str | None = None
+    # Another HTTPS option that needs no extra company: a tiny Google Apps Script "web app" that sends
+    # the email from your own Gmail (see docs/DEPLOY.md). The secret must match the one in the script.
+    mail_webhook_url: str | None = None
+    mail_webhook_secret: SecretStr | None = None
     # Lets anyone with a real email address create an account (only works with email configured).
     allow_signup: bool = True
     session_cookie_name: str = "ciq_session"
@@ -67,7 +71,13 @@ class Settings(BaseSettings):
         sender = self.mail_from or self.smtp_from or self.smtp_user
         has_password = bool(self.smtp_password and self.smtp_password.get_secret_value().strip())
         has_api_key = bool(self.brevo_api_key and self.brevo_api_key.get_secret_value().strip())
-        return bool(sender and (has_api_key or (self.smtp_host and has_password)))
+        has_webhook = bool(
+            self.mail_webhook_url
+            and self.mail_webhook_url.startswith("https://")
+            and self.mail_webhook_secret
+            and self.mail_webhook_secret.get_secret_value().strip()
+        )
+        return has_webhook or bool(sender and (has_api_key or (self.smtp_host and has_password)))
 
     @property
     def email_verification_required(self) -> bool:

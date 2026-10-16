@@ -331,3 +331,71 @@ def test_brevo_errors_become_safe_labels(monkeypatch, status, reason):
     assert caught.value.code == "email_send_failed"
     assert caught.value.details == {"reason": reason, "kind": "HTTPError", "errno": status}
     assert "xkeysib" not in caught.value.message and "secret server text" not in caught.value.message
+
+
+# --- Google Apps Script web app (a stand-in server that answers like Google does) -----------------
+
+import http.server  # noqa: E402
+import json  # noqa: E402
+import threading  # noqa: E402
+
+
+class FakeAppsScript(http.server.BaseHTTPRequestHandler):
+    """POST /exec answers with a redirect; the result is fetched with GET (this is how Google behaves)."""
+
+    posted: list[dict] = []
+    result = b'{"ok": true}'
+    result_type = "application/json"
+
+    def log_message(self, *args):
+        pass
+
+    def do_POST(self):
+        FakeAppsScript.posted.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+        self.send_response(302)
+        self.send_header("Location", "/result")
+        self.end_headers()
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", FakeAppsScript.result_type)
+        self.end_headers()
+        self.wfile.write(FakeAppsScript.result)
+
+
+@pytest.fixture
+def apps_script():
+    FakeAppsScript.posted = []
+    FakeAppsScript.result, FakeAppsScript.result_type = b'{"ok": true}', "application/json"
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), FakeAppsScript)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    yield Settings(_env_file=None, mail_webhook_url=f"http://127.0.0.1:{server.server_port}/exec", mail_webhook_secret="s3cret")
+    server.shutdown()
+
+
+def test_webhook_needs_an_https_address_and_a_secret_to_count_as_set_up():
+    on = dict(mail_webhook_url="https://script.google.com/macros/s/abc/exec", mail_webhook_secret="s")
+    assert Settings(_env_file=None, **on).email_configured is True
+    assert Settings(_env_file=None, **on).signup_open is True
+    assert Settings(_env_file=None, mail_webhook_url=on["mail_webhook_url"]).email_configured is False
+    assert Settings(_env_file=None, mail_webhook_url="http://script.google.com/x", mail_webhook_secret="s").email_configured is False
+
+
+def test_webhook_sends_the_message_and_follows_googles_redirect(apps_script):
+    mailer.send_verification_code(apps_script, "person@example.com", "Ali", "112233", 15)
+    (posted,) = FakeAppsScript.posted  # posted once, not again after the redirect
+    assert posted["secret"] == "s3cret" and posted["to"] == "person@example.com"
+    assert "112233" in posted["subject"] and "112233" in posted["text"] and "112233" in posted["html"]
+
+
+def test_webhook_refusals_become_safe_labels(apps_script):
+    FakeAppsScript.result = b'{"ok": false, "error": "forbidden"}'
+    with pytest.raises(ApiError) as wrong_secret:
+        mailer.send_verification_code(apps_script, "person@example.com", "Ali", "112233", 15)
+    assert wrong_secret.value.details["reason"] == "login_refused"
+
+    FakeAppsScript.result, FakeAppsScript.result_type = b"<html>Sign in to Google</html>", "text/html"
+    with pytest.raises(ApiError) as not_public:
+        mailer.send_verification_code(apps_script, "person@example.com", "Ali", "112233", 15)
+    assert not_public.value.details["reason"] == "bad_response"
+    assert "s3cret" not in not_public.value.message and "Sign in to Google" not in not_public.value.message

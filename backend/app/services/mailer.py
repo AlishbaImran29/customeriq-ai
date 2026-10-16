@@ -1,4 +1,4 @@
-"""Sending email: through SMTP (for example Gmail with an App Password) or through Brevo's HTTPS API.
+"""Sending email: through a Google Apps Script web app, Brevo's HTTPS API, or SMTP (for example Gmail).
 
 Passwords and API keys are read from settings and never logged. A failure is reported to the caller as a
 friendly error, without the server's own message, so no connection details leak.
@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 SMTP_TIMEOUT_SECONDS = 15
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+WEBHOOK_TIMEOUT_SECONDS = 25  # a Google Apps Script can take several seconds to wake up
 APP_NAME = "CustomerIQ AI"
 
 
@@ -61,6 +62,44 @@ def _failure_reason(exc: Exception) -> str:
     if isinstance(exc, OSError):
         return "unreachable"
     return "smtp_error"
+
+
+class MailProviderError(Exception):
+    """The email service answered, but not with success. `reason` is one of the coarse labels."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+def _send_webhook(settings: Settings, to: str, subject: str, text: str, html: str) -> None:
+    """Posts the message to a Google Apps Script web app that sends it from the owner's Gmail.
+
+    Apps Script answers a POST with a redirect to the result page; urllib follows it with a GET,
+    which is exactly what Google expects.
+    """
+    assert settings.mail_webhook_url and settings.mail_webhook_secret
+    body = json.dumps(
+        {
+            "secret": settings.mail_webhook_secret.get_secret_value(),
+            "to": to,
+            "subject": subject,
+            "text": text,
+            "html": html,
+            "name": APP_NAME,
+        }
+    ).encode()
+    request = urllib.request.Request(
+        settings.mail_webhook_url, data=body, method="POST", headers={"content-type": "application/json"}
+    )
+    with urllib.request.urlopen(request, timeout=WEBHOOK_TIMEOUT_SECONDS) as response:  # noqa: S310 (https only, checked in settings)
+        raw = response.read(65536)
+    try:
+        answer = json.loads(raw)
+    except ValueError as exc:  # for example Google's sign-in page, when the web app is not open to "Anyone"
+        raise MailProviderError("bad_response") from exc
+    if not isinstance(answer, dict) or not answer.get("ok"):
+        raise MailProviderError("login_refused" if isinstance(answer, dict) and answer.get("error") == "forbidden" else "smtp_error")
 
 
 def sender_address(settings: Settings) -> str | None:
@@ -112,11 +151,14 @@ def _send_brevo(settings: Settings, sender: str, to: str, subject: str, text: st
 
 def send_email(settings: Settings, to: str, subject: str, text: str, html: str) -> None:
     sender = sender_address(settings)
-    assert sender
     try:
-        if settings.brevo_api_key:
+        if settings.mail_webhook_url:
+            _send_webhook(settings, to, subject, text, html)
+        elif settings.brevo_api_key:
+            assert sender
             _send_brevo(settings, sender, to, subject, text, html)
         else:
+            assert sender
             message = EmailMessage()
             message["From"] = formataddr((APP_NAME, sender))
             message["To"] = to
@@ -124,8 +166,8 @@ def send_email(settings: Settings, to: str, subject: str, text: str, html: str) 
             message.set_content(text)
             message.add_alternative(html, subtype="html")
             _send_smtp(settings, message)
-    except (smtplib.SMTPException, OSError) as exc:  # HTTP errors are OSErrors too
-        reason = _failure_reason(exc)
+    except (smtplib.SMTPException, OSError, MailProviderError) as exc:  # HTTP errors are OSErrors too
+        reason = exc.reason if isinstance(exc, MailProviderError) else _failure_reason(exc)
         # For an HTTP answer the useful number is the status code (401, 400...), otherwise the OS error number.
         number = exc.code if isinstance(exc, urllib.error.HTTPError) else getattr(exc, "errno", None)
         logger.warning("Could not send email: %s (%s)", type(exc).__name__, reason)

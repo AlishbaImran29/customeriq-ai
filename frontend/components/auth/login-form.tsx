@@ -47,7 +47,7 @@ const SERVER_FIELDS: Record<string, Field> = {
 
 // Why an email could not be sent (sent by the server as a short code), in words for the site owner.
 const EMAIL_FAILURE_HINTS: Record<string, string> = {
-  login_refused: "The email service refused the login. (Site owner: check BREVO_API_KEY, or SMTP_USER and the App Password.)",
+  login_refused: "The email service refused the login. (Site owner: check MAIL_WEBHOOK_SECRET, or BREVO_API_KEY, or SMTP_USER and the App Password.)",
   sender_refused: "The email service refused the sender address. (Site owner: verify MAIL_FROM as a sender in Brevo, or check SMTP_USER and SMTP_FROM.)",
   provider_limit: "The email service has reached its sending limit or plan limit. Please try again later.",
   address_refused: "The email address was refused. Please check it for typing mistakes.",
@@ -55,7 +55,9 @@ const EMAIL_FAILURE_HINTS: Record<string, string> = {
   disconnected: "The email service closed the connection. (Site owner: check SMTP_HOST and SMTP_PORT.)",
   host_not_found: "The email host name was not found. (Site owner: check SMTP_HOST, it should be smtp.gmail.com for Gmail.)",
   port_closed: "The email service refused the connection on that port. (Site owner: check SMTP_PORT, try 587 or 465.)",
-  network_blocked: "This server has no network route to the email service. (Site owner: on Vercel use the Brevo API key instead of SMTP.)",
+  network_blocked: "This server has no network route to the email service. (Site owner: on Vercel use MAIL_WEBHOOK_URL instead of SMTP.)",
+  bad_response:
+    "The email service answered in an unexpected way. (Site owner: deploy the Apps Script as a Web app with access set to Anyone, and use the address that ends in /exec.)",
   tls_failed: "The secure connection to the email service failed. (Site owner: 587 needs SMTP_SECURITY=starttls, 465 needs SMTP_SECURITY=ssl.)",
   unreachable: "The server could not reach the email service. (Site owner: check SMTP_HOST and SMTP_PORT.)",
   smtp_error: "The email service reported an error.",
