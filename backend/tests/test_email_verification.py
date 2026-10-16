@@ -239,7 +239,7 @@ class FakeSMTP:
 def test_mailer_sends_over_starttls_with_the_code_in_the_message(monkeypatch):
     FakeSMTP.instances.clear()
     FakeSMTP.fail = False
-    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setattr(mailer, "IPv4SMTP", FakeSMTP)
     name = "Ali" + chr(13) + chr(10) + "Bcc: x@y.z"
     mailer.send_verification_code(Settings(_env_file=None, **MAIL), "person@example.com", name, "123456", 15)
     (smtp,) = FakeSMTP.instances
@@ -252,7 +252,7 @@ def test_mailer_sends_over_starttls_with_the_code_in_the_message(monkeypatch):
 
 def test_mail_failure_gives_a_friendly_error_without_leaking_details(monkeypatch):
     FakeSMTP.fail = True
-    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setattr(mailer, "IPv4SMTP", FakeSMTP)
     with pytest.raises(ApiError) as caught:
         mailer.send_verification_code(Settings(_env_file=None, **MAIL), "person@example.com", "Ali", "123456", 15)
     assert caught.value.status_code == 503 and caught.value.code == "email_send_failed"
@@ -399,3 +399,34 @@ def test_webhook_refusals_become_safe_labels(apps_script):
         mailer.send_verification_code(apps_script, "person@example.com", "Ali", "112233", 15)
     assert not_public.value.details["reason"] == "bad_response"
     assert "s3cret" not in not_public.value.message and "Sign in to Google" not in not_public.value.message
+
+
+def test_smtp_connects_over_ipv4_only(monkeypatch):
+    """Resolves with AF_INET, so a host without an IPv6 route (error 99) is never asked to use one."""
+    import socket
+
+    asked = {}
+
+    def fake_getaddrinfo(host, port, family=0, type=0, *args):
+        asked["family"] = family
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("203.0.113.7", port))]
+
+    class Sock:
+        pass
+
+    def fake_create_connection(address, timeout=None, source_address=None):
+        asked["address"] = address
+        return Sock()
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(socket, "create_connection", fake_create_connection)
+    assert isinstance(mailer._ipv4_connection("smtp.gmail.com", 587, 5), Sock)
+    assert asked == {"family": socket.AF_INET, "address": ("203.0.113.7", 587)}
+
+
+def test_ipv4_connection_with_no_ipv4_address_fails_cleanly(monkeypatch):
+    import socket
+
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: [])
+    with pytest.raises(socket.gaierror):
+        mailer._ipv4_connection("ipv6-only.example", 587, 5)

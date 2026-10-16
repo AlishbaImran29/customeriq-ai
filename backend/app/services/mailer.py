@@ -64,6 +64,29 @@ def _failure_reason(exc: Exception) -> str:
     return "smtp_error"
 
 
+def _ipv4_connection(host: str, port: int, timeout: float, source_address=None) -> socket.socket:
+    """Connect over IPv4 only. Some serverless hosts have no IPv6 route (error 99, "Cannot assign
+    requested address"), and trying an IPv6 address first can make the whole connection fail."""
+    last: OSError | None = None
+    for family, kind, proto, _, address in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
+        try:
+            return socket.create_connection((address[0], address[1]), timeout, source_address)
+        except OSError as exc:
+            last = exc
+    raise last or socket.gaierror(socket.EAI_NONAME, "no IPv4 address found")
+
+
+class IPv4SMTP(smtplib.SMTP):
+    def _get_socket(self, host, port, timeout):
+        return _ipv4_connection(host, port, timeout, self.source_address)
+
+
+class IPv4SMTP_SSL(smtplib.SMTP_SSL):
+    def _get_socket(self, host, port, timeout):
+        sock = _ipv4_connection(host, port, timeout, self.source_address)
+        return self.context.wrap_socket(sock, server_hostname=self._host)
+
+
 class MailProviderError(Exception):
     """The email service answered, but not with success. `reason` is one of the coarse labels."""
 
@@ -109,12 +132,12 @@ def sender_address(settings: Settings) -> str | None:
 def _send_smtp(settings: Settings, message: EmailMessage) -> None:
     assert settings.smtp_host and settings.smtp_password
     if settings.smtp_security == "ssl":
-        client: smtplib.SMTP = smtplib.SMTP_SSL(
+        client: smtplib.SMTP = IPv4SMTP_SSL(
             settings.smtp_host, settings.smtp_port, timeout=SMTP_TIMEOUT_SECONDS,
             context=ssl.create_default_context(),
         )
     else:
-        client = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=SMTP_TIMEOUT_SECONDS)
+        client = IPv4SMTP(settings.smtp_host, settings.smtp_port, timeout=SMTP_TIMEOUT_SECONDS)
     with client:
         if settings.smtp_security == "starttls":
             client.starttls(context=ssl.create_default_context())
