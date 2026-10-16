@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// A quick gate: visitors without a sign-in cookie are sent to /login. This only
+// A quick gate: visitors without a sign-in cookie see the landing page (at /) or are sent to /login. This only
 // checks that a cookie exists; the backend decides whether it is still valid
 // (an expired one ends up at /login?reason=expired). Runs only for page requests.
 const SESSION_COOKIE = "ciq_session";
@@ -11,7 +11,11 @@ export function proxy(request: NextRequest) {
   if (!process.env.NEXT_PUBLIC_API_BASE_URL) return NextResponse.next();
 
   const { pathname, search } = request.nextUrl;
-  if (pathname === "/login" || request.cookies.has(SESSION_COOKIE)) return NextResponse.next();
+  // The landing page and sign-in are public; everyone else needs a session cookie.
+  if (pathname === "/login" || pathname === "/welcome" || request.cookies.has(SESSION_COOKIE)) return NextResponse.next();
+
+  // Visitors who open the bare address see the landing page; deeper links go to sign-in.
+  if (pathname === "/") return NextResponse.redirect(new URL("/welcome", request.url));
 
   const url = new URL("/login", request.url);
   if (pathname !== "/") url.searchParams.set("next", pathname + search);

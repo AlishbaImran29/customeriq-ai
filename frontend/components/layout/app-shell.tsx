@@ -111,8 +111,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     navGroups.flatMap((g) => g.items).find((item) => isActive(pathname, item.href))?.label ??
     "CustomerIQ AI";
 
-  // The sign-in screen stands alone, without the sidebar and header.
-  if (pathname.startsWith("/login")) return <>{children}</>;
+  // The sign-in screen and landing page stand alone, without the sidebar and header.
+  if (pathname.startsWith("/login") || pathname.startsWith("/welcome")) return <>{children}</>;
 
   return (
     <div className="min-h-full bg-slate-50 text-slate-900">
