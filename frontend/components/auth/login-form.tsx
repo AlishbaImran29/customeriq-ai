@@ -55,16 +55,18 @@ const EMAIL_FAILURE_HINTS: Record<string, string> = {
   host_not_found: "The email host name was not found. (Site owner: check SMTP_HOST, it should be smtp.gmail.com for Gmail.)",
   port_closed: "The email service refused the connection on that port. (Site owner: check SMTP_PORT, try 587 or 465.)",
   network_blocked: "This server has no network route to the email service. (Site owner: try SMTP_PORT=465 with SMTP_SECURITY=ssl.)",
+  tls_failed: "The secure connection to the email service failed. (Site owner: 587 needs SMTP_SECURITY=starttls, 465 needs SMTP_SECURITY=ssl.)",
   unreachable: "The server could not reach the email service. (Site owner: check SMTP_HOST and SMTP_PORT.)",
   smtp_error: "The email service reported an error.",
 };
 
 function describe(error: unknown): FormError {
   if (error instanceof ApiError) {
-    const details = error.details as { field?: string; reason?: string } | null;
+    const details = error.details as { field?: string; reason?: string; kind?: string; errno?: number | null } | null;
     const hint = error.code === "email_send_failed" && details?.reason ? EMAIL_FAILURE_HINTS[details.reason] : undefined;
+    const technical = hint && details?.kind ? ` [${details.kind}${details.errno ? `, error ${details.errno}` : ""}]` : "";
     return {
-      message: hint ? `${error.message} ${hint}` : error.message,
+      message: hint ? `${error.message} ${hint}${technical}` : error.message,
       field: details?.field ? SERVER_FIELDS[details.field] : undefined,
     };
   }

@@ -38,6 +38,8 @@ def _failure_reason(exc: Exception) -> str:
         return "timeout"
     if isinstance(exc, smtplib.SMTPServerDisconnected | smtplib.SMTPConnectError):
         return "disconnected"
+    if isinstance(exc, ssl.SSLError):
+        return "tls_failed"  # the encrypted handshake failed (often SMTP_PORT and SMTP_SECURITY do not match)
     if isinstance(exc, socket.gaierror):
         return "host_not_found"  # the host name does not exist (usually a typo in SMTP_HOST)
     if isinstance(exc, ConnectionRefusedError):
@@ -78,7 +80,9 @@ def send_email(settings: Settings, to: str, subject: str, text: str, html: str) 
         raise ApiError(
             503, "email_send_failed",
             "We couldn't send the email just now. Please try again in a moment.",
-            {"reason": reason},
+            # `kind` and `errno` are the exception's class name and OS error number: safe to show
+            # the site owner, and enough to tell a blocked network from a TLS or login problem.
+            {"reason": reason, "kind": type(exc).__name__, "errno": getattr(exc, "errno", None)},
         ) from exc
 
 

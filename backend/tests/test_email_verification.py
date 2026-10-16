@@ -1,6 +1,7 @@
 """Sign-up with an emailed code (the email itself is captured, never sent)."""
 
 import smtplib
+import ssl
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -255,7 +256,7 @@ def test_mail_failure_gives_a_friendly_error_without_leaking_details(monkeypatch
     with pytest.raises(ApiError) as caught:
         mailer.send_verification_code(Settings(_env_file=None, **MAIL), "person@example.com", "Ali", "123456", 15)
     assert caught.value.status_code == 503 and caught.value.code == "email_send_failed"
-    assert caught.value.details == {"reason": "login_refused"}  # a coarse label, never the server's own text
+    assert caught.value.details == {"reason": "login_refused", "kind": "SMTPAuthenticationError", "errno": None}  # never the server's own text
     assert "app-password" not in caught.value.message and "535" not in caught.value.message
     FakeSMTP.fail = False
 
@@ -269,4 +270,5 @@ def test_connection_problems_get_distinct_reasons():
     assert mailer._failure_reason(OSError(errno.ENETUNREACH, "Network is unreachable")) == "network_blocked"
     assert mailer._failure_reason(TimeoutError()) == "timeout"
     assert mailer._failure_reason(smtplib.SMTPAuthenticationError(535, b"x")) == "login_refused"
+    assert mailer._failure_reason(ssl.SSLError("handshake")) == "tls_failed"
     assert mailer._failure_reason(OSError("something else")) == "unreachable"
