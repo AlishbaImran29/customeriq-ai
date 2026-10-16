@@ -272,3 +272,62 @@ def test_connection_problems_get_distinct_reasons():
     assert mailer._failure_reason(smtplib.SMTPAuthenticationError(535, b"x")) == "login_refused"
     assert mailer._failure_reason(ssl.SSLError("handshake")) == "tls_failed"
     assert mailer._failure_reason(OSError("something else")) == "unreachable"
+
+
+# --- Brevo (HTTPS) ---------------------------------------------------------------------------
+
+BREVO = dict(brevo_api_key="xkeysib-secret-value", mail_from="sender@example.com")
+
+
+class FakeResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self):
+        return b"{}"
+
+
+def test_brevo_alone_counts_as_email_being_set_up():
+    assert Settings(_env_file=None, **BREVO).email_configured is True
+    assert Settings(_env_file=None, brevo_api_key="k").email_configured is False  # needs a sender address
+    assert Settings(_env_file=None, mail_from="a@b.co").email_configured is False  # needs the key
+    assert Settings(_env_file=None, **BREVO).signup_open is True
+
+
+def test_brevo_request_has_the_key_in_a_header_and_the_code_in_the_body(monkeypatch):
+    import json
+    import urllib.request
+
+    seen = {}
+
+    def fake_urlopen(request, timeout=None):
+        seen["url"], seen["headers"], seen["body"] = request.full_url, dict(request.header_items()), json.loads(request.data)
+        return FakeResponse()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    mailer.send_verification_code(Settings(_env_file=None, **BREVO), "person@example.com", "Ali", "654321", 15)
+    assert seen["url"] == "https://api.brevo.com/v3/smtp/email"
+    assert seen["headers"]["Api-key"] == "xkeysib-secret-value"
+    assert seen["body"]["sender"]["email"] == "sender@example.com"
+    assert seen["body"]["to"] == [{"email": "person@example.com"}]
+    assert "654321" in seen["body"]["subject"] and "654321" in seen["body"]["textContent"] and "654321" in seen["body"]["htmlContent"]
+    assert "xkeysib" not in json.dumps(seen["body"])  # the key never goes into the message
+
+
+@pytest.mark.parametrize("status, reason", [(401, "login_refused"), (400, "sender_refused"), (402, "provider_limit"), (500, "smtp_error")])
+def test_brevo_errors_become_safe_labels(monkeypatch, status, reason):
+    import urllib.error
+    import urllib.request
+
+    def fail(request, timeout=None):
+        raise urllib.error.HTTPError(request.full_url, status, "secret server text xkeysib-secret-value", {}, None)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fail)
+    with pytest.raises(ApiError) as caught:
+        mailer.send_verification_code(Settings(_env_file=None, **BREVO), "person@example.com", "Ali", "123456", 15)
+    assert caught.value.code == "email_send_failed"
+    assert caught.value.details == {"reason": reason, "kind": "HTTPError", "errno": status}
+    assert "xkeysib" not in caught.value.message and "secret server text" not in caught.value.message

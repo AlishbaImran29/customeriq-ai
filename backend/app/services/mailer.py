@@ -1,14 +1,17 @@
-"""Sending email through SMTP (for example Gmail with an App Password).
+"""Sending email: through SMTP (for example Gmail with an App Password) or through Brevo's HTTPS API.
 
-The password is read from settings and never logged. A failure is reported to the caller as a
+Passwords and API keys are read from settings and never logged. A failure is reported to the caller as a
 friendly error, without the server's own message, so no connection details leak.
 """
 
 import errno
+import json
 import logging
 import smtplib
 import socket
 import ssl
+import urllib.error
+import urllib.request
 from email.message import EmailMessage
 from email.utils import formataddr
 
@@ -18,6 +21,7 @@ from app.core.errors import ApiError
 logger = logging.getLogger(__name__)
 
 SMTP_TIMEOUT_SECONDS = 15
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 APP_NAME = "CustomerIQ AI"
 
 
@@ -28,6 +32,14 @@ def _single_line(value: str) -> str:
 
 def _failure_reason(exc: Exception) -> str:
     """A coarse, safe label for why sending failed (never includes the server's own text)."""
+    if isinstance(exc, urllib.error.HTTPError):
+        if exc.code in (401, 403):
+            return "login_refused"  # the API key was not accepted
+        if exc.code == 400:
+            return "sender_refused"  # usually: the sender address has not been verified at the provider
+        if exc.code in (402, 429):
+            return "provider_limit"  # sending limit or plan problem at the provider
+        return "smtp_error"
     if isinstance(exc, smtplib.SMTPAuthenticationError):
         return "login_refused"
     if isinstance(exc, smtplib.SMTPSenderRefused):
@@ -51,38 +63,78 @@ def _failure_reason(exc: Exception) -> str:
     return "smtp_error"
 
 
+def sender_address(settings: Settings) -> str | None:
+    return settings.mail_from or settings.smtp_from or settings.smtp_user
+
+
+def _send_smtp(settings: Settings, message: EmailMessage) -> None:
+    assert settings.smtp_host and settings.smtp_password
+    if settings.smtp_security == "ssl":
+        client: smtplib.SMTP = smtplib.SMTP_SSL(
+            settings.smtp_host, settings.smtp_port, timeout=SMTP_TIMEOUT_SECONDS,
+            context=ssl.create_default_context(),
+        )
+    else:
+        client = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=SMTP_TIMEOUT_SECONDS)
+    with client:
+        if settings.smtp_security == "starttls":
+            client.starttls(context=ssl.create_default_context())
+        if settings.smtp_user:
+            client.login(settings.smtp_user, settings.smtp_password.get_secret_value())
+        client.send_message(message)
+
+
+def _send_brevo(settings: Settings, sender: str, to: str, subject: str, text: str, html: str) -> None:
+    """Brevo's HTTPS API. Unlike SMTP it only needs port 443, so it works on hosts that block mail ports."""
+    assert settings.brevo_api_key
+    body = json.dumps(
+        {
+            "sender": {"name": APP_NAME, "email": sender},
+            "to": [{"email": to}],
+            "subject": subject,
+            "textContent": text,
+            "htmlContent": html,
+        }
+    ).encode()
+    request = urllib.request.Request(
+        BREVO_URL,
+        data=body,
+        method="POST",
+        headers={
+            "api-key": settings.brevo_api_key.get_secret_value(),
+            "content-type": "application/json",
+            "accept": "application/json",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=SMTP_TIMEOUT_SECONDS) as response:  # noqa: S310 (fixed https URL)
+        response.read()
+
+
 def send_email(settings: Settings, to: str, subject: str, text: str, html: str) -> None:
-    sender = settings.smtp_from or settings.smtp_user
-    assert settings.smtp_host and sender and settings.smtp_password
-    message = EmailMessage()
-    message["From"] = formataddr((APP_NAME, sender))
-    message["To"] = to
-    message["Subject"] = subject
-    message.set_content(text)
-    message.add_alternative(html, subtype="html")
+    sender = sender_address(settings)
+    assert sender
     try:
-        if settings.smtp_security == "ssl":
-            client: smtplib.SMTP = smtplib.SMTP_SSL(
-                settings.smtp_host, settings.smtp_port, timeout=SMTP_TIMEOUT_SECONDS,
-                context=ssl.create_default_context(),
-            )
+        if settings.brevo_api_key:
+            _send_brevo(settings, sender, to, subject, text, html)
         else:
-            client = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=SMTP_TIMEOUT_SECONDS)
-        with client:
-            if settings.smtp_security == "starttls":
-                client.starttls(context=ssl.create_default_context())
-            if settings.smtp_user:
-                client.login(settings.smtp_user, settings.smtp_password.get_secret_value())
-            client.send_message(message)
-    except (smtplib.SMTPException, OSError) as exc:
+            message = EmailMessage()
+            message["From"] = formataddr((APP_NAME, sender))
+            message["To"] = to
+            message["Subject"] = subject
+            message.set_content(text)
+            message.add_alternative(html, subtype="html")
+            _send_smtp(settings, message)
+    except (smtplib.SMTPException, OSError) as exc:  # HTTP errors are OSErrors too
         reason = _failure_reason(exc)
+        # For an HTTP answer the useful number is the status code (401, 400...), otherwise the OS error number.
+        number = exc.code if isinstance(exc, urllib.error.HTTPError) else getattr(exc, "errno", None)
         logger.warning("Could not send email: %s (%s)", type(exc).__name__, reason)
         raise ApiError(
             503, "email_send_failed",
             "We couldn't send the email just now. Please try again in a moment.",
-            # `kind` and `errno` are the exception's class name and OS error number: safe to show
-            # the site owner, and enough to tell a blocked network from a TLS or login problem.
-            {"reason": reason, "kind": type(exc).__name__, "errno": getattr(exc, "errno", None)},
+            # `kind` and `errno` are the exception's class name and a number: safe to show the site
+            # owner, and enough to tell a blocked network from a TLS, login or sender problem.
+            {"reason": reason, "kind": type(exc).__name__, "errno": number},
         ) from exc
 
 

@@ -47,14 +47,15 @@ const SERVER_FIELDS: Record<string, Field> = {
 
 // Why an email could not be sent (sent by the server as a short code), in words for the site owner.
 const EMAIL_FAILURE_HINTS: Record<string, string> = {
-  login_refused: "The email account refused the login. (Site owner: check SMTP_USER and the App Password.)",
-  sender_refused: "The email account refused to send from this address. (Site owner: check SMTP_USER and SMTP_FROM.)",
+  login_refused: "The email service refused the login. (Site owner: check BREVO_API_KEY, or SMTP_USER and the App Password.)",
+  sender_refused: "The email service refused the sender address. (Site owner: verify MAIL_FROM as a sender in Brevo, or check SMTP_USER and SMTP_FROM.)",
+  provider_limit: "The email service has reached its sending limit or plan limit. Please try again later.",
   address_refused: "The email address was refused. Please check it for typing mistakes.",
   timeout: "The email service did not answer in time. Please try again.",
   disconnected: "The email service closed the connection. (Site owner: check SMTP_HOST and SMTP_PORT.)",
   host_not_found: "The email host name was not found. (Site owner: check SMTP_HOST, it should be smtp.gmail.com for Gmail.)",
   port_closed: "The email service refused the connection on that port. (Site owner: check SMTP_PORT, try 587 or 465.)",
-  network_blocked: "This server has no network route to the email service. (Site owner: try SMTP_PORT=465 with SMTP_SECURITY=ssl.)",
+  network_blocked: "This server has no network route to the email service. (Site owner: on Vercel use the Brevo API key instead of SMTP.)",
   tls_failed: "The secure connection to the email service failed. (Site owner: 587 needs SMTP_SECURITY=starttls, 465 needs SMTP_SECURITY=ssl.)",
   unreachable: "The server could not reach the email service. (Site owner: check SMTP_HOST and SMTP_PORT.)",
   smtp_error: "The email service reported an error.",

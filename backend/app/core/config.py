@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     smtp_password: SecretStr | None = None
     smtp_from: str | None = None  # defaults to smtp_user (Gmail only sends as the account itself)
     smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    # Alternative to SMTP: Brevo's HTTPS API (works on hosts such as Vercel that cannot reach SMTP
+    # servers). `mail_from` must be a sender address verified in your Brevo account.
+    brevo_api_key: SecretStr | None = None
+    mail_from: str | None = None
     # Lets anyone with a real email address create an account (only works with email configured).
     allow_signup: bool = True
     session_cookie_name: str = "ciq_session"
@@ -60,8 +64,10 @@ class Settings(BaseSettings):
 
     @property
     def email_configured(self) -> bool:
+        sender = self.mail_from or self.smtp_from or self.smtp_user
         has_password = bool(self.smtp_password and self.smtp_password.get_secret_value().strip())
-        return bool(self.smtp_host and (self.smtp_from or self.smtp_user) and has_password)
+        has_api_key = bool(self.brevo_api_key and self.brevo_api_key.get_secret_value().strip())
+        return bool(sender and (has_api_key or (self.smtp_host and has_password)))
 
     @property
     def email_verification_required(self) -> bool:

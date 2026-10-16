@@ -68,10 +68,8 @@ email-verification update added columns to `users`, so run it before deploying t
    | `DB_MAX_OVERFLOW` | `1` |
    | `APP_ENV` | `production` |
    | `SETUP_CODE` | your invented setup code |
-   | `SMTP_HOST` | `smtp.gmail.com` (see "Email codes" below; leave all `SMTP_*` out to skip email) |
-   | `SMTP_PORT` | `587` |
-   | `SMTP_USER` | your Gmail address |
-   | `SMTP_PASSWORD` | your Gmail **App Password** (not your normal password) |
+   | `BREVO_API_KEY` | your Brevo API key (see "Email codes" below; leave the email variables out to skip email) |
+   | `MAIL_FROM` | the sender address you verified in Brevo (for example your Gmail) |
    | `FRONTEND_ORIGINS` | `https://placeholder.example` (you set the real value in step 5) |
 
    Optional: `ANTHROPIC_API_KEY` (needs paid API credits; without it the assistant says "AI not configured").
@@ -89,15 +87,25 @@ When the `SMTP_*` variables are set, every new account must **confirm its email 
 (set `ALLOW_SIGNUP=false` on the API project to turn public sign-up off again). Without them, accounts
 are created without a code and only the owner account can be created on the site.
 
-To use Gmail (free, no card):
+**On Vercel use Brevo (free, no card, 300 emails a day).** Vercel's servers cannot reach mail servers
+(SMTP, for example Gmail's) and fail with `OSError, error 99`. Brevo sends over HTTPS instead, which
+always works:
 
-1. Open your Google account → **Security** and turn on **2-Step Verification**.
-2. Open <https://myaccount.google.com/apppasswords>, create an app password named `CustomerIQ`, and
-   copy the 16 letters. Treat it like a password: paste it only into the Vercel variable (or
-   `backend/.env`), never into a chat or a file in the repository.
-3. Add the four `SMTP_*` variables from the table above, then **redeploy the API**.
+1. Create a free account at <https://www.brevo.com> (no card needed).
+2. Open **Senders, Domains & Dedicated IPs → Senders → Add a sender**, enter your name and your own
+   email address (for example your Gmail) and click the confirmation link Brevo emails you.
+3. Open **SMTP & API → API Keys → Generate a new API key**, name it `CustomerIQ`, and copy the key.
+   Treat it like a password: paste it only into the Vercel variable (or `backend/.env`), never into a
+   chat or a file in the repository.
+4. On the API project add `BREVO_API_KEY` (the key) and `MAIL_FROM` (the verified sender address),
+   then **redeploy the API**. Sign-up codes may land in the spam folder at first.
 
-Gmail allows roughly 500 emails a day, which is plenty for sign-up codes. Codes expire after 15 minutes,
+**On your own computer** you can use Gmail instead (turn on 2-Step Verification, create an App
+Password at <https://myaccount.google.com/apppasswords>) with `SMTP_HOST=smtp.gmail.com`,
+`SMTP_PORT=587`, `SMTP_USER` and `SMTP_PASSWORD` in `backend/.env`, or use the same two Brevo
+variables there. If both are set, Brevo is used.
+
+Brevo's free plan allows 300 emails a day, plenty for sign-up codes. Codes expire after 15 minutes,
 allow 5 wrong tries, and one address can be sent at most one code a minute and 5 an hour.
 
 > **Important:** the app shows **one shared set of customer data to every signed-in user**; accounts do
@@ -160,8 +168,8 @@ Variables**, change `FRONTEND_ORIGINS` to the website address exactly (for examp
 | The site says **"We couldn't reach the server"** | `NEXT_PUBLIC_API_BASE_URL` is missing or wrong (then redeploy the website), or the API address answers with a Vercel sign-in page (see step 3). |
 | Sign-in works, then you are sent back to sign in | The API is not in production mode, or the website address is not exactly `FRONTEND_ORIGINS`. |
 | *"This request came from a website that is not allowed"* | `FRONTEND_ORIGINS` does not match the address in the browser bar. Fix it and redeploy the API. |
-| No email arrives | Check the spam folder first. Then check the `SMTP_*` variables (an **App Password**, 2-Step Verification on, the same Gmail in `SMTP_USER`), and redeploy the API. The page says "We couldn't send the email" if Gmail refuses. |
-| "Create an account" does not appear | Sign-up needs the `SMTP_*` variables, and `ALLOW_SIGNUP` must not be `false`. The owner account must already exist and be confirmed. |
+| No email arrives, or the page says "We couldn't send the email" | Check the spam folder first. The message now ends with the reason: `[OSError, error 99]` means this host cannot reach SMTP servers (use Brevo); `[HTTPError, error 401]` means the Brevo key was not accepted; `error 400` usually means `MAIL_FROM` is not a verified sender. Fix the variable and redeploy the API. |
+| "Create an account" does not appear | Sign-up needs the email variables (`BREVO_API_KEY` + `MAIL_FROM`, or `SMTP_*`), and `ALLOW_SIGNUP` must not be `false`. The owner account must already exist and be confirmed. |
 | **"That setup code is not correct"** | Use the value of `SETUP_CODE` from the API project's settings. |
 | CSV upload fails on the live site only | The file is over 4.5 MB (see "Free limits"). |
 | The assistant says **no remaining credits** | Add API credits in the Claude Console (a Claude Pro subscription does not include them). |
