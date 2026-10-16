@@ -12,9 +12,12 @@ Usage (from backend/):
 import getpass
 import os
 import sys
+import time
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[1]
+MAX_ATTEMPTS = 3
+RETRY_SECONDS = 6
 sys.path.insert(0, str(BACKEND))
 
 
@@ -47,6 +50,7 @@ def main() -> int:
     from alembic import command
     from alembic.config import Config
     from sqlalchemy import inspect
+    from sqlalchemy.exc import OperationalError
 
     from app.db.session import check_database, get_engine
 
@@ -55,7 +59,20 @@ def main() -> int:
         print(f"\nCould not connect to the database ({status}). Check the host, user, and password.")
         return 1
     print("\nConnected. Updating the tables...")
-    command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
+    # Close the connection used for the check above: a free hosted database allows only a few
+    # connections, and the migration opens its own.
+    get_engine().dispose()
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
+            break
+        except OperationalError as exc:
+            if attempt == MAX_ATTEMPTS:
+                print(f"\nThe database kept dropping the connection ({type(exc.orig).__name__}). Nothing was changed.")
+                print("Wait a few minutes (or open the Supabase dashboard so the project wakes up) and run this again.")
+                return 1
+            print(f"\nThe connection was dropped (attempt {attempt} of {MAX_ATTEMPTS}). Trying again in {RETRY_SECONDS} seconds...")
+            time.sleep(RETRY_SECONDS)
     tables = sorted(inspect(get_engine()).get_table_names())
     print("\nDone. Tables in the database:", ", ".join(tables))
     return 0
