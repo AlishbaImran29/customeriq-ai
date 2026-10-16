@@ -19,6 +19,17 @@ requires_database = pytest.mark.skipif(
 
 
 @pytest.fixture(autouse=True)
+def no_email_unless_a_test_sets_it_up():
+    """Whatever SMTP settings the developer has in backend/.env, tests start with email switched
+    off (so they never depend on, or send mail through, a real account). Tests that need email
+    override `get_settings` themselves."""
+    off = {"smtp_host": None, "smtp_user": None, "smtp_password": None, "smtp_from": None}
+    app.dependency_overrides[get_settings] = lambda: get_settings().model_copy(update=off)
+    yield
+    app.dependency_overrides.pop(get_settings, None)
+
+
+@pytest.fixture(autouse=True)
 def signed_in_test_user(request):
     """Most tests are about data, not sign-in: they run as an always-signed-in test user.
     Tests marked `real_auth` use the real sign-in flow instead."""
