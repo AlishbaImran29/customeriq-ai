@@ -1,6 +1,6 @@
 """Convert the public UCI "Online Retail II" dataset into a CustomerIQ import file.
 
-Source: Chen, D. (2012). Online Retail II [Dataset]. UCI Machine Learning Repository.
+Source: Chen, D. (2019). Online Retail II [Dataset]. UCI Machine Learning Repository.
 https://doi.org/10.24432/C5CG6D  (licence: CC BY 4.0 — credit the source when you share
 results). Real transactions of a UK online gift retailer, 2009-12-01 to 2011-12-09.
 

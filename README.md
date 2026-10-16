@@ -230,7 +230,7 @@ How they are kept honest:
 
 No store of your own? The public **Online Retail II** dataset has real orders from a
 UK online shop: about 36,600 orders from 5,850 customers over two years. Credit the
-source if you share results (licence **CC BY 4.0**): Chen, D. (2012). *Online Retail II*
+source if you share results (licence **CC BY 4.0**): Chen, D. (2019). *Online Retail II*
 [Dataset]. UCI Machine Learning Repository. <https://doi.org/10.24432/C5CG6D>
 
 1. Download `online+retail+ii.zip` from the dataset page
