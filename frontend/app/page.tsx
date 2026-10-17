@@ -34,21 +34,21 @@ import { formatNumber, formatPercent } from "@/lib/utils";
 
 function GrowthScoreExplainer({ details }: { details: GrowthScoreDetails }) {
   return (
-    <details className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-      <summary className="cursor-pointer font-medium text-slate-900">
+    <details className="rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink-2">
+      <summary className="cursor-pointer font-medium text-ink">
         How the Growth Score ({details.score}/100) is calculated
       </summary>
-      <p className="mt-2 text-xs text-slate-500">
+      <p className="mt-2 text-xs text-muted">
         It is <strong>our own</strong> weighted average of the measured inputs below, not an industry standard and
         not a prediction. Revenue growth −50% to +50% maps to 0–100; customer growth −20% to +20% maps to 0–100.
         {details.missing.length > 0
           ? ` Left out for now (not enough history): ${details.missing.join("; ")}. The other weights are scaled up.`
           : ""}
       </p>
-      <div className="mt-3 overflow-x-auto">
+      <div className="relative mt-3 overflow-x-auto">
         <table className="w-full min-w-[520px] text-left text-sm">
           <caption className="sr-only">Growth Score inputs, their measured values, scores, and weights</caption>
-          <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
             <tr>
               <th scope="col" className="py-2 pr-3 font-medium">Input</th>
               <th scope="col" className="px-3 py-2 font-medium">Measured</th>
@@ -58,7 +58,7 @@ function GrowthScoreExplainer({ details }: { details: GrowthScoreDetails }) {
           </thead>
           <tbody>
             {details.components.map((item) => (
-              <tr key={item.key} className="border-b border-slate-100 last:border-0">
+              <tr key={item.key} className="border-b border-line/60 last:border-0">
                 <td className="py-2 pr-3">{item.label}</td>
                 <td className="px-3 py-2 tabular-nums">{item.measure}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{item.value}</td>
@@ -118,7 +118,7 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
       <ModelNote model={meta.models.churn} title="Churn model" />
       <ModelNote model={meta.models.forecast} title="Revenue forecast" />
 
-      <section aria-label="Key metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section aria-label="Key metrics" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard label="Total Customers" value={value(kpis.totalCustomers, formatNumber)} delta={kpiDeltas.totalCustomers} icon={Users} />
         <KpiCard
           label={live ? (range ? `Revenue (${formatRange(range)})` : "Revenue (last 90 days)") : "Revenue"}
@@ -163,7 +163,7 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
 
       {growthScoreDetails ? <GrowthScoreExplainer details={growthScoreDetails} /> : null}
 
-      <div className="grid gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3">
           <CardHeader>
             <CardTitle>{forecastPredicted ? "Revenue trend & forecast" : "Revenue trend"}</CardTitle>
@@ -194,25 +194,25 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-teal-600" aria-hidden="true" />
+              <Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />
               Executive summary
             </CardTitle>
             <CardDescription>{executiveSummary.headline}</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-sm text-slate-600">
+            <ul className="space-y-2 text-sm text-ink-2">
               {executiveSummary.bullets.map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600" aria-hidden="true" />
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
                   {item}
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-slate-400">
+            <p className="mt-3 text-xs text-faint">
               {executiveSummary.method === "rules"
                 ? "Generated from your data with fixed rules (no AI)."
                 : "Sample summary for the demo."}
@@ -227,19 +227,19 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
           </CardHeader>
           <CardContent className="space-y-3">
             {topRecommendations.length === 0 ? (
-              <p className="text-sm text-slate-500">Recommendations appear once customers can be segmented (20+ customers).</p>
+              <p className="text-sm text-muted">Recommendations appear once customers can be segmented (20+ customers).</p>
             ) : (
               topRecommendations.map((item) => (
-                <div key={item.id} className="rounded-xl border border-slate-100 p-3">
+                <div key={item.id} className="rounded-xl border border-line/60 p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-slate-900">{item.title}</p>
+                    <p className="text-sm font-medium text-ink">{item.title}</p>
                     <Badge variant={impactVariant(item.impact)}>{item.impact}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{item.nextAction}</p>
+                  <p className="mt-1 text-xs text-muted">{item.nextAction}</p>
                 </div>
               ))
             )}
-            <Link href="/recommendations" className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:text-teal-800">
+            <Link href="/recommendations" className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent">
               All recommendations <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </CardContent>
@@ -260,14 +260,14 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
           </CardHeader>
           <CardContent>
             {atRiskCustomers.length === 0 ? (
-              <p className="text-sm text-slate-500">No At-Risk customers right now.</p>
+              <p className="text-sm text-muted">No At-Risk customers right now.</p>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-line/60">
                 {atRiskCustomers.map((customer) => (
                   <li key={customer.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900">{customer.name}</p>
-                      <p className="truncate text-xs text-slate-500">
+                      <p className="truncate text-sm font-medium text-ink">{customer.name}</p>
+                      <p className="truncate text-xs text-muted">
                         {customer.segment ?? "Not segmented"}
                         {customer.daysSinceLastOrder !== undefined ? ` · last order ${customer.daysSinceLastOrder} days ago` : ""}
                       </p>
@@ -284,7 +284,7 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
                 ))}
               </ul>
             )}
-            <Link href="/churn" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:text-teal-800">
+            <Link href="/churn" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent">
               {churnPredicted ? "View churn predictions" : "View inactivity levels"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </CardContent>

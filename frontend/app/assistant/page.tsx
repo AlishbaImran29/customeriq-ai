@@ -23,7 +23,7 @@ export default function AssistantPage() {
         title="AI Business Assistant"
         description="Ask questions about your customers in plain language, such as who is going inactive, why revenue moved, or which segment is most valuable."
       />
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle>Growth copilot</CardTitle>
@@ -42,10 +42,10 @@ export default function AssistantPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-teal-600" aria-hidden="true" /> What the AI can see
+                  <ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" /> What the AI can see
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-slate-600">
+              <CardContent className="space-y-2 text-sm text-ink-2">
                 <p>
                   Only summary figures from your dashboards: KPIs, segments, monthly revenue, revenue
                   drivers, and anonymous customer IDs with their totals.
@@ -62,13 +62,13 @@ export default function AssistantPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-amber-200 bg-amber-50">
+            <Card className="border-warning/30 bg-warning/10">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-amber-900">
+                <CardTitle className="flex items-center gap-2 text-warning">
                   <PlugZap className="h-4 w-4" aria-hidden="true" /> Sample mode
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-amber-900">
+              <CardContent className="text-sm text-warning">
                 No backend is configured. Replies are pre-written sample answers matched by keyword.
                 Live answers come from the backend assistant service, which keeps all API keys
                 server-side.
@@ -78,14 +78,14 @@ export default function AssistantPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Info className="h-4 w-4 text-teal-600" aria-hidden="true" /> Topics covered
+                <Info className="h-4 w-4 text-accent" aria-hidden="true" /> Topics covered
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-1.5 text-sm text-slate-600">
+              <ul className="space-y-1.5 text-sm text-ink-2">
                 {topics.map((topic) => (
                   <li key={topic} className="flex gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600" aria-hidden="true" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
                     {topic}
                   </li>
                 ))}

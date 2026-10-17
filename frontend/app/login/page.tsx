@@ -9,18 +9,18 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-10">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-500 text-base font-bold text-slate-950">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-base font-bold text-accent-ink">
           IQ
         </span>
         <span>
-          <span className="block text-lg font-semibold text-slate-900">CustomerIQ AI</span>
-          <span className="block text-xs text-slate-500">Predictive customer intelligence</span>
+          <span className="block text-lg font-semibold text-ink">CustomerIQ AI</span>
+          <span className="block text-xs text-muted">Predictive customer intelligence</span>
         </span>
       </div>
       <Suspense fallback={<Skeleton className="h-96 w-full max-w-md rounded-2xl" />}>
         <LoginForm />
       </Suspense>
-      <p className="max-w-sm text-center text-xs text-slate-400">
+      <p className="max-w-sm text-center text-xs text-faint">
         Your customer data is only shown after you sign in.
       </p>
     </main>

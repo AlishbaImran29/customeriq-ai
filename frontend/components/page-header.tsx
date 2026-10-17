@@ -15,10 +15,10 @@ export function PageHeader({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
           {t(title)}
         </h1>
-        <p className="mt-1 max-w-3xl text-sm text-slate-500 sm:text-base">
+        <p className="mt-1 max-w-3xl text-sm text-muted sm:text-base">
           {t(description)}
         </p>
       </div>

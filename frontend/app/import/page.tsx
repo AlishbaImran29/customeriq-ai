@@ -34,7 +34,7 @@ export default function ImportPage() {
         title="Import Customer Data"
         description="Upload customer and order history from a CSV or Excel export to power segmentation, churn, and CLV analysis."
       />
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <DataImporter />
         </div>
@@ -46,22 +46,22 @@ export default function ImportPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">Required</p>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Required</p>
                 <div className="flex flex-wrap gap-1.5">
                   {REQUIRED_COLUMNS.map((c) => (
-                    <code key={c} className="rounded-md bg-teal-50 px-1.5 py-0.5 text-xs text-teal-800">{c}</code>
+                    <code key={c} className="rounded-md bg-accent/10 px-1.5 py-0.5 text-xs text-accent">{c}</code>
                   ))}
                 </div>
               </div>
               <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">Optional</p>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Optional</p>
                 <div className="flex flex-wrap gap-1.5">
                   {OPTIONAL_COLUMNS.map((c) => (
-                    <code key={c} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{c}</code>
+                    <code key={c} className="rounded-md bg-surface-3 px-1.5 py-0.5 text-xs text-ink-2">{c}</code>
                   ))}
                 </div>
               </div>
-              <ul className="space-y-1 text-xs text-slate-500">
+              <ul className="space-y-1 text-xs text-muted">
                 <li><code>order_date</code>: YYYY-MM-DD (or an Excel date cell).</li>
                 <li><code>order_value</code>: a number such as 142.50, no currency symbol.</li>
                 <li>
@@ -76,10 +76,10 @@ export default function ImportPage() {
               <CardTitle>Data sources</CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="divide-y divide-slate-100 text-sm">
+              <ul className="divide-y divide-line/60 text-sm">
                 {sources.map((s) => (
                   <li key={s.name} className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0">
-                    <span className="text-slate-700">{s.name}</span>
+                    <span className="text-ink-2">{s.name}</span>
                     <Badge variant={s.ok ? "success" : "default"}>{s.status}</Badge>
                   </li>
                 ))}
@@ -97,20 +97,20 @@ export default function ImportPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <ol className="space-y-2 text-sm text-slate-600">
+              <ol className="space-y-2 text-sm text-ink-2">
                 {pipeline.map(({ step, done }) => (
                   <li key={step} className="flex items-start gap-2">
                     <span className="sr-only">{done ? "Available: " : "Not available yet: "}</span>
                     {done ? (
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
                     ) : (
-                      <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" aria-hidden="true" />
+                      <Circle className="mt-0.5 h-4 w-4 shrink-0 text-faint" aria-hidden="true" />
                     )}
                     {step}
                   </li>
                 ))}
               </ol>
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-muted">
                 {live
                   ? "Steps 1–3 run on the server today. Analytics and models come in later phases."
                   : "In demo mode nothing is uploaded; CSVs are only previewed in your browser."}

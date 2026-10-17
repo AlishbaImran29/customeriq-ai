@@ -163,7 +163,7 @@ export function AssistantChat() {
         aria-live="polite"
         aria-label="Conversation"
         aria-busy={pending}
-        className="h-[420px] space-y-4 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4"
+        className="h-[420px] space-y-4 overflow-y-auto rounded-2xl border border-line bg-surface-2 p-4"
       >
         {messages.map((message) => {
           const isUser = message.role === "user";
@@ -173,7 +173,7 @@ export function AssistantChat() {
               <div
                 className={cn(
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                  isUser ? "bg-slate-200 text-slate-700" : isError ? "bg-rose-100 text-rose-700" : "bg-teal-600 text-white",
+                  isUser ? "bg-surface-3 text-ink-2" : isError ? "bg-danger/20 text-danger" : "bg-accent text-accent-ink",
                 )}
                 aria-hidden="true"
               >
@@ -185,25 +185,25 @@ export function AssistantChat() {
                   className={cn(
                     "inline-block whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-left text-sm leading-relaxed",
                     isUser
-                      ? "bg-teal-600 text-white"
+                      ? "bg-accent text-accent-ink"
                       : isError
-                        ? "border border-rose-200 bg-rose-50 text-rose-900"
-                        : "bg-white text-slate-700 shadow-sm",
+                        ? "border border-danger/30 bg-danger/10 text-danger"
+                        : "border border-line bg-surface-2 text-ink-2",
                   )}
                 >
                   {message.text}
                 </div>
-                {message.note ? <p className="mt-1 text-[11px] text-slate-400">{message.note}</p> : null}
+                {message.note ? <p className="mt-1 text-[11px] text-faint">{message.note}</p> : null}
               </div>
             </div>
           );
         })}
         {pending ? (
           <div className="flex gap-3" role="status">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white" aria-hidden="true">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink" aria-hidden="true">
               <Bot className="h-4 w-4" />
             </div>
-            <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 text-sm text-slate-500 shadow-sm">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-muted">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               Thinking…
             </div>
@@ -222,7 +222,7 @@ export function AssistantChat() {
 
       {!hasConversation ? (
         <div>
-          <p className="mb-2 text-xs font-medium text-slate-500">Try asking</p>
+          <p className="mb-2 text-xs font-medium text-muted">Try asking</p>
           <div className="flex flex-wrap gap-2">
             {assistantStarters.map((item) => (
               <button
@@ -230,7 +230,7 @@ export function AssistantChat() {
                 type="button"
                 disabled={notConfigured || pending}
                 onClick={() => send(item)}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-left text-xs text-slate-600 transition hover:border-teal-300 hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full border border-line bg-surface-2 px-3 py-1.5 text-left text-xs text-ink-2 transition hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {item}
               </button>
@@ -284,14 +284,14 @@ export function AssistantChat() {
 function StatusBanner({ status, onCheck }: { status: StatusState; onCheck: () => void }) {
   if (status.state === "loading") {
     return (
-      <p className="flex items-center gap-2 text-xs text-slate-500" role="status">
+      <p className="flex items-center gap-2 text-xs text-muted" role="status">
         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Checking the assistant…
       </p>
     );
   }
   if (status.state === "error") {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
         <span>{status.message}</span>
         <Button variant="secondary" onClick={onCheck}>Check again</Button>
       </div>
@@ -300,7 +300,7 @@ function StatusBanner({ status, onCheck }: { status: StatusState; onCheck: () =>
   const { provider, configured, model, dataAsOf, customerCount } = status.status;
   if (!configured) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
         <span>
           <strong>AI not configured.</strong> Add <code>{PROVIDER_KEY[provider]}</code> to{" "}
           <code>backend/.env</code> and restart the backend. It needs an API account with credits
@@ -311,7 +311,7 @@ function StatusBanner({ status, onCheck }: { status: StatusState; onCheck: () =>
     );
   }
   return (
-    <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+    <p className="rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
       <strong>Connected</strong> to {model}
       {dataAsOf ? ` · answering from data as of ${formatDate(dataAsOf)} (${formatNumber(customerCount)} customers)` : " · no data imported yet"}
     </p>

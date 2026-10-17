@@ -17,10 +17,10 @@ export function CustomersTable({
   riskLabel?: string;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full min-w-[900px] text-left text-sm">
         <caption className="sr-only">{caption}</caption>
-        <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+        <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
           <tr>
             <th scope="col" className="px-3 py-3 font-medium">Customer</th>
             <th scope="col" className="px-3 py-3 font-medium">Segment</th>
@@ -34,21 +34,21 @@ export function CustomersTable({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
+            <tr key={row.id} className="border-b border-line/60 last:border-0 hover:bg-surface-2/60">
               <td className="px-3 py-3">
                 <Link
                   href={`/customers/${encodeURIComponent(row.id)}`}
-                  className="font-medium text-teal-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                  className="font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   {row.name}
                 </Link>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted">
                   {row.id}
                   {row.channel ? ` · ${row.channel}` : ""}
                 </p>
               </td>
-              <td className="px-3 py-3 text-slate-700">
-                {row.segment ?? <span className="text-slate-400">Not segmented</span>}
+              <td className="px-3 py-3 text-ink-2">
+                {row.segment ?? <span className="text-faint">Not segmented</span>}
               </td>
               <td className="px-3 py-3 font-medium tabular-nums">{row.healthScore}</td>
               <td className="px-3 py-3 tabular-nums"><Money value={row.currentClv} /></td>
@@ -58,7 +58,7 @@ export function CustomersTable({
               <td className="px-3 py-3">
                 <div className="flex items-center gap-2">
                   <Badge variant={riskVariant(row.riskLevel)}>{row.riskLevel}</Badge>
-                  <span className="text-xs tabular-nums text-slate-500">
+                  <span className="text-xs tabular-nums text-muted">
                     {row.churnProbability !== null
                       ? formatPercent(row.churnProbability, 0)
                       : row.daysSinceLastOrder !== undefined
@@ -67,10 +67,10 @@ export function CustomersTable({
                   </span>
                 </div>
               </td>
-              <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+              <td className="whitespace-nowrap px-3 py-3 text-ink-2">
                 {formatDate(row.lastPurchase)}
               </td>
-              <td className="max-w-xs px-3 py-3 text-slate-600">{row.recommendedAction}</td>
+              <td className="max-w-xs px-3 py-3 text-ink-2">{row.recommendedAction}</td>
             </tr>
           ))}
         </tbody>

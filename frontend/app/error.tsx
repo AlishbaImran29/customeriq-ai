@@ -30,7 +30,7 @@ export default function Error({
           <Button onClick={() => retry()}>Try again</Button>
           <Link
             href="/"
-            className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center rounded-xl border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2"
           >
             Go to dashboard
           </Link>

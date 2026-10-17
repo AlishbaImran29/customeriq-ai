@@ -24,7 +24,7 @@ export default function CohortsPage() {
 /** Teal that gets darker as retention rises; the number is always printed too. */
 function cellStyle(value: number | null) {
   if (value === null) return undefined;
-  return { backgroundColor: `rgba(13, 148, 136, ${(0.08 + (Math.min(value, 100) / 100) * 0.8).toFixed(2)})` };
+  return { backgroundColor: `rgba(34, 211, 238, ${(0.08 + (Math.min(value, 100) / 100) * 0.8).toFixed(2)})` };
 }
 
 async function CohortsContent() {
@@ -51,16 +51,16 @@ async function CohortsContent() {
     <>
       <DataSourceBanner meta={meta} />
 
-      <section aria-label="Average retention" className="grid gap-4 sm:grid-cols-2">
+      <section aria-label="Average retention" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Average month 1 retention</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Average month 1 retention</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{pct(month1)}</p>
-          <p className="text-xs text-slate-500">Customers who ordered again in the month after their first order.</p>
+          <p className="text-xs text-muted">Customers who ordered again in the month after their first order.</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Average month 3 retention</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Average month 3 retention</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{pct(month3)}</p>
-          <p className="text-xs text-slate-500">Customers who ordered in the third month after their first order.</p>
+          <p className="text-xs text-muted">Customers who ordered in the third month after their first order.</p>
         </Card>
       </section>
 
@@ -74,10 +74,10 @@ async function CohortsContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[820px] border-separate border-spacing-0.5 text-center text-xs">
               <caption className="sr-only">Cohort retention: percent of each first-order-month group that ordered in each later month</caption>
-              <thead className="text-slate-500">
+              <thead className="text-muted">
                 <tr>
                   <th scope="col" className="px-2 py-2 text-left font-medium">First order</th>
                   <th scope="col" className="px-2 py-2 text-right font-medium">Customers</th>
@@ -89,8 +89,8 @@ async function CohortsContent() {
               <tbody>
                 {cohorts.map((row) => (
                   <tr key={row.label}>
-                    <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-medium text-slate-800">{row.label}</th>
-                    <td className={cn("px-2 py-1.5 text-right tabular-nums", row.size < 20 ? "italic text-slate-400" : "text-slate-600")}>
+                    <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-medium text-ink">{row.label}</th>
+                    <td className={cn("px-2 py-1.5 text-right tabular-nums", row.size < 20 ? "italic text-faint" : "text-ink-2")}>
                       {formatNumber(row.size)}
                     </td>
                     {row.retention.map((value, i) => (
@@ -99,7 +99,7 @@ async function CohortsContent() {
                         style={cellStyle(value)}
                         className={cn(
                           "rounded px-1 py-1.5 tabular-nums",
-                          value === null ? "text-slate-300" : value >= 55 ? "text-white" : "text-slate-900",
+                          value === null ? "text-faint" : value >= 55 ? "text-accent-ink" : "text-ink",
                         )}
                       >
                         {pct(value)}
@@ -107,17 +107,17 @@ async function CohortsContent() {
                     ))}
                   </tr>
                 ))}
-                <tr className="border-t border-slate-200">
-                  <th scope="row" className="px-2 py-2 text-left font-semibold text-slate-900">Average</th>
+                <tr className="border-t border-line">
+                  <th scope="row" className="px-2 py-2 text-left font-semibold text-ink">Average</th>
                   <td />
                   {averages.map((value, i) => (
-                    <td key={i} className="px-1 py-2 font-semibold tabular-nums text-slate-900">{pct(value)}</td>
+                    <td key={i} className="px-1 py-2 font-semibold tabular-nums text-ink">{pct(value)}</td>
                   ))}
                 </tr>
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-muted">
             Averages weight each cohort by its size. Cohorts under 20 customers (shown in grey italics) swing a lot, so
             read them with care.
           </p>

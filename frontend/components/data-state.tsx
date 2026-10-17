@@ -32,7 +32,7 @@ export async function load<T>(loader: () => Promise<T>): Promise<LoadResult<T>> 
 export function DataSourceBanner({ meta }: { meta: DataMeta }) {
   if (meta.source === "demo") {
     return (
-      <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>
           <strong>Demo data.</strong> These are realistic sample figures, not your business. No
@@ -42,7 +42,7 @@ export function DataSourceBanner({ meta }: { meta: DataMeta }) {
     );
   }
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+    <div className="flex items-start gap-2 rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
       <Database className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <p>
         <strong>Live data</strong> from your database
@@ -74,7 +74,7 @@ export function ModelNote({
 }) {
   if (model.status !== "available" || model.metrics.length === 0) return null;
   return (
-    <details className={`rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900 ${className ?? ""}`}>
+    <details className={`rounded-xl border border-info/30 bg-info/10 px-3 py-2 text-sm text-info ${className ?? ""}`}>
       <summary className="flex cursor-pointer list-none items-center gap-2 font-medium">
         <FlaskConical className="h-4 w-4 shrink-0" aria-hidden="true" />
         {title}: model estimates, not facts. Tested on unseen data. <span className="font-normal underline">Details</span>
@@ -82,7 +82,7 @@ export function ModelNote({
       <dl className="mt-2 grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
         {model.metrics.map((metric) => (
           <div key={metric.label} className="flex justify-between gap-3">
-            <dt className="text-sky-800">{metric.label}</dt>
+            <dt className="text-info">{metric.label}</dt>
             <dd className="font-medium tabular-nums">{metric.value}</dd>
           </div>
         ))}

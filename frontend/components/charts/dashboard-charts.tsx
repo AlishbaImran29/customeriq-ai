@@ -32,23 +32,26 @@ const formatCurrency = (value: number) => formatMoney(getCurrencyState(), value)
 const formatCompactCurrency = (value: number) => formatMoney(getCurrencyState(), value, true);
 
 // Validated categorical slots (see dataviz palette): series 1 and 2.
-const SERIES_1 = "#2a78d6";
-const SERIES_2 = "#eb6834";
-const GRID = "#e2e8f0";
-const AXIS_TICK = { fontSize: 12, fill: "#64748b" };
+const SERIES_1 = "#22d3ee";
+const SERIES_2 = "#a78bfa";
+const GRID = "#263449";
+const AXIS_TICK = { fontSize: 12, fill: "#94a3b8" };
+const LEGEND_STYLE = { fontSize: 12, color: "#cbd5e1" };
 
 const riskColors: Record<RiskLevel, string> = {
-  Low: "#059669",
-  Medium: "#d97706",
-  High: "#ea580c",
-  Critical: "#e11d48",
+  Low: "#34d399",
+  Medium: "#fbbf24",
+  High: "#fb923c",
+  Critical: "#fb7185",
 };
 
 const tooltipStyle = {
   borderRadius: 12,
-  border: "1px solid #e2e8f0",
+  border: "1px solid #34465f",
+  backgroundColor: "#162238",
+  color: "#f1f5f9",
   fontSize: 12,
-  boxShadow: "0 4px 12px rgb(15 23 42 / 0.08)",
+  boxShadow: "0 8px 24px rgb(0 0 0 / 0.5)",
 };
 
 function currencyTooltip(value: unknown) {
@@ -101,7 +104,7 @@ export function RevenueForecastChart({ data }: { data: RevenuePoint[] }) {
           tickFormatter={(value: number) => formatCompactCurrency(value)}
         />
         <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} />
-        <Legend iconType="plainline" wrapperStyle={{ fontSize: 12 }} />
+        <Legend iconType="plainline" wrapperStyle={LEGEND_STYLE} />
         {hasForecast ? (
         <Area
           dataKey="range"
@@ -151,7 +154,7 @@ export function SegmentDonutChart({ data }: { data: SegmentSummary[] }) {
           innerRadius={62}
           outerRadius={96}
           paddingAngle={2}
-          stroke="#ffffff"
+          stroke="#111c2f"
           strokeWidth={2}
         >
           {data.map((entry) => (
@@ -159,7 +162,7 @@ export function SegmentDonutChart({ data }: { data: SegmentSummary[] }) {
           ))}
         </Pie>
         <Tooltip contentStyle={tooltipStyle} formatter={numberTooltip} />
-        <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+        <Legend iconType="circle" wrapperStyle={LEGEND_STYLE} />
       </PieChart>
     </ChartFrame>
   );
@@ -186,7 +189,7 @@ export function SegmentRevenueBars({ data }: { data: SegmentSummary[] }) {
           tickLine={false}
           axisLine={false}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "#f1f5f9" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
         <Bar dataKey="revenue" name="Revenue" radius={[0, 4, 4, 0]} barSize={22}>
           {data.map((entry) => (
             <Cell key={entry.name} fill={entry.color} />
@@ -221,8 +224,8 @@ export function ClvBySegmentChart({ data }: { data: SegmentSummary[] }) {
           width={56}
           tickFormatter={(value: number) => formatCompactCurrency(value)}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "#f1f5f9" }} />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
+        <Legend wrapperStyle={LEGEND_STYLE} />
         <Bar dataKey="current" name="Current CLV" fill={SERIES_1} radius={[4, 4, 0, 0]} />
         {hasPredicted ? (
           <Bar dataKey="predicted" name="Predicted CLV" fill={SERIES_2} radius={[4, 4, 0, 0]} />
@@ -246,7 +249,7 @@ export function RevenueAtRiskChart({ data }: { data: RevenueAtRiskPoint[] }) {
           width={56}
           tickFormatter={(value: number) => formatCompactCurrency(value)}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "#f1f5f9" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
         <Bar dataKey="atRisk" name="Revenue at risk" fill={SERIES_1} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ChartFrame>
@@ -266,7 +269,7 @@ export function HealthDistributionChart({ data }: { data: HealthBucket[] }) {
           width={48}
           tickFormatter={(value: number) => formatNumber(value)}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={numberTooltip} cursor={{ fill: "#f1f5f9" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={numberTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
         <Bar dataKey="customers" name="Customers" fill={SERIES_1} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ChartFrame>
@@ -286,7 +289,7 @@ export function RiskDistributionChart({ data }: { data: RiskBucket[] }) {
           width={48}
           tickFormatter={(value: number) => formatNumber(value)}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={numberTooltip} cursor={{ fill: "#f1f5f9" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={numberTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
         <Bar dataKey="customers" name="Customers" radius={[4, 4, 0, 0]}>
           {data.map((entry) => (
             <Cell key={entry.level} fill={riskColors[entry.level]} />

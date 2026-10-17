@@ -4,7 +4,7 @@ import { Coins } from "lucide-react";
 import { CURRENCIES, setCurrencies, useCurrency, type CurrencyCode } from "@/lib/currency";
 
 const selectClass =
-  "mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40";
+  "mt-1 w-full rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
 
 export function CurrencyMenu() {
   const { state } = useCurrency();
@@ -21,14 +21,14 @@ export function CurrencyMenu() {
   return (
     <details className="group relative">
       <summary
-        className="flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 [&::-webkit-details-marker]:hidden"
+        className="flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-2 hover:bg-surface-2 [&::-webkit-details-marker]:hidden"
         aria-label="Currency settings"
       >
-        <Coins className="h-3.5 w-3.5 text-teal-700" aria-hidden="true" />
+        <Coins className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
         {state.status === "ready" ? state.target : state.source}
       </summary>
-      <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-lg">
-        <label className="block text-xs font-medium text-slate-600">
+      <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-line bg-surface p-3 text-left shadow-lg">
+        <label className="block text-xs font-medium text-ink-2">
           My data is in
           <select
             className={selectClass}
@@ -42,7 +42,7 @@ export function CurrencyMenu() {
             ))}
           </select>
         </label>
-        <label className="mt-3 block text-xs font-medium text-slate-600">
+        <label className="mt-3 block text-xs font-medium text-ink-2">
           Show amounts in
           <select
             className={selectClass}
@@ -56,8 +56,8 @@ export function CurrencyMenu() {
             ))}
           </select>
         </label>
-        <p className="mt-3 text-xs text-slate-500">{note}</p>
-        <p className="mt-1 text-[11px] text-slate-400">Rates are indicative, not for accounting.</p>
+        <p className="mt-3 text-xs text-muted">{note}</p>
+        <p className="mt-1 text-[11px] text-faint">Rates are indicative, not for accounting.</p>
       </div>
     </details>
   );

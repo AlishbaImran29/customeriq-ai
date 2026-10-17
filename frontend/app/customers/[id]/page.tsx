@@ -14,7 +14,7 @@ import { formatDate, formatNumber, formatPercent } from "@/lib/utils";
 export default function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-6">
-      <Link href="/segmentation" className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:text-teal-800">
+      <Link href="/segmentation" className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent">
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         All customers
       </Link>
@@ -28,9 +28,9 @@ export default function CustomerPage({ params }: { params: Promise<{ id: string 
 function Stat({ label, children, note }: { label: string; children: React.ReactNode; note?: string }) {
   return (
     <Card className="p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-xl font-semibold tabular-nums text-slate-900">{children}</p>
-      {note ? <p className="mt-1 text-xs text-slate-500">{note}</p> : null}
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-2 text-xl font-semibold tabular-nums text-ink">{children}</p>
+      {note ? <p className="mt-1 text-xs text-muted">{note}</p> : null}
     </Card>
   );
 }
@@ -47,7 +47,7 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
         title="Customer not found"
         description="There is no customer with this ID in your data. They may have been removed, or the link is wrong."
         action={
-          <Link href="/segmentation" className="text-sm font-medium text-teal-700 hover:text-teal-800">
+          <Link href="/segmentation" className="text-sm font-medium text-accent hover:text-accent">
             Back to all customers
           </Link>
         }
@@ -70,8 +70,8 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{customer.name}</h1>
-          <p className="mt-1 break-words text-sm text-slate-500">
+          <h1 className="truncate text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{customer.name}</h1>
+          <p className="mt-1 break-words text-sm text-muted">
             {customer.email} · ID {customer.id}
             {customer.channel ? ` · ${customer.channel}` : ""}
           </p>
@@ -85,7 +85,7 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
         </div>
       </div>
 
-      <section aria-label="Customer figures" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Customer figures" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Spent so far"><Money value={customer.currentClv} /></Stat>
         <Stat label="Predicted CLV">
           {customer.predictedClv === null ? <NotAvailableCell /> : <Money value={customer.predictedClv} />}
@@ -104,7 +104,7 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
         <Stat label="Health score" note="0–100, from the four factors below">{customer.healthScore}</Stat>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Why this health score</CardTitle>
@@ -114,7 +114,7 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
             {factors.map((factor) => (
               <div key={factor.label}>
                 <div className="mb-1.5 flex justify-between gap-2 text-sm">
-                  <span className="text-slate-700">{factor.label}</span>
+                  <span className="text-ink-2">{factor.label}</span>
                   <span className="font-medium tabular-nums">{factor.value === null ? "No engagement data" : factor.value}</span>
                 </div>
                 {factor.value === null ? null : (
@@ -135,7 +135,7 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-800">{customer.recommendedAction}</p>
+            <p className="text-sm text-ink">{customer.recommendedAction}</p>
           </CardContent>
         </Card>
       </div>
@@ -153,10 +153,10 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
         </CardHeader>
         {orders.length > 0 ? (
           <CardContent>
-            <div className="max-h-96 overflow-auto rounded-xl border border-slate-100">
+            <div className="max-h-96 overflow-auto rounded-xl border border-line/60">
               <table className="w-full text-left text-sm">
                 <caption className="sr-only">Orders placed by {customer.name}</caption>
-                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <thead className="sticky top-0 bg-surface-2 text-xs uppercase tracking-wide text-muted">
                   <tr>
                     <th scope="col" className="px-3 py-2 font-medium">Date</th>
                     <th scope="col" className="px-3 py-2 text-right font-medium">Value</th>
@@ -166,11 +166,11 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
                 </thead>
                 <tbody>
                   {orders.map((order, index) => (
-                    <tr key={`${order.orderDate}-${index}`} className="border-t border-slate-100">
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-700">{formatDate(order.orderDate)}</td>
+                    <tr key={`${order.orderDate}-${index}`} className="border-t border-line/60">
+                      <td className="whitespace-nowrap px-3 py-2 text-ink-2">{formatDate(order.orderDate)}</td>
                       <td className="px-3 py-2 text-right tabular-nums"><Money value={order.value} /></td>
-                      <td className="px-3 py-2 text-slate-600">{order.category ?? <span className="text-slate-300">—</span>}</td>
-                      <td className="px-3 py-2 text-slate-600">{order.channel ?? <span className="text-slate-300">—</span>}</td>
+                      <td className="px-3 py-2 text-ink-2">{order.category ?? <span className="text-faint">—</span>}</td>
+                      <td className="px-3 py-2 text-ink-2">{order.channel ?? <span className="text-faint">—</span>}</td>
                     </tr>
                   ))}
                 </tbody>

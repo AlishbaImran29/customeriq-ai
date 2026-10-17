@@ -51,41 +51,41 @@ async function ClvContent() {
       <DataSourceBanner meta={meta} />
       <ModelNote model={meta.models.clv} title="Predicted CLV" />
       {!predicted ? (
-        <p className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-          <strong className="text-slate-900">Predicted CLV is not available.</strong>{" "}
+        <p className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-2">
+          <strong className="text-ink">Predicted CLV is not available.</strong>{" "}
           {meta.models.clv.reason} Current CLV below is actual revenue to date.
         </p>
       ) : live ? (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           Predicted CLV = revenue to date + the model&apos;s estimate of spend over the next 6 months.
         </p>
       ) : null}
 
-      <section aria-label="CLV summary" className="grid gap-4 sm:grid-cols-3">
+      <section aria-label="CLV summary" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Average current CLV</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Average current CLV</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{averageClv === null ? "—" : <Money value={averageClv} />}</p>
-          <p className="text-xs text-slate-500">{live ? "Revenue to date per customer" : "Weighted across all segments"}</p>
+          <p className="text-xs text-muted">{live ? "Revenue to date per customer" : "Weighted across all segments"}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Average predicted CLV</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Average predicted CLV</p>
           {averagePredictedClv === null ? (
             <NotAvailableValue reason={meta.models.clv.reason ?? undefined} />
           ) : (
             <>
               <p className="mt-2 text-2xl font-semibold tabular-nums"><Money value={averagePredictedClv} /></p>
-              <p className="text-xs text-slate-500">12-month forward forecast</p>
+              <p className="text-xs text-muted">12-month forward forecast</p>
             </>
           )}
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Portfolio growth potential</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Portfolio growth potential</p>
           {portfolioGrowth === null ? (
             <NotAvailableValue reason={meta.models.clv.reason ?? undefined} />
           ) : (
             <>
-              <p className="mt-2 text-2xl font-semibold tabular-nums text-emerald-700">{formatSignedPercent(portfolioGrowth)}</p>
-              <p className="text-xs text-slate-500">Predicted vs current CLV</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-success">{formatSignedPercent(portfolioGrowth)}</p>
+              <p className="text-xs text-muted">Predicted vs current CLV</p>
             </>
           )}
         </Card>
@@ -121,10 +121,10 @@ async function ClvContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <caption className="sr-only">Current CLV, predicted CLV, and growth potential per customer</caption>
-              <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
                 <tr>
                   <th scope="col" className="px-3 py-3 font-medium">Customer</th>
                   <th scope="col" className="px-3 py-3 font-medium">Segment</th>
@@ -138,9 +138,9 @@ async function ClvContent() {
                 {rows.map((row) => {
                   const status = row.growth !== null ? growthLabel(row.growth) : null;
                   return (
-                    <tr key={row.id} className="border-b border-slate-100 last:border-0">
-                      <td className="px-3 py-3 font-medium text-slate-900">{row.name}</td>
-                      <td className="px-3 py-3 text-slate-700">{row.segment ?? <span className="text-slate-400">Not segmented</span>}</td>
+                    <tr key={row.id} className="border-b border-line/60 last:border-0">
+                      <td className="px-3 py-3 font-medium text-ink">{row.name}</td>
+                      <td className="px-3 py-3 text-ink-2">{row.segment ?? <span className="text-faint">Not segmented</span>}</td>
                       <td className="px-3 py-3 text-right tabular-nums"><Money value={row.currentClv} /></td>
                       <td className="px-3 py-3 text-right tabular-nums">
                         {row.predictedClv === null ? <NotAvailableCell /> : <Money value={row.predictedClv} />}
@@ -150,8 +150,8 @@ async function ClvContent() {
                           row.growth === null
                             ? "px-3 py-3 text-right"
                             : row.growth >= 0
-                              ? "px-3 py-3 text-right font-medium tabular-nums text-emerald-700"
-                              : "px-3 py-3 text-right font-medium tabular-nums text-rose-700"
+                              ? "px-3 py-3 text-right font-medium tabular-nums text-success"
+                              : "px-3 py-3 text-right font-medium tabular-nums text-danger"
                         }
                       >
                         {row.growth === null ? <NotAvailableCell /> : formatSignedPercent(row.growth)}

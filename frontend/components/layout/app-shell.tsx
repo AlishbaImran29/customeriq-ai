@@ -115,17 +115,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname.startsWith("/login") || pathname.startsWith("/welcome")) return <>{children}</>;
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-900">
+    <div className="min-h-full bg-app text-ink">
       <a
         href="#main-content"
-        className="sr-only z-50 rounded-lg bg-white px-3 py-2 text-sm font-medium text-teal-800 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        className="sr-only z-50 rounded-lg bg-surface px-3 py-2 text-sm font-medium text-accent shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
         {t("Skip to content")}
       </a>
       <div className="flex min-h-screen">
         {open ? (
           <div
-            className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+            className="fixed inset-0 z-30 bg-black/60 lg:hidden"
             aria-hidden="true"
             onClick={() => closeDrawer()}
           />
@@ -134,24 +134,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           id="app-sidebar"
           inert={drawerHidden}
           className={cn(
-            "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-800 bg-slate-950 text-slate-200 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-line bg-sidebar text-ink-2 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
             open ? "translate-x-0" : "-translate-x-full",
           )}
         >
           <div className="flex items-center justify-between px-5 py-5">
             <Link href="/" className="flex items-center gap-2" onClick={() => closeDrawer(false)}>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500 text-sm font-bold text-slate-950">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-sm font-bold text-accent-ink">
                 IQ
               </span>
               <span>
                 <span className="block text-sm font-semibold text-white">CustomerIQ AI</span>
-                <span className="block text-[11px] text-slate-400">Predictive customer intelligence</span>
+                <span className="block text-[11px] text-faint">Predictive customer intelligence</span>
               </span>
             </Link>
             <button
               ref={closeButtonRef}
               type="button"
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-900 hover:text-white lg:hidden"
+              className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-white lg:hidden"
               onClick={() => closeDrawer()}
               aria-label="Close navigation"
             >
@@ -161,7 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 pb-3">
             {navGroups.map((group) => (
               <div key={t(group.label)}>
-                <p className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+                <p className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted">
                   {group.label}
                 </p>
                 <ul className="space-y-1">
@@ -174,10 +174,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           onClick={() => closeDrawer(false)}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50",
+                            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
                             active
-                              ? "bg-teal-500/15 font-medium text-teal-200"
-                              : "text-slate-400 hover:bg-slate-900 hover:text-white",
+                              ? "bg-accent/15 font-medium text-accent-strong"
+                              : "text-muted hover:bg-surface-2 hover:text-ink",
                           )}
                         >
                           <item.icon className="h-4 w-4" aria-hidden="true" />
@@ -190,9 +190,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             ))}
           </nav>
-          <div className="m-3 rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400">
-            <p className="flex items-center gap-1 font-medium text-slate-200">
-              <Sparkles className="h-3.5 w-3.5 text-teal-400" aria-hidden="true" />
+          <div className="m-3 rounded-xl border border-line bg-surface p-3 text-xs text-muted">
+            <p className="flex items-center gap-1 font-medium text-ink-2">
+              <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
               {t(LIVE ? "Live workspace" : "Demo workspace")}
             </p>
             <p className="mt-1">
@@ -201,11 +201,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
+          <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-app/85 px-4 py-3 backdrop-blur">
             <button
               ref={menuButtonRef}
               type="button"
-              className="rounded-lg p-2 hover:bg-slate-100 lg:hidden"
+              className="rounded-lg p-2 hover:bg-surface-3 lg:hidden"
               onClick={openDrawer}
               aria-label="Open navigation"
               aria-expanded={open}
@@ -213,15 +213,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <p className="truncate text-sm font-medium text-slate-900 lg:hidden">{t(currentLabel)}</p>
-            <p className="hidden text-sm text-slate-500 lg:block">
+            <p className="min-w-0 truncate text-sm font-medium text-ink lg:hidden">{t(currentLabel)}</p>
+            <p className="hidden text-sm text-muted lg:block">
               {t("E-commerce growth copilot for Shopify, WooCommerce, and Magento")}
             </p>
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <span
                 className={cn(
                   "hidden rounded-full px-2.5 py-1 text-xs font-medium sm:inline",
-                  LIVE ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800",
+                  LIVE ? "bg-success/10 text-success" : "bg-warning/10 text-warning",
                 )}
               >
                 {t(LIVE ? "Live data" : "Demo data")}

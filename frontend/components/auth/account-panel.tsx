@@ -32,7 +32,7 @@ export function AccountPanel() {
   if (API_MODE === "demo") {
     return (
       <Card>
-        <CardContent className="pt-5 text-sm text-slate-600">
+        <CardContent className="pt-5 text-sm text-ink-2">
           Accounts are not used in demo mode. Connect the backend to turn on sign-in.
         </CardContent>
       </Card>
@@ -40,7 +40,7 @@ export function AccountPanel() {
   }
   if (loadError) {
     return (
-      <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+      <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
         {loadError}
       </p>
     );
@@ -48,7 +48,7 @@ export function AccountPanel() {
   if (!user) return <Skeleton className="h-64 rounded-2xl" />;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>Your account</CardTitle>
@@ -57,16 +57,16 @@ export function AccountPanel() {
         <CardContent>
           <dl className="space-y-3 text-sm">
             <div>
-              <dt className="text-xs text-slate-500">Name</dt>
-              <dd className="font-medium text-slate-900">{user.name}</dd>
+              <dt className="text-xs text-muted">Name</dt>
+              <dd className="font-medium text-ink">{user.name}</dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Email</dt>
-              <dd className="font-medium text-slate-900">{user.email}</dd>
+              <dt className="text-xs text-muted">Email</dt>
+              <dd className="font-medium text-ink">{user.email}</dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Last sign-in</dt>
-              <dd className="font-medium text-slate-900">{user.lastLoginAt ? formatDate(user.lastLoginAt) : "This is your first sign-in"}</dd>
+              <dt className="text-xs text-muted">Last sign-in</dt>
+              <dd className="font-medium text-ink">{user.lastLoginAt ? formatDate(user.lastLoginAt) : "This is your first sign-in"}</dd>
             </div>
           </dl>
         </CardContent>
@@ -134,13 +134,13 @@ function PasswordForm() {
           </Field>
 
           {general ? (
-            <p role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+            <p role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               {general}
             </p>
           ) : null}
           {done ? (
-            <p role="status" className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            <p role="status" className="flex items-start gap-2 rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               Password changed. Your other devices were signed out.
             </p>
@@ -171,17 +171,17 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-800">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink">
         {label}
       </label>
       {children}
       {error ? (
-        <p role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm text-rose-700">
+        <p role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm text-danger">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {error}
         </p>
       ) : hint ? (
-        <p className="mt-1.5 text-xs text-slate-500">{hint}</p>
+        <p className="mt-1.5 text-xs text-muted">{hint}</p>
       ) : null}
     </div>
   );

@@ -18,16 +18,16 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-10 text-center",
+        "flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-surface-2/60 px-6 py-10 text-center",
         className,
       )}
     >
-      <div className="rounded-xl bg-white p-2.5 text-slate-400 shadow-sm">
+      <div className="rounded-xl bg-surface-2 p-2.5 text-faint">
         <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
-      <p className="mt-3 text-sm font-medium text-slate-900">{title}</p>
+      <p className="mt-3 text-sm font-medium text-ink">{title}</p>
       {description ? (
-        <p className="mt-1 max-w-sm text-sm text-slate-500">{description}</p>
+        <p className="mt-1 max-w-sm text-sm text-muted">{description}</p>
       ) : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
@@ -49,16 +49,16 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        "flex flex-col items-center justify-center rounded-2xl border border-rose-200 bg-rose-50/60 px-6 py-10 text-center",
+        "flex flex-col items-center justify-center rounded-2xl border border-danger/30 bg-danger/60 px-6 py-10 text-center",
         className,
       )}
     >
-      <div className="rounded-xl bg-white p-2.5 text-rose-600 shadow-sm">
+      <div className="rounded-xl bg-danger/10 p-2.5 text-danger">
         <AlertTriangle className="h-5 w-5" aria-hidden="true" />
       </div>
-      <p className="mt-3 text-sm font-medium text-slate-900">{title}</p>
+      <p className="mt-3 text-sm font-medium text-ink">{title}</p>
       {description ? (
-        <p className="mt-1 max-w-md text-sm text-slate-600">{description}</p>
+        <p className="mt-1 max-w-md text-sm text-ink-2">{description}</p>
       ) : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>

@@ -15,7 +15,7 @@ export function NoDataState() {
       action={
         <Link
           href="/import"
-          className="inline-flex items-center rounded-xl bg-teal-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-teal-700"
+          className="inline-flex items-center rounded-xl bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink hover:bg-accent-strong"
         >
           {t("Import data")}
         </Link>

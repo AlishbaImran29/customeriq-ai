@@ -43,8 +43,8 @@ async function ChurnContent() {
     <>
       <DataSourceBanner meta={meta} />
       {inactivityView ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-          <strong className="text-slate-900">Churn probability is not available.</strong>{" "}
+        <div className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-2">
+          <strong className="text-ink">Churn probability is not available.</strong>{" "}
           {meta.models.churn.reason} Until then this page shows a <strong>rule-based inactivity
           level</strong>: days since a customer&apos;s last order divided by their usual gap between orders
           (Low ≤ 1×, Medium ≤ 1.5×, High ≤ 2.5×, Critical beyond). It describes behaviour; it does not
@@ -54,7 +54,7 @@ async function ChurnContent() {
         <>
           <ModelNote model={meta.models.churn} title="Churn model" />
           {meta.source === "live" ? (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted">
               Churn means placing <strong>no order in the next 90 days</strong>. Levels: Low under 25%,
               Medium 25–50%, High 50–80%, Critical 80% or more. Predicted churn rate is the average
               chance among customers who ordered in the last 12 months.
@@ -63,9 +63,9 @@ async function ChurnContent() {
         </>
       )}
 
-      <section aria-label="Churn summary" className="grid gap-4 sm:grid-cols-3">
+      <section aria-label="Churn summary" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted">
             <TrendingDown className="h-4 w-4" aria-hidden="true" /> Predicted churn rate
           </p>
           {churnRate === null ? (
@@ -74,7 +74,7 @@ async function ChurnContent() {
             <>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{formatPercent(churnRate)}</p>
               {churnRateDelta !== null ? (
-                <p className={churnRateDelta > 0 ? "text-xs font-medium text-rose-600" : "text-xs font-medium text-emerald-700"}>
+                <p className={churnRateDelta > 0 ? "text-xs font-medium text-danger" : "text-xs font-medium text-success"}>
                   {churnRateDelta > 0 ? "+" : ""}
                   {churnRateDelta.toFixed(1)} pts vs last period
                 </p>
@@ -83,24 +83,24 @@ async function ChurnContent() {
           )}
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted">
             <AlertTriangle className="h-4 w-4" aria-hidden="true" /> {inactivityView ? "High + critical inactivity" : "High + critical risk"}
           </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{formatNumber(elevated)}</p>
-          <p className="text-xs text-slate-500">{formatPercent(total ? (elevated / total) * 100 : 0)} of customers</p>
+          <p className="text-xs text-muted">{formatPercent(total ? (elevated / total) * 100 : 0)} of customers</p>
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted">
             <ShieldAlert className="h-4 w-4" aria-hidden="true" /> {inactivityView ? "Critical inactivity" : "Critical risk"}
           </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{formatNumber(critical)}</p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted">
             {inactivityView ? "More than 2.5× their usual gap since the last order" : "Churn probability of 80% or higher"}
           </p>
         </Card>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle>{inactivityView ? "Inactivity levels" : "Risk distribution"}</CardTitle>
@@ -110,21 +110,21 @@ async function ChurnContent() {
             <RiskDistributionChart data={distribution} />
           </CardContent>
         </Card>
-        <div className="grid gap-4 md:grid-cols-3 xl:col-span-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:col-span-3">
           {customers.slice(0, 3).map((customer) => (
             <Card key={customer.id} className="flex flex-col p-4">
-              <p className="text-sm font-medium text-slate-900">{customer.name}</p>
-              <p className="text-xs text-slate-500">{customer.segment ?? "Not segmented"}</p>
+              <p className="text-sm font-medium text-ink">{customer.name}</p>
+              <p className="text-xs text-muted">{customer.segment ?? "Not segmented"}</p>
               {customer.churnProbability !== null ? (
                 <>
                   <p className="mt-4 text-3xl font-semibold tabular-nums">{formatPercent(customer.churnProbability, 0)}</p>
-                  <p className="text-xs text-slate-500">churn probability</p>
+                  <p className="text-xs text-muted">churn probability</p>
                   <Progress className="mt-2" value={customer.churnProbability} tone="critical" label={`${customer.name} churn probability`} />
                 </>
               ) : (
                 <>
                   <p className="mt-4 text-3xl font-semibold tabular-nums">{customer.daysSinceLastOrder ?? "—"}</p>
-                  <p className="text-xs text-slate-500">days since last order · <Money value={customer.revenue} /> spent</p>
+                  <p className="text-xs text-muted">days since last order · <Money value={customer.revenue} /> spent</p>
                 </>
               )}
               <div className="mt-3">
@@ -132,8 +132,8 @@ async function ChurnContent() {
                   {customer.riskLevel} {inactivityView ? "inactivity" : "risk"}
                 </Badge>
               </div>
-              <p className="mt-auto pt-3 text-sm text-slate-600">
-                <span className="font-medium text-slate-800">Action: </span>
+              <p className="mt-auto pt-3 text-sm text-ink-2">
+                <span className="font-medium text-ink">Action: </span>
                 {customer.recommendedAction}
               </p>
             </Card>

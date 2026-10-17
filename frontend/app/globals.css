@@ -1,19 +1,73 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-}
+/*
+  Midnight AI: the design tokens of the whole application.
+  Components use these names (bg-surface, text-muted, border-line, text-accent, ...) instead of
+  raw colours, so the look can be changed here in one place.
+*/
+@theme {
+  /* Surfaces */
+  --color-app: #0b1220;          /* page background */
+  --color-sidebar: #0f172a;      /* sidebar and landing sections */
+  --color-surface: #111c2f;      /* cards and panels */
+  --color-surface-2: #162238;    /* secondary surfaces: table heads, inputs, upload areas */
+  --color-surface-3: #1c2b45;    /* hover states, tracks, skeletons */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Borders */
+  --color-line: #263449;
+  --color-line-strong: #34465f;
+
+  /* Text */
+  --color-ink: #f1f5f9;          /* main text */
+  --color-ink-2: #cbd5e1;        /* body copy on cards */
+  --color-muted: #94a3b8;        /* secondary text */
+  --color-faint: #7d8da6;        /* hints and placeholders (still above 4.5:1 on cards) */
+
+  /* Accents */
+  --color-accent: #22d3ee;       /* primary accent (cyan) */
+  --color-accent-strong: #67e8f9;/* hover / emphasis (a brighter cyan) */
+  --color-accent-ink: #062a33;   /* text on top of the accent colour */
+  --color-teal: #14b8a6;         /* secondary accent */
+
+  /* Status */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-serious: #fb923c;      /* "High" risk: between warning and critical */
+  --color-danger: #fb7185;       /* errors and critical churn alerts */
+  --color-info: #38bdf8;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+:root {
+  color-scheme: dark; /* native selects, scrollbars, date pickers and checkboxes follow the dark theme */
+}
+
+html {
+  background: var(--color-app);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-app);
+  color: var(--color-ink);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgb(34 211 238 / 0.3);
+  color: var(--color-ink);
+}
+
+/* Slim scrollbars that fit the dark surfaces */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+/* Native option lists need an explicit background in some browsers */
+select option {
+  background: var(--color-surface-2);
+  color: var(--color-ink);
 }

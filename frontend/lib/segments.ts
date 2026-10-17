@@ -15,27 +15,27 @@ export const SEGMENT_META: Record<
   { color: string; definition: string; strategy: string }
 > = {
   Champions: {
-    color: "#2a78d6",
+    color: "#22d3ee",
     definition: "Bought recently, buy often, and spend the most.",
     strategy: "Reward, request reviews and referrals, offer early access.",
   },
   "Loyal Customers": {
-    color: "#eb6834",
+    color: "#a78bfa",
     definition: "Buy regularly with above-average frequency and spend.",
     strategy: "Upsell higher-value products and loyalty tiers.",
   },
   "Potential Loyalists": {
-    color: "#1baf7a",
+    color: "#34d399",
     definition: "Recent customers who have not ordered often yet.",
     strategy: "Nurture toward repeat purchase with timed incentives.",
   },
   "At-Risk Customers": {
-    color: "#eda100",
+    color: "#fbbf24",
     definition: "Used to buy often or spend a lot, but not recently.",
     strategy: "Personalised win-back offers before they lapse.",
   },
   "Lost Customers": {
-    color: "#e87ba4",
+    color: "#f472b6",
     definition: "Lowest recency, frequency, and spend.",
     strategy: "Low-cost recovery offer and feedback survey.",
   },

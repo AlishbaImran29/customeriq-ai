@@ -32,30 +32,30 @@ export function KpiCard({
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
             <T>{label}</T>
           </p>
           {value === null ? (
             <>
-              <p className="mt-2 text-lg font-semibold tracking-tight text-slate-400">
+              <p className="mt-2 text-lg font-semibold tracking-tight text-faint">
                 <T>Not available yet</T>
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-muted">
                 <T>{unavailableReason ?? "Not available yet."}</T>
               </p>
             </>
           ) : (
             <>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-ink">
                 {value}
               </p>
               {delta === null ? (
-                <p className="mt-1 text-xs text-slate-500"><T>{note ?? "Not enough history to compare"}</T></p>
+                <p className="mt-1 text-xs text-muted"><T>{note ?? "Not enough history to compare"}</T></p>
               ) : (
                 <p
                   className={cn(
                     "mt-1 text-xs font-medium",
-                    positive ? "text-emerald-600" : "text-rose-600",
+                    positive ? "text-success" : "text-danger",
                   )}
                 >
                   {delta > 0 ? "+" : ""}
@@ -65,7 +65,7 @@ export function KpiCard({
             </>
           )}
         </div>
-        <div className="rounded-xl bg-teal-50 p-2 text-teal-700">
+        <div className="rounded-xl bg-accent/10 p-2 text-accent">
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
       </div>

@@ -39,7 +39,7 @@ async function RecommendationsContent() {
     <>
       <DataSourceBanner meta={meta} />
       {live ? (
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-ink-2">
           These recommendations come from <strong>fixed rules per segment</strong>, not from an AI
           model. Impact is based on each audience&apos;s share of the last 12 months&apos; revenue
           (High ≥ 20%, Medium ≥ 8%). No revenue gains are estimated, because that needs a trained
@@ -54,22 +54,22 @@ async function RecommendationsContent() {
         />
       ) : (
         <>
-          <section aria-label="Recommendation summary" className="grid gap-4 sm:grid-cols-3">
+          <section aria-label="Recommendation summary" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card className="p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">
                 {live ? "Spent by target audiences (12 mo)" : "Estimated revenue opportunity"}
               </p>
-              <p className={live ? "mt-2 text-2xl font-semibold tabular-nums" : "mt-2 text-2xl font-semibold tabular-nums text-emerald-700"}>
+              <p className={live ? "mt-2 text-2xl font-semibold tabular-nums" : "mt-2 text-2xl font-semibold tabular-nums text-success"}>
                 <Money value={totalRevenue} />
               </p>
-              {live ? <p className="text-xs text-slate-500">Historical spend, not a forecast</p> : null}
+              {live ? <p className="text-xs text-muted">Historical spend, not a forecast</p> : null}
             </Card>
             <Card className="p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">High-impact actions</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">High-impact actions</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{highImpact} of {items.length}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Largest audience</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Largest audience</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums">{formatNumber(reach)} customers</p>
             </Card>
           </section>

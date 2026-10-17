@@ -180,15 +180,15 @@ export function DataImporter() {
               if (file) void handleFile(file);
             }}
             className={cn(
-              "flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition focus-within:ring-2 focus-within:ring-teal-500/40",
-              dragging ? "border-teal-500 bg-teal-50" : "border-slate-200 bg-slate-50 hover:border-teal-300",
+              "flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition focus-within:ring-2 focus-within:ring-accent/40",
+              dragging ? "border-accent bg-accent/10" : "border-line bg-surface-2 hover:border-accent/40",
             )}
           >
-            <UploadCloud className="h-8 w-8 text-teal-600" aria-hidden="true" />
-            <span className="mt-3 text-sm font-medium text-slate-900">
-              Drag and drop a file, or <span className="text-teal-700 underline">browse</span>
+            <UploadCloud className="h-8 w-8 text-accent" aria-hidden="true" />
+            <span className="mt-3 text-sm font-medium text-ink">
+              Drag and drop a file, or <span className="text-accent underline">browse</span>
             </span>
-            <span className="mt-1 text-xs text-slate-500">
+            <span className="mt-1 text-xs text-muted">
               Required columns: {REQUIRED_COLUMNS.join(", ")}
             </span>
             <input
@@ -216,8 +216,8 @@ export function DataImporter() {
         ) : null}
 
         {state.status === "reading" ? (
-          <Card className="flex items-center gap-3 p-5 text-sm text-slate-600">
-            <Loader2 className="h-4 w-4 animate-spin text-teal-600" aria-hidden="true" />
+          <Card className="flex items-center gap-3 p-5 text-sm text-ink-2">
+            <Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden="true" />
             Reading {state.file.name}…
           </Card>
         ) : null}
@@ -251,7 +251,7 @@ export function DataImporter() {
           <Card>
             <FileHeader file={state.file} onRemove={reset} />
             <CardContent>
-              <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900">
+              <p className="rounded-xl bg-info/10 px-3 py-2 text-sm text-info">
                 Excel files are read and checked on the server when you import, so there is no
                 preview here. The first sheet is used. To preview first, export the sheet as CSV.
               </p>
@@ -283,7 +283,7 @@ function FileHeader({ file, onRemove }: { file: File; onRemove: () => void }) {
   return (
     <CardHeader className="flex-row items-center justify-between">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="rounded-xl bg-teal-50 p-2 text-teal-700">
+        <div className="rounded-xl bg-accent/10 p-2 text-accent">
           <FileSpreadsheet className="h-5 w-5" aria-hidden="true" />
         </div>
         <div className="min-w-0">
@@ -324,7 +324,7 @@ function ImportActions({
         )}
         {t(uploading ? "Importing…" : "Import customers")}
       </Button>
-      <p id="import-status" className="text-xs text-slate-500">
+      <p id="import-status" className="text-xs text-muted">
         {!IMPORT_ENDPOINT_AVAILABLE
           ? "Demo mode: no backend is configured (NEXT_PUBLIC_API_BASE_URL), so import is disabled. No data has left your browser."
           : uploading
@@ -354,9 +354,9 @@ function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: 
         <div>
           <CardTitle className="flex items-center gap-2">
             {failed || saved === 0 ? (
-              <XCircle className="h-4 w-4 text-rose-600" aria-hidden="true" />
+              <XCircle className="h-4 w-4 text-danger" aria-hidden="true" />
             ) : (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+              <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
             )}
             {t(failed ? "Import failed" : saved > 0 ? "Import complete" : "Import finished — no rows saved")}
           </CardTitle>
@@ -377,21 +377,21 @@ function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: 
       <CardContent className="space-y-4">
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-slate-100 p-3">
-              <dt className="text-xs text-slate-500">{stat.label}</dt>
-              <dd className="mt-1 text-xl font-semibold tabular-nums text-slate-900">{formatNumber(stat.value)}</dd>
+            <div key={stat.label} className="rounded-xl border border-line/60 p-3">
+              <dt className="text-xs text-muted">{stat.label}</dt>
+              <dd className="mt-1 text-xl font-semibold tabular-nums text-ink">{formatNumber(stat.value)}</dd>
             </div>
           ))}
         </dl>
         {listed.length > 0 ? (
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-900">
+            <p className="mb-2 text-sm font-medium text-ink">
               Problems found ({formatNumber(result.errorCount)})
             </p>
-            <div className="max-h-80 overflow-auto rounded-xl border border-slate-100">
+            <div className="max-h-80 overflow-auto rounded-xl border border-line/60">
               <table className="w-full text-left text-xs">
                 <caption className="sr-only">Rows rejected by the server and why</caption>
-                <thead className="sticky top-0 bg-slate-50 text-slate-500">
+                <thead className="sticky top-0 bg-surface-2 text-muted">
                   <tr>
                     <th scope="col" className="px-3 py-2 font-medium">Row</th>
                     <th scope="col" className="px-3 py-2 font-medium">Column</th>
@@ -400,19 +400,19 @@ function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: 
                 </thead>
                 <tbody>
                   {listed.map((error, i) => (
-                    <tr key={`${error.row}-${error.column}-${i}`} className="border-t border-slate-100">
-                      <td className="px-3 py-2 tabular-nums text-slate-700">{error.row ?? "—"}</td>
+                    <tr key={`${error.row}-${error.column}-${i}`} className="border-t border-line/60">
+                      <td className="px-3 py-2 tabular-nums text-ink-2">{error.row ?? "—"}</td>
                       <td className="px-3 py-2">
-                        <code className="text-slate-700">{error.column ?? "—"}</code>
+                        <code className="text-ink-2">{error.column ?? "—"}</code>
                       </td>
-                      <td className="px-3 py-2 text-slate-600">{error.message}</td>
+                      <td className="px-3 py-2 text-ink-2">{error.message}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             {hiddenErrors > 0 ? (
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-muted">
                 {formatNumber(hiddenErrors)} more problem{hiddenErrors === 1 ? "" : "s"} not shown.
                 Fix the ones above and upload again to see the rest.
               </p>
@@ -428,14 +428,14 @@ function CheckRow({ ok, label, detail }: { ok: boolean; label: string; detail?: 
   return (
     <li className="flex items-start gap-2 text-sm">
       {ok ? (
-        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
       ) : (
-        <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden="true" />
+        <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
       )}
       <span>
         <span className="sr-only">{ok ? "Passed: " : "Issue: "}</span>
-        <span className="text-slate-800">{label}</span>
-        {detail ? <span className="block text-xs text-slate-500">{detail}</span> : null}
+        <span className="text-ink">{label}</span>
+        {detail ? <span className="block text-xs text-muted">{detail}</span> : null}
       </span>
     </li>
   );
@@ -499,7 +499,7 @@ function CsvResult({
             />
           </ul>
           )}
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-muted">
             Quick browser check only — the server re-checks every row when you import.
           </p>
           {actions}
@@ -514,10 +514,10 @@ function CsvResult({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full text-left text-xs">
               <caption className="sr-only">Preview of uploaded rows</caption>
-              <thead className="border-b border-slate-200 text-slate-500">
+              <thead className="border-b border-line text-muted">
                 <tr>
                   {headers.map((h, i) => (
                     <th
@@ -525,7 +525,7 @@ function CsvResult({
                       scope="col"
                       className={cn(
                         "whitespace-nowrap px-3 py-2 font-medium",
-                        (REQUIRED_COLUMNS as readonly string[]).includes(h) && "text-teal-700",
+                        (REQUIRED_COLUMNS as readonly string[]).includes(h) && "text-accent",
                       )}
                     >
                       {h || `column_${i + 1}`}
@@ -535,10 +535,10 @@ function CsvResult({
               </thead>
               <tbody>
                 {preview.map((row, r) => (
-                  <tr key={r} className="border-b border-slate-100 last:border-0">
+                  <tr key={r} className="border-b border-line/60 last:border-0">
                     {headers.map((_, c) => (
-                      <td key={c} className="max-w-[220px] truncate whitespace-nowrap px-3 py-2 text-slate-700">
-                        {row[c] || <span className="text-slate-300">—</span>}
+                      <td key={c} className="max-w-[220px] truncate whitespace-nowrap px-3 py-2 text-ink-2">
+                        {row[c] || <span className="text-faint">—</span>}
                       </td>
                     ))}
                   </tr>

@@ -125,10 +125,10 @@ export function LoginForm() {
   if (API_MODE === "demo") {
     return (
       <Panel title="No sign-in needed">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-ink-2">
           This is demo mode: no backend is connected, so the app shows sample data and does not need an account.
         </p>
-        <Link href="/" className="mt-4 inline-flex text-sm font-medium text-teal-700 hover:text-teal-800">
+        <Link href="/" className="mt-4 inline-flex text-sm font-medium text-accent hover:text-accent">
           Go to the demo dashboard
         </Link>
       </Panel>
@@ -151,7 +151,7 @@ export function LoginForm() {
   if (view.kind === "unreachable") {
     return (
       <Panel title="We can't reach the server">
-        <p className="text-sm text-slate-600">{view.message}</p>
+        <p className="text-sm text-ink-2">{view.message}</p>
         <Button
           className="mt-4"
           variant="secondary"
@@ -284,18 +284,18 @@ export function LoginForm() {
               placeholder="123456"
               maxLength={CODE_LENGTH}
               aria-invalid={fieldError("code") ? true : undefined}
-              className={cn("h-12 text-center text-2xl tracking-[0.4em]", fieldError("code") && "border-rose-400")}
+              className={cn("h-12 text-center text-2xl tracking-[0.4em]", fieldError("code") && "border-danger")}
             />
           </FieldBox>
 
           {info ? (
-            <p className="flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900" role="status">
+            <p className="flex items-start gap-2 rounded-xl bg-info/10 px-3 py-2 text-sm text-info" role="status">
               <MailCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               {info}
             </p>
           ) : null}
           {generalError ? (
-            <p role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+            <p role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               {generalError}
             </p>
@@ -312,7 +312,7 @@ export function LoginForm() {
             type="button"
             onClick={onResend}
             disabled={cooldown > 0}
-            className="font-medium text-teal-700 hover:text-teal-800 disabled:cursor-not-allowed disabled:text-slate-400"
+            className="font-medium text-accent hover:text-accent disabled:cursor-not-allowed disabled:text-faint"
           >
             {cooldown > 0 ? `Send a new code in ${cooldown}s` : "Send a new code"}
           </button>
@@ -323,7 +323,7 @@ export function LoginForm() {
               setError(null);
               setInfo(null);
             }}
-            className="text-slate-600 hover:text-slate-900"
+            className="text-ink-2 hover:text-ink"
           >
             Use a different email
           </button>
@@ -344,7 +344,7 @@ export function LoginForm() {
       }
     >
       {notice && !creating ? (
-        <p className="mb-4 flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900" role="status">
+        <p className="mb-4 flex items-start gap-2 rounded-xl bg-info/10 px-3 py-2 text-sm text-info" role="status">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {notice}
         </p>
@@ -380,7 +380,7 @@ export function LoginForm() {
             placeholder="name@company.com"
             aria-invalid={fieldError("email") ? true : undefined}
             aria-describedby={fieldError("email") ? "email-error" : undefined}
-            className={cn("h-11", fieldError("email") && "border-rose-400")}
+            className={cn("h-11", fieldError("email") && "border-danger")}
           />
         </FieldBox>
 
@@ -400,14 +400,14 @@ export function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               aria-invalid={fieldError("password") ? true : undefined}
               aria-describedby={fieldError("password") ? "password-error" : undefined}
-              className={cn("h-11 pr-11", fieldError("password") && "border-rose-400")}
+              className={cn("h-11 pr-11", fieldError("password") && "border-danger")}
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Hide password" : "Show password"}
               aria-pressed={showPassword}
-              className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+              className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
             </button>
@@ -425,7 +425,7 @@ export function LoginForm() {
               onChange={(e) => setConfirm(e.target.value)}
               aria-invalid={fieldError("confirm") ? true : undefined}
               aria-describedby={fieldError("confirm") ? "confirm-error" : undefined}
-              className={cn("h-11", fieldError("confirm") && "border-rose-400")}
+              className={cn("h-11", fieldError("confirm") && "border-danger")}
             />
           </FieldBox>
         ) : null}
@@ -448,12 +448,12 @@ export function LoginForm() {
           </FieldBox>
         ) : null}
 
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-2">
           <input
             type="checkbox"
             checked={remember}
             onChange={(e) => setRemember(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 accent-teal-600"
+            className="h-4 w-4 rounded border-line-strong accent-accent"
           />
           Keep me signed in on this device
         </label>
@@ -461,7 +461,7 @@ export function LoginForm() {
         {generalError ? (
           <p
             role="alert"
-            className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900"
+            className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
           >
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             {generalError}
@@ -475,7 +475,7 @@ export function LoginForm() {
       </form>
 
       {!setupRequired && signupOpen ? (
-        <p className="mt-5 text-center text-sm text-slate-600">
+        <p className="mt-5 text-center text-sm text-ink-2">
           {creating ? "Already have an account?" : "New here?"}{" "}
           <button
             type="button"
@@ -483,7 +483,7 @@ export function LoginForm() {
               setMode(creating ? "signin" : "signup");
               setError(null);
             }}
-            className="font-medium text-teal-700 hover:text-teal-800"
+            className="font-medium text-accent hover:text-accent"
           >
             {creating ? "Sign in" : "Create an account"}
           </button>
@@ -491,8 +491,8 @@ export function LoginForm() {
       ) : null}
 
       {!creating ? (
-        <details className="mt-5 text-sm text-slate-600">
-          <summary className="cursor-pointer font-medium text-teal-700 hover:text-teal-800">
+        <details className="mt-5 text-sm text-ink-2">
+          <summary className="cursor-pointer font-medium text-accent hover:text-accent">
             Forgot your password?
           </summary>
           <p className="mt-2">
@@ -515,9 +515,9 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-      {subtitle ? <p className="mt-1 mb-6 text-sm text-slate-500">{subtitle}</p> : <div className="mb-6" />}
+    <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-sm sm:p-8">
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+      {subtitle ? <p className="mt-1 mb-6 text-sm text-muted">{subtitle}</p> : <div className="mb-6" />}
       {children}
     </div>
   );
@@ -540,18 +540,18 @@ function FieldBox({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-800">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink">
         {label}
-        {optional ? <span className="ml-1 font-normal text-slate-400">(optional)</span> : null}
+        {optional ? <span className="ml-1 font-normal text-faint">(optional)</span> : null}
       </label>
       {children}
       {error ? (
-        <p id={`${id}-error`} role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm text-rose-700">
+        <p id={`${id}-error`} role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm text-danger">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {error}
         </p>
       ) : hint ? (
-        <div className="mt-1.5 text-xs text-slate-500">{hint}</div>
+        <div className="mt-1.5 text-xs text-muted">{hint}</div>
       ) : null}
     </div>
   );
@@ -561,7 +561,7 @@ function PasswordHint({ password }: { password: string }) {
   const long = password.length >= MIN_PASSWORD_LENGTH;
   return (
     <>
-      <span className={cn("inline-flex items-center gap-1 font-medium", long ? "text-emerald-700" : "text-slate-500")}>
+      <span className={cn("inline-flex items-center gap-1 font-medium", long ? "text-success" : "text-muted")}>
         {long ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> : <Circle className="h-3.5 w-3.5" aria-hidden="true" />}
         At least {MIN_PASSWORD_LENGTH} characters
       </span>

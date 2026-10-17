@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
 
 const tones = {
-  brand: "bg-teal-600",
-  good: "bg-emerald-600",
-  warning: "bg-amber-500",
-  critical: "bg-rose-600",
+  brand: "bg-accent",
+  good: "bg-success",
+  warning: "bg-warning",
+  critical: "bg-danger",
 };
 
 export function scoreTone(score: number): keyof typeof tones {
@@ -36,7 +36,7 @@ export function Progress({
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={value}
-      className={cn("h-2 w-full overflow-hidden rounded-full bg-slate-100", className)}
+      className={cn("h-2 w-full overflow-hidden rounded-full bg-surface-3", className)}
     >
       <div
         className={cn("h-full rounded-full transition-[width]", tones[tone])}

@@ -2,10 +2,10 @@ import { cn } from "@/lib/utils";
 
 const variants = {
   primary:
-    "bg-teal-600 text-white hover:bg-teal-700 shadow-sm",
+    "bg-accent text-accent-ink hover:bg-accent-strong shadow-sm",
   secondary:
-    "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
-  ghost: "text-slate-600 hover:bg-slate-100",
+    "bg-surface-2 text-ink-2 border border-line hover:bg-surface-3 hover:text-ink",
+  ghost: "text-ink-2 hover:bg-surface-3 hover:text-ink",
 };
 
 export function Button({
@@ -18,7 +18,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-app disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
         className,
       )}

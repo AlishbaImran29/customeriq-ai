@@ -23,7 +23,7 @@ const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const MONTHS = monthNames();
 const YEARS_BACK = 15;
 const selectClass =
-  "rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40";
+  "rounded-lg border border-line bg-surface-2 px-2 py-1 text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
 
 /**
  * Calendar for choosing the period behind the revenue, retention and growth figures.
@@ -103,18 +103,18 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
         onClick={() => (open ? setOpen(false) : openPanel())}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+        className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium text-ink shadow-sm hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
-        <CalendarDays className="h-4 w-4 text-teal-700" aria-hidden="true" />
+        <CalendarDays className="h-4 w-4 text-accent" aria-hidden="true" />
         {formatRange(current)}
-        <span className="text-xs font-normal text-slate-500">({dayCount(current)} days)</span>
+        <span className="text-xs font-normal text-muted">({dayCount(current)} days)</span>
       </button>
 
       {open ? (
         <div
           role="dialog"
           aria-label="Choose a period"
-          className="absolute left-0 z-30 mt-2 flex w-[min(94vw,560px)] flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:flex-row"
+          className="absolute left-0 z-30 mt-2 flex w-[min(94vw,560px)] flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-xl sm:flex-row"
         >
           <div className="flex flex-wrap gap-1.5 sm:w-40 sm:shrink-0 sm:flex-col">
             {presets(asOf).map((preset) => {
@@ -129,8 +129,8 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
                   }}
                   aria-pressed={active}
                   className={cn(
-                    "rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40",
-                    active ? "bg-teal-600 text-white" : "bg-slate-50 text-slate-700 hover:bg-teal-50 hover:text-teal-800",
+                    "rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                    active ? "bg-accent text-accent-ink" : "bg-surface-2 text-ink-2 hover:bg-accent/10 hover:text-accent",
                   )}
                 >
                   {preset.label}
@@ -145,7 +145,7 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
                 type="button"
                 onClick={() => shiftMonth(-1)}
                 aria-label="Previous month"
-                className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                className="rounded-lg p-1.5 text-ink-2 hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -184,12 +184,12 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
                 onClick={() => shiftMonth(1)}
                 disabled={atLastMonth}
                 aria-label="Next month"
-                className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 disabled:cursor-not-allowed disabled:opacity-30"
+                className="rounded-lg p-1.5 text-ink-2 hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
-            <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400">
+            <div className="grid grid-cols-7 text-center text-[11px] font-medium text-faint">
               {WEEKDAYS.map((day) => (
                 <span key={day} className="py-1">
                   {day}
@@ -212,11 +212,11 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
                       aria-label={formatRange({ from: day, to: day })}
                       aria-pressed={selected}
                       className={cn(
-                        "h-8 text-xs tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40",
-                        disabled && "cursor-not-allowed text-slate-300",
-                        !disabled && !selected && inDraft(day) && "bg-teal-100 text-teal-900",
-                        !disabled && !selected && !inDraft(day) && "text-slate-700 hover:bg-slate-100",
-                        selected && "rounded-md bg-teal-600 font-semibold text-white",
+                        "h-8 text-xs tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                        disabled && "cursor-not-allowed text-faint",
+                        !disabled && !selected && inDraft(day) && "bg-accent/20 text-accent",
+                        !disabled && !selected && !inDraft(day) && "text-ink-2 hover:bg-surface-3",
+                        selected && "rounded-md bg-accent font-semibold text-accent-ink",
                       )}
                     >
                       {Number(day.slice(8))}
@@ -224,18 +224,18 @@ export function DateRangePicker({ asOf, current }: { asOf: string; current: Date
                   );
                 })}
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">Days after {formatRange({ from: asOf, to: asOf })} (the last day of data) are not selectable.</p>
+            <p className="mt-2 text-[11px] text-faint">Days after {formatRange({ from: asOf, to: asOf })} (the last day of data) are not selectable.</p>
 
-            <div className="mt-3 flex flex-col gap-3 border-t border-slate-100 pt-3">
-              <div className="text-xs text-slate-600">
+            <div className="mt-3 flex flex-col gap-3 border-t border-line/60 pt-3">
+              <div className="text-xs text-ink-2">
                 {complete ? (
                   <>
-                    <p className="font-medium text-slate-900">{formatRange(complete)}</p>
+                    <p className="font-medium text-ink">{formatRange(complete)}</p>
                     <p>{days} days</p>
                     {tooLong ? (
-                      <p className="mt-1 text-rose-700">Choose at most {MAX_RANGE_DAYS} days (about 3 years).</p>
+                      <p className="mt-1 text-danger">Choose at most {MAX_RANGE_DAYS} days (about 3 years).</p>
                     ) : (
-                      <p className="mt-1 text-slate-500">Compared with the {days} days before: {formatRange(previousRange(complete))}.</p>
+                      <p className="mt-1 text-muted">Compared with the {days} days before: {formatRange(previousRange(complete))}.</p>
                     )}
                   </>
                 ) : (

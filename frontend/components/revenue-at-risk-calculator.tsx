@@ -36,10 +36,10 @@ export function RevenueAtRiskCalculator({ defaults }: { defaults: CalculatorDefa
   const maxSpend = sliderMax(defaults.yearlySpend, 3, 100);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div className="space-y-4">
         <label className="block text-sm">
-          <span className="text-slate-600">Customers at risk</span>
+          <span className="text-ink-2">Customers at risk</span>
           <input
             type="range"
             min={0}
@@ -47,12 +47,12 @@ export function RevenueAtRiskCalculator({ defaults }: { defaults: CalculatorDefa
             step={Math.max(1, Math.round(maxCustomers / 200))}
             value={customers}
             onChange={(event) => setCustomers(Number(event.target.value))}
-            className="mt-2 w-full accent-teal-600"
+            className="mt-2 w-full accent-accent"
           />
-          <span className="text-xs text-slate-500">{formatNumber(customers)}</span>
+          <span className="text-xs text-muted">{formatNumber(customers)}</span>
         </label>
         <label className="block text-sm">
-          <span className="text-slate-600">Average spend per customer per year</span>
+          <span className="text-ink-2">Average spend per customer per year</span>
           <input
             type="range"
             min={0}
@@ -60,12 +60,12 @@ export function RevenueAtRiskCalculator({ defaults }: { defaults: CalculatorDefa
             step={Math.max(1, Math.round(maxSpend / 200))}
             value={yearlySpend}
             onChange={(event) => setYearlySpend(Number(event.target.value))}
-            className="mt-2 w-full accent-teal-600"
+            className="mt-2 w-full accent-accent"
           />
-          <span className="text-xs text-slate-500"><Money value={yearlySpend} /></span>
+          <span className="text-xs text-muted"><Money value={yearlySpend} /></span>
         </label>
         <label className="block text-sm">
-          <span className="text-slate-600">Share of them expected to leave</span>
+          <span className="text-ink-2">Share of them expected to leave</span>
           <input
             type="range"
             min={0}
@@ -73,16 +73,16 @@ export function RevenueAtRiskCalculator({ defaults }: { defaults: CalculatorDefa
             step={1}
             value={share}
             onChange={(event) => setShare(Number(event.target.value))}
-            className="mt-2 w-full accent-teal-600"
+            className="mt-2 w-full accent-accent"
           />
-          <span className="text-xs text-slate-500">{share}%</span>
+          <span className="text-xs text-muted">{share}%</span>
         </label>
-        <p className="text-xs text-slate-500">Starting values: {defaults.source}. Move the sliders to try other scenarios.</p>
+        <p className="text-xs text-muted">Starting values: {defaults.source}. Move the sliders to try other scenarios.</p>
       </div>
-      <div className="rounded-2xl bg-slate-950 p-5 text-white" aria-live="polite">
-        <p className="text-xs uppercase tracking-wide text-slate-400">Yearly revenue at risk in this scenario</p>
+      <div className="rounded-2xl bg-sidebar p-5 text-white" aria-live="polite">
+        <p className="text-xs uppercase tracking-wide text-faint">Yearly revenue at risk in this scenario</p>
         <p className="mt-2 text-3xl font-semibold"><Money value={atRisk} /></p>
-        <p className="mt-3 text-sm text-slate-300">
+        <p className="mt-3 text-sm text-faint">
           = {formatNumber(customers)} customers × <Money value={yearlySpend} /> a year × {share}% leaving. A
           &ldquo;what if&rdquo; tool, not a forecast.
         </p>
