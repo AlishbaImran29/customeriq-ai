@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Download, Search, SearchX } from "lucide-react";
 import { CustomersTable } from "@/components/customers-table";
 import { EmptyState } from "@/components/states";
@@ -37,6 +38,51 @@ export function CustomerExplorer({
   const [query, setQuery] = useState("");
   const [segment, setSegment] = useState<SegmentName | "all">("all");
   const [risk, setRisk] = useState<RiskFilter>(initialRisk);
+
+  // Remember the filters and scroll position, so Back from a customer page returns to the same place.
+  const storageKey = `customeriq:explorer:${usePathname()}`;
+  const restored = useRef(false);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
+      if (saved) {
+        // Reading sessionStorage must wait until after hydration, so it is applied here.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setQuery(typeof saved.query === "string" ? saved.query : "");
+        if (saved.segment === "all" || segments.includes(saved.segment)) setSegment(saved.segment);
+        if (saved.risk === "all" || riskLevels.includes(saved.risk)) setRisk(saved.risk);
+      }
+      restored.current = true;
+      const y = Number(saved?.scrollY) || 0;
+      if (y > 0) {
+        // The page above the table can still be growing (charts), so retry for a moment.
+        let tries = 0;
+        const timer = window.setInterval(() => {
+          window.scrollTo(0, y);
+          if (Math.abs(window.scrollY - y) < 4 || ++tries > 60) window.clearInterval(timer);
+        }, 100);
+        return () => window.clearInterval(timer);
+      }
+    } catch {
+      restored.current = true;
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!restored.current) return;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") ?? {};
+      sessionStorage.setItem(storageKey, JSON.stringify({ ...saved, query, segment, risk }));
+    } catch {}
+  }, [storageKey, query, segment, risk]);
+
+  function rememberScroll() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") ?? {};
+      sessionStorage.setItem(storageKey, JSON.stringify({ ...saved, query, segment, risk, scrollY: window.scrollY }));
+    } catch {}
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -83,7 +129,7 @@ export function CustomerExplorer({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onClickCapture={rememberScroll}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative sm:w-64">
