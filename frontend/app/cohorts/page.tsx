@@ -21,10 +21,11 @@ export default function CohortsPage() {
   );
 }
 
-/** Teal that gets darker as retention rises; the number is always printed too. */
-function cellStyle(value: number | null) {
+/** Cyan that gets brighter as retention rises; the number is always printed too. */
+function cellStyle(value: number | null, max: number) {
   if (value === null) return undefined;
-  return { backgroundColor: `rgba(34, 211, 238, ${(0.08 + (Math.min(value, 100) / 100) * 0.8).toFixed(2)})` };
+  const alpha = 0.1 + Math.min(value / max, 1) * 0.75;
+  return { backgroundColor: `rgba(34, 211, 238, ${alpha.toFixed(2)})` };
 }
 
 async function CohortsContent() {
@@ -45,6 +46,9 @@ async function CohortsContent() {
   const offsets = Array.from({ length: months + 1 }, (_, i) => i);
   const month1 = averages[1];
   const month3 = averages[3];
+  // Month 0 is always 100%, so the colour scale is set by the later months; otherwise they would all look alike.
+  const laterValues = cohorts.flatMap((r) => r.retention.slice(1)).filter((v): v is number => v !== null);
+  const scaleMax = Math.max(...laterValues, 1);
   const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${v.toFixed(0)}%`);
 
   return (
@@ -88,18 +92,31 @@ async function CohortsContent() {
               </thead>
               <tbody>
                 {cohorts.map((row) => (
-                  <tr key={row.label}>
-                    <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-medium text-ink">{row.label}</th>
+                  <tr key={row.label} className="group/row">
+                    <th scope="row" className="sticky left-0 z-10 whitespace-nowrap bg-surface px-2 py-1.5 text-left font-medium text-ink">{row.label}</th>
                     <td className={cn("px-2 py-1.5 text-right tabular-nums", row.size < 20 ? "italic text-faint" : "text-ink-2")}>
                       {formatNumber(row.size)}
                     </td>
                     {row.retention.map((value, i) => (
                       <td
                         key={i}
-                        style={cellStyle(value)}
+                        style={i === 0 ? undefined : cellStyle(value, scaleMax)}
+                        title={
+                          value === null
+                            ? undefined
+                            : i === 0
+                              ? `${row.label}: all ${formatNumber(row.size)} customers placed their first order`
+                              : `${row.label}, month ${i}: ${pct(value)} ordered again (about ${formatNumber(Math.round((value / 100) * row.size))} of ${formatNumber(row.size)} customers)`
+                        }
                         className={cn(
-                          "rounded px-1 py-1.5 tabular-nums",
-                          value === null ? "text-faint" : value >= 55 ? "text-accent-ink" : "text-ink",
+                          "rounded px-1 py-1.5 tabular-nums transition hover:ring-2 hover:ring-accent",
+                          value === null
+                            ? "text-faint"
+                            : i === 0
+                              ? "bg-surface-3 font-medium text-muted"
+                              : value / scaleMax >= 0.6
+                                ? "font-semibold text-accent-ink"
+                                : "text-ink",
                         )}
                       >
                         {pct(value)}
@@ -108,7 +125,7 @@ async function CohortsContent() {
                   </tr>
                 ))}
                 <tr className="border-t border-line">
-                  <th scope="row" className="px-2 py-2 text-left font-semibold text-ink">Average</th>
+                  <th scope="row" className="sticky left-0 z-10 bg-surface px-2 py-2 text-left font-semibold text-ink">Average</th>
                   <td />
                   {averages.map((value, i) => (
                     <td key={i} className="px-1 py-2 font-semibold tabular-nums text-ink">{pct(value)}</td>
@@ -116,6 +133,21 @@ async function CohortsContent() {
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
+            <span className="flex items-center gap-2">
+              Lower
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-32 rounded-full"
+                style={{ background: "linear-gradient(to right, rgba(34,211,238,0.1), rgba(34,211,238,0.85))" }}
+              />
+              Higher retention (colours are scaled to the best month shown, {scaleMax.toFixed(0)}%)
+            </span>
+            <span className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-3 w-5 rounded bg-surface-3" /> M0 = first order, always 100%
+            </span>
+            <span>Hover a cell to see roughly how many customers it means.</span>
           </div>
           <p className="mt-3 text-xs text-muted">
             Averages weight each cohort by its size. Cohorts under 20 customers (shown in grey italics) swing a lot, so
