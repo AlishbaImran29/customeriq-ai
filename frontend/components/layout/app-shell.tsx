@@ -9,6 +9,7 @@ import {
   HeartPulse,
   LayoutDashboard,
   Lightbulb,
+  CirclePlus,
   Menu,
   PackageX,
   Sparkles,
@@ -51,7 +52,10 @@ const navGroups = [
   },
   {
     label: "Data",
-    items: [{ href: "/import", label: "Import Data", icon: Upload }],
+    items: [
+      { href: "/orders/new", label: "Add Order", icon: CirclePlus },
+      { href: "/import", label: "Import Data", icon: Upload },
+    ],
   },
 ];
 

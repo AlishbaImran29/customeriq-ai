@@ -3,7 +3,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -43,6 +43,9 @@ class Order(TimestampMixin, Base):
             name="order_sales_channel_known",
         ),
         CheckConstraint(
+            "payment_type IS NULL OR payment_type IN ('cod', 'prepaid')", name="order_payment_type_known"
+        ),
+        CheckConstraint(
             "(item_count IS NULL OR item_count >= 1) AND (distinct_products IS NULL OR distinct_products >= 1)",
             name="order_item_counts_positive",
         ),
@@ -60,6 +63,11 @@ class Order(TimestampMixin, Base):
     channel: Mapped[str | None] = mapped_column(String(50))
     # The clean channel used for filters and charts (services/channels.py).
     sales_channel: Mapped[str] = mapped_column(String(20), default="other", server_default="other")
+    # Quick Order Entry: filled when a seller types the order in by hand (all optional).
+    payment_type: Mapped[str | None] = mapped_column(String(10))  # "cod" | "prepaid"
+    city: Mapped[str | None] = mapped_column(String(100))
+    products: Mapped[str | None] = mapped_column(Text)            # product names joined with ", "
+    note: Mapped[str | None] = mapped_column(Text)
     # Optional 0–100 engagement score from the import. NULL means "not provided";
     # it is never treated as zero by the health score.
     engagement_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))

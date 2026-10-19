@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_user
-from app.api.v1 import analytics, assistant, auth, health, imports, order_risk
+from app.api.v1 import analytics, assistant, auth, health, imports, order_risk, quick_orders
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -15,3 +15,4 @@ api_router.include_router(imports.router, dependencies=_signed_in)
 api_router.include_router(analytics.router, dependencies=_signed_in)
 api_router.include_router(assistant.router, dependencies=_signed_in)
 api_router.include_router(order_risk.router, dependencies=_signed_in)
+api_router.include_router(quick_orders.router, dependencies=_signed_in)
