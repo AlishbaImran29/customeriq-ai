@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
+from sqlalchemy.exc import ProgrammingError
 
 from app.main import app
 from app.models import Customer, OrderRiskRun
@@ -109,3 +110,15 @@ def test_each_retraining_is_saved_once_and_repeat_requests_use_the_cache(db_clie
 @pytest.mark.real_auth
 def test_sign_in_is_required():
     assert TestClient(app).get("/api/v1/order-risk").status_code == 401
+
+
+@requires_database
+def test_an_out_of_date_database_gives_a_clear_message_not_a_generic_error(db_client, monkeypatch):
+    def missing_column(db):
+        raise ProgrammingError("SELECT ordered_at", {}, Exception("column orders.ordered_at does not exist"))
+
+    monkeypatch.setattr(order_risk_service, "load_order_inputs", missing_column)
+    response = db_client.get("/api/v1/order-risk")
+    assert response.status_code == 503
+    error = response.json()["error"]
+    assert error["code"] == "database_out_of_date" and "migrate_remote.py" in error["message"]

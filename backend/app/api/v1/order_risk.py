@@ -1,8 +1,12 @@
 """Order Risk Check: which recent orders look likely to come back, and why."""
 
+import logging
+
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
+from app.core.errors import ApiError
 from app.db.session import get_db
 from app.schemas.analytics import Meta, ModelInfo, ModelsMeta
 from app.schemas.order_risk import (
@@ -16,6 +20,7 @@ from app.services import order_risk_config as config
 from app.services.order_risk_savings import SavingsEstimate
 from app.services.order_risk_service import OrderRiskReport, get_order_risk
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["order-risk"])
 
 
@@ -82,4 +87,16 @@ def order_risk(
 
     When it did not, `model.status` is "unavailable" with the reason and both scores, and there
     are no orders and no savings: no number is shown that was not earned."""
-    return _out(get_order_risk(db), limit)
+    try:
+        report = get_order_risk(db)
+    except ProgrammingError as exc:
+        # A missing column or table: the database was not updated for this feature yet.
+        db.rollback()
+        logger.error("Order Risk needs a database update: %s", type(exc.orig).__name__)
+        raise ApiError(
+            503,
+            "database_out_of_date",
+            "The database has not been updated for Order Risk yet. Run scripts/migrate_remote.py "
+            "(see docs/DEPLOY.md), then import the orders file again.",
+        ) from exc
+    return _out(report, limit)
