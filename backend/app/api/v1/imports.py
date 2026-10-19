@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from app.core.errors import ApiError
 from app.db.session import get_db
 from app.models import ImportJob
-from app.schemas.imports import ImportJobOut, ImportJobSummary
+from app.schemas.imports import CourierImportOut, ImportJobOut, ImportJobSummary
+from app.services.courier_import import MAX_STORED_ERRORS, run_courier_import
 from app.services.import_files import MAX_FILE_BYTES, file_type_of
 from app.services.import_service import run_import, safe_filename
 
@@ -59,6 +60,27 @@ async def create_import(file: UploadFile, db: Session = Depends(get_db)) -> Impo
     # Parsing and database work are blocking; keep them off the event loop.
     job = await run_in_threadpool(run_import, db, filename, file_type, content)
     return _job_out(job)
+
+
+@router.post(
+    "/courier",
+    response_model=CourierImportOut,
+    summary="Upload a courier status file (delivered / returned per order)",
+)
+async def create_courier_import(file: UploadFile, db: Session = Depends(get_db)) -> CourierImportOut:
+    """Add the real delivery result to orders that are already imported.
+
+    Columns: order_id, customer_id, status (delivered or returned), date. Each matching
+    order is labelled with `label_source = courier data`. Rows that do not match an order
+    are rejected and listed; nothing else is changed.
+    """
+    filename = safe_filename(file.filename)
+    file_type = file_type_of(filename)
+    content = await _read_limited(file)
+    result = await run_in_threadpool(run_courier_import, db, content, file_type)
+    return CourierImportOut.model_validate(
+        {**result.__dict__, "errors_truncated": result.error_count > MAX_STORED_ERRORS}
+    )
 
 
 @router.get("", response_model=list[ImportJobSummary], summary="List recent imports")

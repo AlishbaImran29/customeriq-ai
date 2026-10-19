@@ -99,6 +99,7 @@ def _save_rows(db: Session, job_id: uuid.UUID, rows: list[OrderRow]) -> tuple[in
             "first_name": r.first_name,
             "last_name": r.last_name,
             "country": r.country,
+            "phone": r.phone,
         }
         for r in customers.values()
     ]
@@ -112,6 +113,7 @@ def _save_rows(db: Session, job_id: uuid.UUID, rows: list[OrderRow]) -> tuple[in
                 "first_name": func.coalesce(excluded.first_name, Customer.first_name),
                 "last_name": func.coalesce(excluded.last_name, Customer.last_name),
                 "country": func.coalesce(excluded.country, Customer.country),
+                "phone": func.coalesce(excluded.phone, Customer.phone),
                 "updated_at": func.now(),
             },
         ).returning(Customer.id, Customer.external_id)
@@ -127,6 +129,15 @@ def _save_rows(db: Session, job_id: uuid.UUID, rows: list[OrderRow]) -> tuple[in
             "product_category": r.product_category,
             "channel": r.channel,
             "engagement_score": r.engagement,
+            "ordered_at": r.ordered_at,
+            "item_count": r.item_count,
+            "distinct_products": r.distinct_products,
+            "outcome": r.outcome,
+            "outcome_date": r.outcome_date,
+            "label_source": r.label_source,
+            "address_length": r.address_length,
+            "has_house_number": r.has_house_number,
+            "phone_valid": r.phone_valid,
             "import_job_id": job_id,
         }
         for r in rows
@@ -147,6 +158,17 @@ def _save_rows(db: Session, job_id: uuid.UUID, rows: list[OrderRow]) -> tuple[in
                 "engagement_score": func.coalesce(
                     excluded.engagement_score, Order.engagement_score
                 ),
+                # Order Risk facts: a file that leaves them blank keeps what is already saved
+                # (so re-importing plain orders never erases a courier outcome).
+                "ordered_at": func.coalesce(excluded.ordered_at, Order.ordered_at),
+                "item_count": func.coalesce(excluded.item_count, Order.item_count),
+                "distinct_products": func.coalesce(excluded.distinct_products, Order.distinct_products),
+                "outcome": func.coalesce(excluded.outcome, Order.outcome),
+                "outcome_date": func.coalesce(excluded.outcome_date, Order.outcome_date),
+                "label_source": func.coalesce(excluded.label_source, Order.label_source),
+                "address_length": func.coalesce(excluded.address_length, Order.address_length),
+                "has_house_number": func.coalesce(excluded.has_house_number, Order.has_house_number),
+                "phone_valid": func.coalesce(excluded.phone_valid, Order.phone_valid),
                 "import_job_id": excluded.import_job_id,
                 "updated_at": func.now(),
             },

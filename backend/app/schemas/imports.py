@@ -55,3 +55,15 @@ class ImportJobSummary(CamelModel):
     error_count: int
     created_at: datetime
     completed_at: datetime | None
+
+
+class CourierImportOut(CamelModel):
+    """Result of importing a courier status file (delivered / returned per order)."""
+
+    rows_in_file: int
+    rows_updated: int
+    rows_returned: int
+    rows_rejected: int
+    error_count: int
+    errors: list[ImportRowError]
+    errors_truncated: bool

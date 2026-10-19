@@ -8,8 +8,15 @@ The dataset has one row per product line; CustomerIQ wants one row per order. Ru
 - Rows are grouped by invoice number; the order value is the sum of quantity x price over
   product lines (positive quantity and price; postage, fees, samples and manual
   adjustments are left out).
-- Invoices starting with "C" are cancellations / credit notes and are skipped. Returns are
-  NOT subtracted from the original orders (the dataset does not link them).
+- Invoices starting with "C" are cancellations / credit notes. They are NOT imported as
+  orders and are NOT subtracted from the original orders. Instead each one is linked to the
+  order it cancelled: the same customer's most recent earlier invoice that contained the same
+  product. That order gets outcome "returned" and the credit note's date as outcome_date.
+  Credit notes that match no earlier order are counted and left out. All other orders get
+  outcome "delivered" (meaning "not cancelled"; the newest orders may still be cancelled
+  later, so a model must ignore orders too recent to have been cancelled yet).
+  The label source is "proxy: cancellations": it measures cancellations in a UK shop, not
+  cash-on-delivery refusals.
 - Rows without a Customer ID (guest checkouts) are skipped.
 - The workbook's two sheets overlap in early December 2010; each invoice is counted once.
 - The dataset has no email addresses, names, categories, or engagement. Customers get the
@@ -25,7 +32,7 @@ Default output: ../data/public_uci_online_retail_ii.csv (the data/ folder is git
 import csv
 import sys
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -39,12 +46,14 @@ NON_PRODUCT_CODES = {
 MAX_ROWS = 50_000  # the import limit (backend/app/services/import_files.py)
 CHANNEL = "Online retail"
 ID_PREFIX = "PUB-"
+LABEL_SOURCE = "proxy: cancellations"  # must match LABEL_PROXY in app/models/order.py
 
 
 def convert(source: Path) -> tuple[list[dict[str, str]], dict[str, int]]:
     stats: dict[str, int] = defaultdict(int)
     owner_sheet: dict[str, int] = {}                 # invoice -> sheet index that first had it
     invoices: dict[str, dict] = {}
+    cancellations: list[dict] = []                   # credit-note product lines, linked afterwards
 
     workbook = load_workbook(source, read_only=True, data_only=True)
     try:
@@ -60,6 +69,7 @@ def convert(source: Path) -> tuple[list[dict[str, str]], dict[str, int]]:
                     continue
                 if invoice.upper().startswith("C"):
                     stats["cancellation_rows"] += 1
+                    _note_cancellation(cancellations, stock_code, quantity, invoice_date, customer_id)
                     continue
                 if customer_id is None or str(customer_id).strip() == "":
                     stats["guest_rows"] += 1
@@ -76,18 +86,27 @@ def convert(source: Path) -> tuple[list[dict[str, str]], dict[str, int]]:
                 if not positive or invoice_date is None:
                     stats["non_positive_rows"] += 1
                     continue
+                moment = _as_datetime(invoice_date)
                 order = invoices.setdefault(
                     invoice,
                     {
                         "customer": str(int(float(customer_id))),
-                        "date": invoice_date.date() if hasattr(invoice_date, "date") else date.fromisoformat(str(invoice_date)[:10]),
+                        "date": moment.date(),
+                        "moment": moment,
                         "value": Decimal(0),
                         "country": str(country or "").strip(),
+                        "items": 0,                    # units bought
+                        "products": set(),             # distinct stock codes
+                        "returned_on": None,           # date of the credit note that cancelled it
                     },
                 )
                 order["value"] += line_value
+                order["items"] += int(Decimal(str(quantity)))
+                order["products"].add(str(stock_code).strip().upper())
     finally:
         workbook.close()
+
+    _link_cancellations(invoices, cancellations, stats)
 
     output = []
     for invoice, o in sorted(invoices.items(), key=lambda kv: (kv[1]["date"], kv[0])):
@@ -104,11 +123,63 @@ def convert(source: Path) -> tuple[list[dict[str, str]], dict[str, int]]:
                 "order_value": str(value),
                 "country": o["country"],
                 "channel": CHANNEL,
+                # Order Risk Check facts
+                "order_datetime": o["moment"].strftime("%Y-%m-%d %H:%M:%S"),
+                "item_count": max(o["items"], 1),
+                "distinct_products": len(o["products"]),
+                "outcome": "returned" if o["returned_on"] else "delivered",
+                "outcome_date": o["returned_on"].isoformat() if o["returned_on"] else "",
+                "label_source": LABEL_SOURCE,
             }
         )
+        stats["orders_returned"] += bool(o["returned_on"])
     stats["orders"] = len(output)
     stats["customers"] = len({r["customer_id"] for r in output})
     return output, dict(stats)
+
+
+def _as_datetime(value) -> datetime:
+    """The invoice date with its time of day (Excel gives a datetime; text is read as ISO)."""
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(str(value)[:19].replace("T", " "))
+
+
+def _note_cancellation(cancellations: list[dict], stock_code, quantity, invoice_date, customer_id) -> None:
+    """Keep one credit-note product line so it can be linked to the order it cancelled.
+    Lines without a customer, a real product or a negative quantity cannot be linked."""
+    code = str(stock_code).strip().upper()
+    try:
+        negative = Decimal(str(quantity)) < 0
+        customer = str(int(float(customer_id))) if customer_id not in (None, "") else None
+        moment = _as_datetime(invoice_date)
+    except Exception:
+        return
+    if customer is None or code in NON_PRODUCT_CODES or not negative:
+        return
+    cancellations.append({"customer": customer, "stock": code, "moment": moment})
+
+
+def _link_cancellations(invoices: dict[str, dict], cancellations: list[dict], stats: dict[str, int]) -> None:
+    """Mark the order each credit note cancelled: the same customer's most recent EARLIER
+    invoice that contained the same product. Several credit notes may hit one order; the
+    earliest date counts, because that is when the return first became known."""
+    by_customer: dict[str, list[tuple[datetime, str]]] = defaultdict(list)
+    for invoice, o in invoices.items():
+        by_customer[o["customer"]].append((o["moment"], invoice))
+    for credit in sorted(cancellations, key=lambda c: c["moment"]):
+        candidates = [
+            (moment, invoice)
+            for moment, invoice in by_customer.get(credit["customer"], [])
+            if moment <= credit["moment"] and credit["stock"] in invoices[invoice]["products"]
+        ]
+        if not candidates:
+            stats["cancellations_unlinked"] += 1
+            continue
+        order = invoices[max(candidates)[1]]
+        day = credit["moment"].date()
+        order["returned_on"] = day if order["returned_on"] is None else min(order["returned_on"], day)
+        stats["cancellations_linked"] += 1
 
 
 def main() -> None:
@@ -129,8 +200,9 @@ def main() -> None:
 
     print(f"Wrote {stats['orders']:,} orders for {stats['customers']:,} customers to {target}")
     print(f"Dates: {rows[0]['order_date']} to {rows[-1]['order_date']}")
-    for key in ("line_rows", "duplicate_rows_in_overlap", "cancellation_rows", "guest_rows",
-                "non_product_rows", "non_positive_rows", "unreadable_rows", "zero_value_orders"):
+    for key in ("line_rows", "duplicate_rows_in_overlap", "cancellation_rows", "cancellations_linked",
+                "cancellations_unlinked", "orders_returned", "guest_rows", "non_product_rows",
+                "non_positive_rows", "unreadable_rows", "zero_value_orders"):
         print(f"  {key.replace('_', ' ')}: {stats.get(key, 0):,}")
 
 

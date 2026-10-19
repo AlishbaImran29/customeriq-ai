@@ -6,6 +6,7 @@ from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from app.core.errors import ApiError
+from app.models.order import LABEL_COURIER, LABEL_SOURCES, OUTCOME_RETURNED, OUTCOMES
 from app.services.import_files import Cell, ParsedFile
 
 REQUIRED_COLUMNS = ("customer_id", "email", "order_id", "order_date", "order_value")
@@ -17,7 +18,18 @@ OPTIONAL_COLUMNS = (
     "channel",
     "engagement",
 )
-KNOWN_COLUMNS = REQUIRED_COLUMNS + OPTIONAL_COLUMNS
+# Optional columns for the Order Risk Check. Blank means "not provided", never zero.
+RISK_COLUMNS = (
+    "order_datetime",     # YYYY-MM-DD HH:MM[:SS]: the time of day; order_date is still the day
+    "item_count",
+    "distinct_products",
+    "outcome",            # delivered | returned
+    "outcome_date",       # the day the outcome became known (required for "returned")
+    "label_source",       # "proxy: cancellations" | "courier data" (default: courier data)
+    "phone",
+    "address",            # only used for simple checks; the text itself is not stored
+)
+KNOWN_COLUMNS = REQUIRED_COLUMNS + OPTIONAL_COLUMNS + RISK_COLUMNS
 
 MAX_LENGTHS = {
     "customer_id": 100,
@@ -28,11 +40,15 @@ MAX_LENGTHS = {
     "country": 100,
     "product_category": 100,
     "channel": 50,
+    "phone": 40,
 }
+MAX_ADDRESS_LENGTH = 1000
+MAX_ITEMS = 100_000
 MAX_ORDER_VALUE = Decimal("9999999999.99")  # fits NUMERIC(12, 2)
 _CENTS = Decimal("0.01")
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$")
 
 
 @dataclass(frozen=True)
@@ -59,6 +75,17 @@ class OrderRow:
     product_category: str | None
     channel: str | None
     engagement: Decimal | None
+    # Order Risk Check facts (all optional).
+    ordered_at: datetime | None = None
+    item_count: int | None = None
+    distinct_products: int | None = None
+    outcome: str | None = None
+    outcome_date: date | None = None
+    label_source: str | None = None
+    phone: str | None = None
+    phone_valid: bool | None = None
+    address_length: int | None = None
+    has_house_number: bool | None = None
 
 
 @dataclass
@@ -142,6 +169,7 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
         order_value = _parse_order_value(cell("order_value"), n, row_errors)
         engagement = _parse_engagement(cell("engagement"), n, row_errors)
         optional = {c: text(c, required=False) for c in OPTIONAL_COLUMNS if c != "engagement"}
+        risk = _parse_risk_columns(cell, text, order_date, n, row_errors)
 
         if order_id is not None:
             if order_id in first_seen_order:
@@ -172,6 +200,7 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
                 order_value=order_value,
                 engagement=engagement,
                 **optional,
+                **risk,
             )
         )
 
@@ -261,3 +290,116 @@ def _parse_engagement(value: Cell, row: int, errors: list[RowError]) -> Decimal 
         )
         return None
     return number.quantize(_CENTS, rounding=ROUND_HALF_UP)
+
+
+# --- Order Risk Check columns ---------------------------------------------------------
+
+def _parse_risk_columns(cell, text, order_date: date | None, row: int, errors: list[RowError]) -> dict:
+    """Read the optional Order Risk columns of one row. Problems are added to `errors`;
+    messages never copy the value (it may be a phone number or an address)."""
+    ordered_at = _parse_order_datetime(cell("order_datetime"), order_date, row, errors)
+    item_count = _parse_count(cell("item_count"), "item_count", row, errors)
+    distinct = _parse_count(cell("distinct_products"), "distinct_products", row, errors)
+    if item_count is not None and distinct is not None and distinct > item_count:
+        errors.append(RowError(row, "distinct_products", "Cannot be more than item_count."))
+
+    outcome = _as_text(cell("outcome"))
+    outcome = outcome.lower() if outcome else None
+    if outcome is not None and outcome not in OUTCOMES:
+        errors.append(RowError(row, "outcome", "Must be delivered or returned, or left blank."))
+        outcome = None
+    outcome_date = None
+    has_outcome_date = _as_text(cell("outcome_date")) is not None
+    if has_outcome_date:
+        found: list[RowError] = []
+        outcome_date = _parse_date(cell("outcome_date"), row, found)
+        errors.extend(RowError(e.row, "outcome_date", e.message) for e in found)
+    if outcome == OUTCOME_RETURNED and not has_outcome_date:
+        # The date matters: a model may only use an outcome from after it became known.
+        errors.append(RowError(row, "outcome_date", "Required when outcome is returned."))
+    if outcome_date is not None and order_date is not None and outcome_date < order_date:
+        errors.append(RowError(row, "outcome_date", "Cannot be before order_date."))
+    if has_outcome_date and _as_text(cell("outcome")) is None:
+        errors.append(RowError(row, "outcome", "Required when outcome_date is given."))
+
+    label_source = _as_text(cell("label_source"))
+    if label_source is not None and label_source not in LABEL_SOURCES:
+        errors.append(
+            RowError(row, "label_source", "Must be 'proxy: cancellations' or 'courier data', or left blank.")
+        )
+        label_source = None
+    if outcome is not None and label_source is None:
+        label_source = LABEL_COURIER  # an outcome typed into a file is the seller's own data
+
+    phone = text("phone", required=False)
+    address = _as_text(cell("address"))
+    if address is not None and len(address) > MAX_ADDRESS_LENGTH:
+        errors.append(RowError(row, "address", f"Value is longer than {MAX_ADDRESS_LENGTH} characters."))
+        address = None
+    return {
+        "ordered_at": ordered_at,
+        "item_count": item_count,
+        "distinct_products": distinct,
+        "outcome": outcome,
+        "outcome_date": outcome_date,
+        "label_source": label_source,
+        "phone": phone,
+        "phone_valid": None if phone is None else is_valid_phone(phone),
+        "address_length": None if address is None else len(address),
+        "has_house_number": None if address is None else has_house_number(address),
+    }
+
+
+def _parse_order_datetime(
+    value: Cell, order_date: date | None, row: int, errors: list[RowError]
+) -> datetime | None:
+    if _as_text(value) is None:
+        return None
+    message = "Not a valid date and time. Use YYYY-MM-DD HH:MM."
+    if isinstance(value, datetime):
+        moment = value
+    else:
+        written = _as_text(value) or ""
+        if not _ISO_DATETIME.match(written):
+            errors.append(RowError(row, "order_datetime", message))
+            return None
+        try:
+            moment = datetime.fromisoformat(written.replace(" ", "T"))
+        except ValueError:
+            errors.append(RowError(row, "order_datetime", message))
+            return None
+    if moment.tzinfo is not None:
+        moment = moment.replace(tzinfo=None)  # times are stored as written, with no time zone
+    if moment > datetime.now():
+        errors.append(RowError(row, "order_datetime", "Time is in the future."))
+        return None
+    if order_date is not None and moment.date() != order_date:
+        errors.append(RowError(row, "order_datetime", "Must be on the same day as order_date."))
+        return None
+    return moment
+
+
+def _parse_count(value: Cell, column: str, row: int, errors: list[RowError]) -> int | None:
+    if _as_text(value) is None:
+        return None
+    number = _to_decimal(value)
+    if number is None or number != number.to_integral_value() or not (1 <= number <= MAX_ITEMS):
+        errors.append(RowError(row, column, f"Must be a whole number from 1 to {MAX_ITEMS}, or left blank."))
+        return None
+    return int(number)
+
+
+_PHONE_SEPARATORS = re.compile(r"[\s\-().]")
+_PHONE = re.compile(r"^\+?\d{10,15}$")
+
+
+def is_valid_phone(phone: str) -> bool:
+    """A simple format check: 10-15 digits, an optional leading +, spaces and dashes ignored.
+    It accepts Pakistani numbers such as 0300 1234567 and +92 300 1234567. It does not check
+    that the number really exists."""
+    return bool(_PHONE.match(_PHONE_SEPARATORS.sub("", phone)))
+
+
+def has_house_number(address: str) -> bool:
+    """A simple check: the address contains at least one digit (house, flat or plot number)."""
+    return any(ch.isdigit() for ch in address)
