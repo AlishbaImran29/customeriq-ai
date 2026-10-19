@@ -222,6 +222,8 @@ export const URDU: Record<string, string> = {
   "Upload a CSV or Excel file from your courier with these columns:": "اپنے کورئیر کی CSV یا ایکسل فائل اپ لوڈ کریں، جس میں یہ کالم ہوں:",
   "Status is delivered or returned. The orders must already be imported.": "اسٹیٹس delivered یا returned ہو۔ آرڈرز پہلے سے درآمد شدہ ہونے چاہییں۔",
   "Upload courier results": "کورئیر کے نتائج اپ لوڈ کریں",
+  "Download the template": "ٹیمپلیٹ ڈاؤن لوڈ کریں",
+  "The two example rows only show the format. Replace them with your own.": "دو مثال والی قطاریں صرف انداز دکھاتی ہیں۔ انہیں اپنی قطاروں سے بدل دیں۔",
   "{updated} orders updated ({returned} returned). {rejected} rows were rejected.": "{updated} آرڈرز اپ ڈیٹ ہوئے ({returned} واپس)۔ {rejected} قطاریں مسترد ہوئیں۔",
   "Row": "قطار",
   "risky orders need checking": "رسک والے آرڈرز کی جانچ ضروری ہے",

@@ -47,6 +47,12 @@ export function CourierUpload() {
         <code className="text-xs">order_id, customer_id, status, date</code>.{" "}
         {t("Status is delivered or returned. The orders must already be imported.")}
       </p>
+      <p className="text-sm">
+        <a href="/courier_results_template.csv" download className="font-medium text-accent hover:underline">
+          {t("Download the template")}
+        </a>{" "}
+        <span className="text-muted">{t("The two example rows only show the format. Replace them with your own.")}</span>
+      </p>
       <input
         ref={input}
         type="file"
