@@ -1,5 +1,6 @@
 "use client";
 
+import { ChannelLabel } from "@/components/channel-icon";
 import { ChannelRevenueChart } from "@/components/charts/dashboard-charts";
 import { Money } from "@/components/money";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +55,9 @@ export function ChannelRevenueCard({
             <tbody>
               {rows.map((row) => (
                 <tr key={row.channel} className="border-b border-line/60 last:border-0">
-                  <th scope="row" className="py-2 pr-3 text-left font-medium text-ink">{row.label}</th>
+                  <th scope="row" className="py-2 pr-3 text-left font-medium text-ink">
+                    <ChannelLabel channel={row.channel}>{row.label}</ChannelLabel>
+                  </th>
                   <td className="px-3 py-2 text-right tabular-nums"><Money value={row.revenue} /></td>
                   <td className="px-3 py-2 text-right tabular-nums">{total > 0 ? formatPercent((row.revenue / total) * 100) : "—"}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{formatNumber(row.orders)}</td>

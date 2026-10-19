@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ChannelLabel } from "@/components/channel-icon";
 import { FilterPills } from "@/components/ui/filter-pills";
 import { useLanguage } from "@/lib/i18n";
 import { CHANNELS } from "@/lib/quick-order";
@@ -43,7 +44,11 @@ export function ChannelFilter({
         label={t("Filter by sales channel")}
         options={[
           { value: "all" as Choice, label: t("All channels"), count: total },
-          ...CHANNELS.map((c) => ({ value: c.value as Choice, label: label(c.value, c.label), count: orders(c.value) })),
+          ...CHANNELS.map((c) => ({
+            value: c.value as Choice,
+            label: <ChannelLabel channel={c.value}>{label(c.value, c.label)}</ChannelLabel>,
+            count: orders(c.value),
+          })),
         ]}
         value={(current ?? "all") as Choice}
         onChange={choose}

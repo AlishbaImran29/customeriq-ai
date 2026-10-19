@@ -366,6 +366,10 @@ export const URDU: Record<string, string> = {
   "Not enough data yet: {count} more customers needed. Segmentation needs at least {minimum} customers.": "ابھی ڈیٹا کافی نہیں: {count} مزید کسٹمرز چاہییں۔ گروپس بنانے کے لیے کم از کم {minimum} کسٹمرز درکار ہیں۔",
   "No {channel} orders yet": "ابھی {channel} کا کوئی آرڈر نہیں",
   "There are no orders from this channel in your data. Add orders with Add Order, or choose another channel above.": "آپ کے ڈیٹا میں اس چینل کا کوئی آرڈر نہیں۔ Add Order سے آرڈرز شامل کریں، یا اوپر سے دوسرا چینل چنیں۔",
+  // Add Order: platform for "Other".
+  "Which platform? (optional)": "کون سا پلیٹ فارم؟ (اختیاری)",
+  "For example TikTok, Daraz or walk-in": "مثال: TikTok، Daraz یا walk-in",
+  "The platform name is too long (50 characters at most).": "پلیٹ فارم کا نام بہت لمبا ہے (زیادہ سے زیادہ 50 حروف)۔",
 };
 
 let current: Language = "en";

@@ -104,6 +104,34 @@ def test_long_names_cities_and_notes_are_refused():
     assert check_quick_order(good(note="  Call before delivery  "))[0].note == "Call before delivery"
 
 
+# --- "Other" with the platform's own name ----------------------------------------------------------
+
+def test_other_keeps_the_platform_name_the_seller_typed():
+    clean, errors = check_quick_order(good(channel="other", platform="  TikTok  "))
+    assert errors == {} and (clean.channel, clean.channel_label) == ("other", "TikTok")
+
+
+def test_a_known_channel_typed_as_a_platform_is_counted_in_that_channel():
+    for typed, channel in (("insta", "instagram"), ("FB", "facebook"), ("whatsapp", "whatsapp"), ("Shopify", "website")):
+        clean, _ = check_quick_order(good(channel="other", platform=typed))
+        assert clean.channel == channel and clean.channel_label == typed
+
+
+def test_the_platform_is_optional_ignored_for_other_channels_and_length_limited():
+    clean, _ = check_quick_order(good(channel="other"))
+    assert (clean.channel, clean.channel_label) == ("other", "Other")
+    clean, _ = check_quick_order(good(channel="instagram", platform="TikTok"))
+    assert (clean.channel, clean.channel_label) == ("instagram", "Instagram")
+    assert "too long" in problems(channel="other", platform="x" * 51)["platform"]
+
+
+@requires_database
+def test_the_platform_name_is_saved_as_the_channel_text(db_client, db_session):
+    assert post(db_client, channel="other", platform="TikTok").status_code == 201
+    order = db_session.scalar(select(Order))
+    assert (order.channel, order.sales_channel) == ("TikTok", "other")
+
+
 # --- saving ---------------------------------------------------------------------------------------
 
 def post(client, **changes):

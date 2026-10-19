@@ -30,6 +30,8 @@ export type QuickOrderRequest = {
   amount: number;
   paymentType: string;
   channel: string;
+  /** With channel "other": the platform's own name, e.g. TikTok. */
+  platform?: string;
   orderDate: string;
   note: string | null;
 };

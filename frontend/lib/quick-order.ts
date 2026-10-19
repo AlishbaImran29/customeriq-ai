@@ -27,6 +27,10 @@ export const PK_CITIES = [
   "Mirpur", "Muzaffarabad",
 ];
 
+/** Platforms offered while typing under "Other". Any name can still be typed. */
+export const PLATFORM_SUGGESTIONS = ["TikTok", "Daraz", "OLX", "Snapchat", "Telegram", "YouTube", "Walk-in", "Phone call"];
+export const MAX_PLATFORM = 50;
+
 export const MAX_AMOUNT = 9_999_999.99;
 export const MAX_PRODUCTS = 20;
 
@@ -41,11 +45,13 @@ export type FormValues = {
   amount: string;
   paymentType: PaymentType | "";
   channel: Channel | "";
+  /** With channel "other": the platform's own name, e.g. TikTok. */
+  platform: string;
   orderDate: string;
   note: string;
 };
 
-export type FieldName = "phone" | "customerName" | "city" | "products" | "amount" | "paymentType" | "channel" | "orderDate" | "note";
+export type FieldName = "phone" | "customerName" | "city" | "products" | "amount" | "paymentType" | "channel" | "platform" | "orderDate" | "note";
 export type FieldErrors = Partial<Record<FieldName, string>>;
 
 /** Add a product to the list: trimmed, and ignored when empty or already there (any capitals). */
@@ -88,6 +94,9 @@ export function validate(values: FormValues, today: string): FieldErrors {
   }
   if (!values.paymentType) errors.paymentType = "Choose COD or prepaid.";
   if (!values.channel) errors.channel = "Choose where the order came from.";
+  if (values.channel === "other" && values.platform.trim().length > MAX_PLATFORM) {
+    errors.platform = "The platform name is too long (50 characters at most).";
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(values.orderDate)) errors.orderDate = "Enter the date as YYYY-MM-DD.";
   else if (values.orderDate > today) errors.orderDate = "The date is in the future.";
   if (values.note.length > 500) errors.note = "The note is too long (500 characters at most).";
@@ -95,14 +104,14 @@ export function validate(values: FormValues, today: string): FieldErrors {
 }
 
 /** The first field with a problem, in the order the form shows them (to move the cursor there). */
-export const FIELD_ORDER: FieldName[] = ["phone", "customerName", "city", "products", "amount", "paymentType", "channel", "orderDate", "note"];
+export const FIELD_ORDER: FieldName[] = ["phone", "customerName", "city", "products", "amount", "paymentType", "channel", "platform", "orderDate", "note"];
 export function firstError(errors: FieldErrors): FieldName | null {
   return FIELD_ORDER.find((name) => errors[name]) ?? null;
 }
 
 // --- remember what was used last, to make the next order faster -------------------------------
 
-export type LastUsed = { channel: Channel | ""; paymentType: PaymentType | ""; products: string[] };
+export type LastUsed = { channel: Channel | ""; platform: string; paymentType: PaymentType | ""; products: string[] };
 export const LAST_USED_KEY = "ciq_quick_order_last";
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem">;
@@ -117,7 +126,7 @@ export function saveLastUsed(storage: Storage, used: LastUsed) {
 
 /** What was used last on this device. Anything unreadable or unexpected is ignored, never trusted. */
 export function loadLastUsed(storage: Storage): LastUsed {
-  const empty: LastUsed = { channel: "", paymentType: "", products: [] };
+  const empty: LastUsed = { channel: "", platform: "", paymentType: "", products: [] };
   try {
     const raw = JSON.parse(storage.getItem(LAST_USED_KEY) ?? "null");
     if (!raw || typeof raw !== "object") return empty;
@@ -126,7 +135,8 @@ export function loadLastUsed(storage: Storage): LastUsed {
     const products = Array.isArray(raw.products)
       ? raw.products.filter((p: unknown): p is string => typeof p === "string" && p.trim() !== "" && p.length <= 100).slice(0, MAX_PRODUCTS)
       : [];
-    return { channel, paymentType, products };
+    const platform = typeof raw.platform === "string" ? raw.platform.trim().slice(0, MAX_PLATFORM) : "";
+    return { channel, platform, paymentType, products };
   } catch {
     return empty;
   }

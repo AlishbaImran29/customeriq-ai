@@ -9,7 +9,7 @@ import {
 const TODAY = "2026-10-20";
 const good = (changes: Partial<FormValues> = {}): FormValues => ({
   phone: "0300-1234567", customerName: "Ayesha Khan", city: "Lahore", products: ["Red lawn suit"], productInput: "",
-  amount: "4500", paymentType: "cod", channel: "instagram", orderDate: TODAY, note: "", ...changes,
+  amount: "4500", paymentType: "cod", channel: "instagram", platform: "", orderDate: TODAY, note: "", ...changes,
 });
 
 test("a complete form has no problems", () => {
@@ -56,20 +56,28 @@ test("products are trimmed, never repeated, and can be pasted several at a time"
 test("the last used channel, payment and products are remembered and survive bad data", () => {
   const store = new Map<string, string>();
   const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-  assert.deepEqual(loadLastUsed(storage), { channel: "", paymentType: "", products: [] });
-  saveLastUsed(storage, { channel: "whatsapp", paymentType: "prepaid", products: ["Kurta", "Scarf"] });
-  assert.deepEqual(loadLastUsed(storage), { channel: "whatsapp", paymentType: "prepaid", products: ["Kurta", "Scarf"] });
+  assert.deepEqual(loadLastUsed(storage), { channel: "", platform: "", paymentType: "", products: [] });
+  saveLastUsed(storage, { channel: "whatsapp", platform: "", paymentType: "prepaid", products: ["Kurta", "Scarf"] });
+  assert.deepEqual(loadLastUsed(storage), { channel: "whatsapp", platform: "", paymentType: "prepaid", products: ["Kurta", "Scarf"] });
+  saveLastUsed(storage, { channel: "other", platform: " TikTok ", paymentType: "cod", products: [] });
+  assert.equal(loadLastUsed(storage).platform, "TikTok");
 
   store.set(LAST_USED_KEY, JSON.stringify({ channel: "tiktok", paymentType: "cash", products: ["ok", 5, "", null] }));
-  assert.deepEqual(loadLastUsed(storage), { channel: "", paymentType: "", products: ["ok"] });
+  assert.deepEqual(loadLastUsed(storage), { channel: "", platform: "", paymentType: "", products: ["ok"] });
   store.set(LAST_USED_KEY, "not json");
-  assert.deepEqual(loadLastUsed(storage), { channel: "", paymentType: "", products: [] });
+  assert.deepEqual(loadLastUsed(storage), { channel: "", platform: "", paymentType: "", products: [] });
   const broken = { getItem: () => { throw new Error("blocked"); }, setItem: () => { throw new Error("blocked"); } };
-  assert.deepEqual(loadLastUsed(broken), { channel: "", paymentType: "", products: [] });
-  saveLastUsed(broken, { channel: "", paymentType: "", products: [] });   // must not throw
+  assert.deepEqual(loadLastUsed(broken), { channel: "", platform: "", paymentType: "", products: [] });
+  saveLastUsed(broken, { channel: "", platform: "", paymentType: "", products: [] });   // must not throw
 });
 
 test("today is the date on the seller's own device", () => {
   assert.equal(localToday(new Date(2026, 9, 5, 23, 59)), "2026-10-05");
   assert.equal(localToday(new Date(2026, 0, 1, 0, 1)), "2026-01-01");
+});
+
+test("the platform name only matters for Other, and is length limited", () => {
+  assert.equal(validate(good({ channel: "other", platform: "TikTok" }), TODAY).platform, undefined);
+  assert.equal(validate(good({ channel: "other", platform: "x".repeat(51) }), TODAY).platform, "The platform name is too long (50 characters at most).");
+  assert.equal(validate(good({ channel: "instagram", platform: "x".repeat(51) }), TODAY).platform, undefined);
 });

@@ -59,7 +59,7 @@ export function rowFrom(candidate: ReviewCandidate): ReviewRow {
 
 /** The same checks as the Add Order form (the channel is always WhatsApp). */
 export function checkRow(values: RowValues, today: string): FieldErrors {
-  return validate({ ...values, channel: "whatsapp", note: "" }, today);
+  return validate({ ...values, channel: "whatsapp", platform: "", note: "" }, today);
 }
 
 /** Accept: only when every field is valid. Otherwise the row stays open with its problems. */

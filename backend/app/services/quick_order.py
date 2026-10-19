@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
 from app.models import Customer, Order
-from app.services.channels import CHANNELS
+from app.services.channels import CHANNELS, normalise_channel
 from app.services.phone import NOT_A_PK_MOBILE, normalise_pk_phone
 
 PAYMENT_TYPES = ("cod", "prepaid")
@@ -43,6 +43,7 @@ class CleanOrder:
     amount: Decimal
     payment_type: str           # "cod" | "prepaid"
     channel: str                # one of CHANNELS
+    channel_label: str          # the channel as the seller wrote it, e.g. "TikTok" (shown as written)
     order_date: date
     note: str | None
 
@@ -102,6 +103,12 @@ def check_quick_order(data: dict[str, Any]) -> tuple[CleanOrder | None, dict[str
     channel = _text(data.get("channel")).lower()
     if channel not in CHANNELS:
         errors["channel"] = "Choose where the order came from."
+    platform = _text(data.get("platform")) if channel == "other" else ""
+    if len(platform) > 50:
+        errors["platform"] = "The platform name is too long (50 characters at most)."
+    elif platform:
+        # "Other" with a name typed in: if it is really one of the five ("insta", "FB"), count it there.
+        channel = normalise_channel(platform)
 
     order_date, problem = _check_date(data.get("orderDate"))
     if problem:
@@ -113,7 +120,8 @@ def check_quick_order(data: dict[str, Any]) -> tuple[CleanOrder | None, dict[str
 
     if errors:
         return None, errors
-    return CleanOrder(name, phone, city, products, amount, payment, channel, order_date, note), {}
+    label = platform or channel.capitalize()
+    return CleanOrder(name, phone, city, products, amount, payment, channel, label, order_date, note), {}
 
 
 def _check_products(raw: Any) -> tuple[list[str], str | None]:
@@ -235,7 +243,7 @@ def create_quick_order(
             with db.begin_nested():
                 db.add(Order(
                     external_id=new_id, customer_id=customer.id, order_date=order.order_date,
-                    order_value=order.amount, channel=order.channel.capitalize(), sales_channel=order.channel,
+                    order_value=order.amount, channel=order.channel_label, sales_channel=order.channel,
                     payment_type=order.payment_type, city=order.city, products=products, note=order.note,
                     source=source,
                 ))

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Loader2, Plus, UserCheck, UserPlus, X } from "lucide-react";
+import { ChannelLabel } from "@/components/channel-icon";
 import { Button } from "@/components/ui/button";
 import { FilterPills } from "@/components/ui/filter-pills";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { createQuickOrder, lookupCustomer, type CustomerLookup, type QuickOrderR
 import { setCurrencies, useCurrency } from "@/lib/currency";
 import { useLanguage } from "@/lib/i18n";
 import {
-  CHANNELS, PAYMENT_TYPES, PK_CITIES, addProduct, addProducts, firstError, loadLastUsed, localToday,
+  CHANNELS, PAYMENT_TYPES, PK_CITIES, PLATFORM_SUGGESTIONS, addProduct, addProducts, firstError, loadLastUsed, localToday,
   parseAmount, saveLastUsed, validate, type FieldErrors, type FieldName, type FormValues,
 } from "@/lib/quick-order";
 import { formatDate } from "@/lib/utils";
@@ -49,7 +50,7 @@ export function Field({
 
 const blank = (today: string): FormValues => ({
   phone: "", customerName: "", city: "", products: [], productInput: "", amount: "", paymentType: "", channel: "",
-  orderDate: today, note: "",
+  platform: "", orderDate: today, note: "",
 });
 
 /**
@@ -78,7 +79,7 @@ export function QuickOrderForm() {
   useEffect(() => {
     const last = loadLastUsed(window.localStorage);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setValues((v) => ({ ...v, channel: last.channel, paymentType: last.paymentType }));
+    setValues((v) => ({ ...v, channel: last.channel, platform: last.platform, paymentType: last.paymentType }));
     setLastProducts(last.products);
   }, []);
 
@@ -134,10 +135,11 @@ export function QuickOrderForm() {
       const response = await createQuickOrder({
         customerName: values.customerName.trim(), phone: values.phone.trim(), city: values.city.trim(), products,
         amount: parseAmount(values.amount) ?? 0, paymentType: values.paymentType, channel: values.channel,
+        platform: values.channel === "other" ? values.platform.trim() : "",
         orderDate: values.orderDate, note: values.note.trim() || null,
       });
       saveLastUsed(window.localStorage, {
-        channel: values.channel, paymentType: values.paymentType, products,
+        channel: values.channel, platform: values.platform.trim(), paymentType: values.paymentType, products,
       });
       setLastProducts(products);
       setSaved(response);
@@ -146,7 +148,7 @@ export function QuickOrderForm() {
       setPrefilled(false);
       // Ready for the next order: the phone, name, city, amount and note start empty again;
       // the channel, payment type, products and date stay.
-      setValues((v) => ({ ...blank(today), channel: v.channel, paymentType: v.paymentType, products, orderDate: v.orderDate }));
+      setValues((v) => ({ ...blank(today), channel: v.channel, platform: v.platform, paymentType: v.paymentType, products, orderDate: v.orderDate }));
       phoneRef.current?.focus();
     } catch (error) {
       const fields = (error instanceof ApiError ? (error.details as { fields?: FieldErrors } | undefined)?.fields : undefined);
@@ -363,11 +365,39 @@ export function QuickOrderForm() {
       <Field id={id("channel")} label={t("Where did the order come from?")} error={errors.channel}>
         <FilterPills
           label={t("Where did the order come from?")}
-          options={CHANNELS.map((c) => ({ value: c.value, label: c.value === "other" ? t("Other") : c.label }))}
+          options={CHANNELS.map((c) => ({
+            value: c.value,
+            label: <ChannelLabel channel={c.value}>{c.value === "other" ? t("Other") : c.label}</ChannelLabel>,
+          }))}
           value={values.channel as "instagram"}
-          onChange={(value) => change("channel", value)}
+          onChange={(value) => {
+            change("channel", value);
+            // "Other" opens a box for the platform's name: put the cursor in it.
+            if (value === "other") window.setTimeout(() => document.getElementById(id("platform"))?.focus(), 50);
+          }}
         />
       </Field>
+
+      {values.channel === "other" ? (
+        <Field id={id("platform")} label={t("Which platform? (optional)")} error={errors.platform}>
+          <Input
+            id={id("platform")}
+            list={`${uid}-platforms`}
+            autoComplete="off"
+            placeholder={t("For example TikTok, Daraz or walk-in")}
+            value={values.platform}
+            onChange={(e) => change("platform", e.target.value)}
+            aria-invalid={errors.platform ? true : undefined}
+            aria-describedby={errors.platform ? `${id("platform")}-error` : undefined}
+            className={bigInput}
+          />
+          <datalist id={`${uid}-platforms`}>
+            {PLATFORM_SUGGESTIONS.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+        </Field>
+      ) : null}
 
       <Field id={id("orderDate")} label={t("Date")} error={errors.orderDate}>
         <Input

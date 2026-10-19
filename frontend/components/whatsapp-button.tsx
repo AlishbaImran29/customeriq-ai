@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
+import { ChannelIcon } from "@/components/channel-icon";
 import { FilterPills } from "@/components/ui/filter-pills";
 import { useCurrency } from "@/lib/currency";
 import { useLanguage } from "@/lib/i18n";
@@ -78,7 +78,7 @@ export function WhatsAppButton({
           title={reason}
           className={`${buttonClass} cursor-not-allowed opacity-50`}
         >
-          <MessageCircle className="h-4 w-4" aria-hidden="true" />
+          <ChannelIcon channel="whatsapp" />
           {t("Confirm on WhatsApp")}
         </button>
         <p id={reasonId} className={showReason ? "text-xs text-muted" : "sr-only"}>
@@ -95,7 +95,7 @@ export function WhatsAppButton({
       className={buttonClass}
       title={t("Opens WhatsApp with the message ready. Nothing is sent until you press send.")}
     >
-      <MessageCircle className="h-4 w-4" aria-hidden="true" />
+      <ChannelIcon channel="whatsapp" />
       {t("Confirm on WhatsApp")}
     </a>
   );

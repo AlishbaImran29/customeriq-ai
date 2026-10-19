@@ -11,7 +11,7 @@ export function FilterPills<T extends string>({
 }: {
   /** Accessible group label. */
   label: string;
-  options: readonly { value: T; label: string; count?: number }[];
+  options: readonly { value: T; label: React.ReactNode; count?: number }[];
   value: T;
   onChange: (value: T) => void;
 }) {
