@@ -21,7 +21,7 @@ RETRY_SECONDS = 6
 sys.path.insert(0, str(BACKEND))
 
 
-def ask_connection_details() -> None:
+def ask_connection_details(action: str = "update the tables on") -> None:
     print("Enter the connection details from Supabase (Connect -> Session pooler).\n")
     host = input("Host (contains 'pooler.supabase.com'): ").strip()
     port = input("Port [5432]: ").strip() or "5432"
@@ -37,7 +37,7 @@ def ask_connection_details() -> None:
         DB_HOST=host, DB_PORT=port, DB_NAME=database, DB_USER=user, DB_PASSWORD=password,
         DB_SSLMODE="require", DATABASE_URL="",
     )
-    print(f"\nAbout to update the tables on {host} (database '{database}', user '{user}').")
+    print(f"\nAbout to {action} {host} (database '{database}', user '{user}').")
     if input("Type yes to continue (anything else cancels): ").strip().lower() not in ("yes", "y"):
         raise SystemExit("Cancelled. Nothing was changed. Run the command again and type: yes")
 
