@@ -39,6 +39,10 @@ class Order(TimestampMixin, Base):
             name="order_label_source_known",
         ),
         CheckConstraint(
+            "sales_channel IN ('instagram', 'whatsapp', 'facebook', 'website', 'other')",
+            name="order_sales_channel_known",
+        ),
+        CheckConstraint(
             "(item_count IS NULL OR item_count >= 1) AND (distinct_products IS NULL OR distinct_products >= 1)",
             name="order_item_counts_positive",
         ),
@@ -52,7 +56,10 @@ class Order(TimestampMixin, Base):
     order_date: Mapped[date] = mapped_column(Date, index=True)
     order_value: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     product_category: Mapped[str | None] = mapped_column(String(100))
+    # The channel text as imported ("Shopify (web)", "insta dm"); shown as written.
     channel: Mapped[str | None] = mapped_column(String(50))
+    # The clean channel used for filters and charts (services/channels.py).
+    sales_channel: Mapped[str] = mapped_column(String(20), default="other", server_default="other")
     # Optional 0–100 engagement score from the import. NULL means "not provided";
     # it is never treated as zero by the health score.
     engagement_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))

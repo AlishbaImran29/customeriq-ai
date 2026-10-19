@@ -64,7 +64,7 @@ class HealthFactors(CamelModel):
 class CustomerOut(CamelModel):
     id: str
     name: str
-    email: str
+    email: str | None  # None for customers known only by phone number
     channel: str | None
     segment: SegmentName | None
     orders: int

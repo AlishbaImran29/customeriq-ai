@@ -7,9 +7,15 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from app.core.errors import ApiError
 from app.models.order import LABEL_COURIER, LABEL_SOURCES, OUTCOME_RETURNED, OUTCOMES
+from app.services.channels import normalise_channel
+from app.services.phone import NOT_A_PK_MOBILE, normalise_pk_phone
 from app.services.import_files import Cell, ParsedFile
 
-REQUIRED_COLUMNS = ("customer_id", "email", "order_id", "order_date", "order_value")
+REQUIRED_COLUMNS = ("order_id", "order_date", "order_value")
+# A row must say WHO ordered, and any one of these is enough: a customer id, an email, or a
+# phone number (sellers on WhatsApp or Instagram often have only a phone number).
+IDENTITY_COLUMNS = ("customer_id", "email", "phone")
+IDENTITY_LABEL = "customer_id or email or phone (at least one)"
 OPTIONAL_COLUMNS = (
     "first_name",
     "last_name",
@@ -29,7 +35,7 @@ RISK_COLUMNS = (
     "phone",
     "address",            # only used for simple checks; the text itself is not stored
 )
-KNOWN_COLUMNS = REQUIRED_COLUMNS + OPTIONAL_COLUMNS + RISK_COLUMNS
+KNOWN_COLUMNS = REQUIRED_COLUMNS + ("customer_id", "email") + OPTIONAL_COLUMNS + RISK_COLUMNS
 
 MAX_LENGTHS = {
     "customer_id": 100,
@@ -64,8 +70,8 @@ class RowError:
 @dataclass(frozen=True)
 class OrderRow:
     row: int
-    customer_id: str
-    email: str
+    customer_id: str                 # the customer's own id, or the normalised phone, or the email
+    email: str | None
     order_id: str
     order_date: date
     order_value: Decimal
@@ -86,6 +92,10 @@ class OrderRow:
     phone_valid: bool | None = None
     address_length: int | None = None
     has_house_number: bool | None = None
+    # Social Seller Mode: the phone as +923XXXXXXXXX (None when absent or not a Pakistani mobile),
+    # and the clean channel (None when the file had no channel text).
+    phone_normalised: str | None = None
+    sales_channel: str | None = None
 
 
 @dataclass
@@ -111,6 +121,8 @@ def column_positions(headers: list[str]) -> dict[str, int]:
             else:
                 positions[name] = index
     missing = [c for c in REQUIRED_COLUMNS if c not in positions]
+    if not any(c in positions for c in IDENTITY_COLUMNS):
+        missing.append(IDENTITY_LABEL)
     if missing:
         raise ApiError(
             422,
@@ -159,9 +171,9 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
                 return None
             return value
 
-        customer_id = text("customer_id", required=True)
+        customer_id = text("customer_id", required=False)
         order_id = text("order_id", required=True)
-        email = text("email", required=True)
+        email = text("email", required=False)
         if email is not None and not _EMAIL.match(email):
             row_errors.append(RowError(n, "email", "Not a valid email address."))
             email = None
@@ -170,6 +182,15 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
         engagement = _parse_engagement(cell("engagement"), n, row_errors)
         optional = {c: text(c, required=False) for c in OPTIONAL_COLUMNS if c != "engagement"}
         risk = _parse_risk_columns(cell, text, order_date, n, row_errors)
+        phone_normalised = normalise_pk_phone(risk["phone"])
+        channel_text = optional.get("channel")
+        # Who ordered: the customer's own id, else their phone number, else their email.
+        identity = customer_id or phone_normalised or (email.lower() if email else None)
+        if identity is None and not row_errors:
+            if risk["phone"]:
+                row_errors.append(RowError(n, "phone", NOT_A_PK_MOBILE))
+            else:
+                row_errors.append(RowError(n, "customer_id", "Needs a customer_id, an email or a phone number."))
 
         if order_id is not None:
             if order_id in first_seen_order:
@@ -189,18 +210,20 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
             rejected += 1
             continue
 
-        assert customer_id and order_id and email and order_date and order_value is not None
+        assert identity and order_id and order_date and order_value is not None
         valid.append(
             OrderRow(
                 row=n,
-                customer_id=customer_id,
-                email=email.lower(),
+                customer_id=identity,
+                email=email.lower() if email else None,
                 order_id=order_id,
                 order_date=order_date,
                 order_value=order_value,
                 engagement=engagement,
                 **optional,
                 **risk,
+                phone_normalised=phone_normalised,
+                sales_channel=normalise_channel(channel_text) if channel_text else None,
             )
         )
 

@@ -90,7 +90,7 @@ def test_shopify_conversion_groups_line_items_and_skips_canceled_orders():
     assert (first.first_name, first.last_name, first.country) == ("Amelia", "Demo", "US")
     assert first.channel == "Shopify (web)" and rows["#1002"].channel == "Shopify (pos)"
     assert rows["#1005"].order_value == Decimal("50.00")  # partial refund removed
-    assert [(e.row, e.column) for e in result.errors] == [(8, "customer_id"), (8, "email")]
+    assert [(e.row, e.column) for e in result.errors] == [(8, "customer_id")]  # one clear message: who ordered?
 
 
 @requires_database

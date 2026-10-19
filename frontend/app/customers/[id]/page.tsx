@@ -72,7 +72,7 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{customer.name}</h1>
           <p className="mt-1 break-words text-sm text-muted">
-            {customer.email} · ID {customer.id}
+            {customer.email ? `${customer.email} · ` : ""}ID {customer.id}
             {customer.channel ? ` · ${customer.channel}` : ""}
           </p>
         </div>

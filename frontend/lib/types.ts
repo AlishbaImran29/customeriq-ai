@@ -52,7 +52,8 @@ export type HealthFactors = {
 export type Customer = {
   id: string;
   name: string;
-  email: string;
+  /** null for a customer known only by phone number. */
+  email: string | null;
   /** Sales channel or store platform, e.g. "Shopify". */
   channel: string | null;
   /** null when there are too few customers to segment. */

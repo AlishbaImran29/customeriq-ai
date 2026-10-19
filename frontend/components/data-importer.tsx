@@ -20,6 +20,8 @@ import {
   ACCEPTED_EXTENSIONS,
   IMPORT_ENDPOINT_AVAILABLE,
   MAX_IMPORT_BYTES,
+  IDENTITY_COLUMNS,
+  IDENTITY_LABEL,
   REQUIRED_COLUMNS,
   TEMPLATE_CSV,
   analyseCsv,
@@ -189,7 +191,7 @@ export function DataImporter() {
               Drag and drop a file, or <span className="text-accent underline">browse</span>
             </span>
             <span className="mt-1 text-xs text-muted">
-              Required columns: {REQUIRED_COLUMNS.join(", ")}
+              Required columns: {REQUIRED_COLUMNS.join(", ")}, and {IDENTITY_LABEL}
             </span>
             <input
               ref={inputRef}
@@ -525,7 +527,7 @@ function CsvResult({
                       scope="col"
                       className={cn(
                         "whitespace-nowrap px-3 py-2 font-medium",
-                        (REQUIRED_COLUMNS as readonly string[]).includes(h) && "text-accent",
+                        ([...REQUIRED_COLUMNS, ...IDENTITY_COLUMNS] as readonly string[]).includes(h) && "text-accent",
                       )}
                     >
                       {h || `column_${i + 1}`}

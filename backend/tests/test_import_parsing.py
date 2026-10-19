@@ -154,7 +154,7 @@ def test_bad_rows_rejected_with_row_numbers_and_no_values():
             HEADER + ",engagement",
             "C1,good@example.com,O1,2026-01-01,10,50",       # row 2: valid
             "C2,not-an-email,O2,03/04/2026,abc,150",         # row 3: four problems
-            ",x@example.com,O3,2026-01-01,-5,",              # row 4: two problems
+            ",x@example.com,O3,2026-01-01,-5,",              # row 4: one problem (the email is enough to identify them)
             "C4,d@example.com,O1,2026-01-02,5,",             # row 5: duplicate order
         ),
         "csv",
@@ -165,7 +165,7 @@ def test_bad_rows_rejected_with_row_numbers_and_no_values():
     problems = {(e.row, e.column) for e in result.errors}
     assert problems == {
         (3, "email"), (3, "order_date"), (3, "order_value"), (3, "engagement"),
-        (4, "customer_id"), (4, "order_value"),
+        (4, "order_value"),
         (5, "order_id"),
     }
     text = " ".join(e.message for e in result.errors)

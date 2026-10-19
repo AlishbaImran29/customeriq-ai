@@ -17,18 +17,13 @@ from decimal import Decimal, InvalidOperation
 from typing import Literal
 
 from app.services.import_files import Cell, ParsedFile, SheetRow
-from app.services.import_validation import (
-    OPTIONAL_COLUMNS,
-    REQUIRED_COLUMNS,
-    RowError,
-    normalise_header,
-)
+from app.services.import_validation import OPTIONAL_COLUMNS, RowError, normalise_header
 
 FileFormat = Literal["standard", "shopify"]
 
 _SHOPIFY_MARKERS = {"name", "email", "created_at", "total", "financial_status"}
 _SKIP_STATUSES = {"voided": "voided", "refunded": "fully refunded"}
-_STANDARD = REQUIRED_COLUMNS + OPTIONAL_COLUMNS
+_STANDARD = ("customer_id", "email", "order_id", "order_date", "order_value") + OPTIONAL_COLUMNS
 
 
 @dataclass

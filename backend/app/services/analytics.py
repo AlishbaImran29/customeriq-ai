@@ -75,7 +75,7 @@ INACTIVITY_LEVELS = ["Low", "Medium", "High", "Critical"]
 class OrderFact:
     customer_id: str
     name: str
-    email: str
+    email: str | None
     order_date: date
     value: Decimal
     channel: str | None
@@ -90,7 +90,7 @@ class OrderFact:
 class CustomerMetrics:
     customer_id: str
     name: str
-    email: str
+    email: str | None
     channel: str | None
     country: str | None
     orders: int

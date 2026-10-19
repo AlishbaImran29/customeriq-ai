@@ -14,13 +14,11 @@ export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
 export const ACCEPTED_EXTENSIONS = [".csv", ".xlsx"] as const;
 
-export const REQUIRED_COLUMNS = [
-  "customer_id",
-  "email",
-  "order_id",
-  "order_date",
-  "order_value",
-] as const;
+export const REQUIRED_COLUMNS = ["order_id", "order_date", "order_value"] as const;
+
+/** A row must say who ordered: any ONE of these columns is enough (a seller on WhatsApp has a phone, not an email). */
+export const IDENTITY_COLUMNS = ["customer_id", "email", "phone"] as const;
+export const IDENTITY_LABEL = "customer_id or email or phone (at least one)";
 
 export const OPTIONAL_COLUMNS = [
   "first_name",
@@ -32,7 +30,7 @@ export const OPTIONAL_COLUMNS = [
 ] as const;
 
 export const TEMPLATE_CSV = [
-  [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS].join(","),
+  ["customer_id", "email", "order_id", "order_date", "order_value", ...OPTIONAL_COLUMNS].join(","),
   "CUS-1042,amelia.chen@example.com,ORD-88120,2026-10-08,142.50,Amelia,Chen,US,Skincare,Shopify,82",
   "CUS-1188,noah.patel@example.com,ORD-88121,2026-09-29,89.00,Noah,Patel,UK,Haircare,WooCommerce,",
 ].join("\n");
@@ -102,7 +100,7 @@ export function analyseCsv(table: string[][]): CsvAnalysis {
   const [rawHeaders = [], ...rows] = table;
   const headers = rawHeaders.map(normalise);
   const index = (name: string) => headers.indexOf(name);
-  const known: string[] = [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS];
+  const known: string[] = [...REQUIRED_COLUMNS, ...IDENTITY_COLUMNS, ...OPTIONAL_COLUMNS];
 
   if (!headers.includes("order_id") && SHOPIFY_MARKERS.every((m) => headers.includes(m))) {
     // Shopify rows are line items (order numbers repeat), so the standard
@@ -124,6 +122,12 @@ export function analyseCsv(table: string[][]): CsvAnalysis {
     const i = index(column);
     if (i === -1) continue;
     emptyRequiredCells += rows.filter((r) => !r[i]?.trim()).length;
+  }
+
+  // Rows that say nothing about who ordered (every identity cell empty).
+  const identityColumns = IDENTITY_COLUMNS.map(index).filter((i) => i !== -1);
+  if (identityColumns.length > 0) {
+    emptyRequiredCells += rows.filter((r) => identityColumns.every((i) => !r[i]?.trim())).length;
   }
 
   const orderIndex = index("order_id");
@@ -151,7 +155,10 @@ export function analyseCsv(table: string[][]): CsvAnalysis {
     format: "standard",
     headers,
     rows,
-    missingColumns: REQUIRED_COLUMNS.filter((c) => index(c) === -1),
+    missingColumns: [
+      ...REQUIRED_COLUMNS.filter((c) => index(c) === -1),
+      ...(IDENTITY_COLUMNS.some((c) => index(c) !== -1) ? [] : [IDENTITY_LABEL]),
+    ],
     recognisedColumns: headers.filter((h) => known.includes(h)),
     emptyRequiredCells,
     duplicateOrderIds,

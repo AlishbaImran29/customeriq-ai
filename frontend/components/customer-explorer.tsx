@@ -92,7 +92,7 @@ export function CustomerExplorer({
         (risk === "all" || c.riskLevel === risk) &&
         (!q ||
           c.name.toLowerCase().includes(q) ||
-          c.email.toLowerCase().includes(q) ||
+          (c.email ?? "").toLowerCase().includes(q) ||
           c.id.toLowerCase().includes(q)),
     );
   }, [customers, query, segment, risk]);
@@ -115,7 +115,7 @@ export function CustomerExplorer({
         "days_since_last_order", "recommended_action",
       ],
       filtered.map((c) => [
-        c.id, c.name, c.email, c.channel, c.segment, c.riskLevel, c.churnProbability?.toFixed(1),
+        c.id, c.name, c.email ?? "", c.channel, c.segment, c.riskLevel, c.churnProbability?.toFixed(1),
         c.orders, c.revenue, c.currentClv, c.predictedClv, c.healthScore, c.lastPurchase,
         c.daysSinceLastOrder, c.recommendedAction,
       ]),
