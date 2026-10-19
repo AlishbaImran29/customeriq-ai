@@ -107,6 +107,11 @@ export function apiPostForm<T>(path: string, form: FormData, init?: RequestInit)
   return request<T>(path, { ...init, method: "POST", body: form });
 }
 
+/** DELETE, and parse the JSON response. */
+export function apiDelete<T>(path: string, init?: RequestInit): Promise<T> {
+  return request<T>(path, { ...init, method: "DELETE" });
+}
+
 /** POST a JSON body and parse the JSON response (undefined for 204 No Content). */
 export function apiPostJson<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
   return request<T>(path, {

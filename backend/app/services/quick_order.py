@@ -186,8 +186,17 @@ def _new_order_id(day: date) -> str:
     return f"QO-{day:%Y%m%d}-" + "".join(secrets.choice(_ID_ALPHABET) for _ in range(5))
 
 
-def create_quick_order(db: Session, order: CleanOrder) -> QuickOrderResult:
-    """Save the order, creating the customer when this phone number is new."""
+def create_quick_order(
+    db: Session, order: CleanOrder, *, order_id: str | None = None, source: str | None = None, commit: bool = True
+) -> QuickOrderResult | None:
+    """Save the order, creating the customer when this phone number is new.
+
+    With an explicit `order_id` (the WhatsApp import makes one from the order itself) an order that
+    already exists is skipped and None is returned, so importing the same chat twice adds nothing.
+    `commit=False` leaves the transaction open so a whole batch is saved, or none of it.
+    """
+    if order_id is not None and db.scalar(select(Order.id).where(Order.external_id == order_id)) is not None:
+        return None
     customer = find_customer(db, order.phone)
     returning = customer is not None
     if customer is None:
@@ -205,7 +214,7 @@ def create_quick_order(db: Session, order: CleanOrder) -> QuickOrderResult:
 
     products = ", ".join(order.products)
     since = func.now() - timedelta(seconds=DUPLICATE_WINDOW_SECONDS)
-    twin = db.scalar(
+    twin = None if order_id is not None else db.scalar(
         select(Order.id).where(
             Order.customer_id == customer.id, Order.order_date == order.order_date,
             Order.order_value == order.amount, Order.products == products, Order.created_at > since,
@@ -219,15 +228,18 @@ def create_quick_order(db: Session, order: CleanOrder) -> QuickOrderResult:
             "If it is a different order, change something and save again.",
         )
 
-    for _ in range(5):                                   # a clash of random ids is very unlikely; retry
-        order_id = _new_order_id(order.order_date)
+    # A given id is used as it is; otherwise a random one, retried on the rare clash.
+    for _ in range(1 if order_id is not None else 5):
+        new_id = order_id or _new_order_id(order.order_date)
         try:
             with db.begin_nested():
                 db.add(Order(
-                    external_id=order_id, customer_id=customer.id, order_date=order.order_date,
+                    external_id=new_id, customer_id=customer.id, order_date=order.order_date,
                     order_value=order.amount, channel=order.channel.capitalize(), sales_channel=order.channel,
                     payment_type=order.payment_type, city=order.city, products=products, note=order.note,
+                    source=source,
                 ))
+            order_id = new_id
             break
         except IntegrityError:
             continue
@@ -236,6 +248,7 @@ def create_quick_order(db: Session, order: CleanOrder) -> QuickOrderResult:
 
     db.flush()
     count = db.scalar(select(func.count()).select_from(Order).where(Order.customer_id == customer.id))
-    db.commit()
+    if commit:
+        db.commit()
     name = customer.first_name or customer.external_id
     return QuickOrderResult(order_id, customer.external_id, name, order.phone, returning, int(count or 0))

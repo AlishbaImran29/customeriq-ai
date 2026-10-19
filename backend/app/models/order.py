@@ -68,6 +68,9 @@ class Order(TimestampMixin, Base):
     city: Mapped[str | None] = mapped_column(String(100))
     products: Mapped[str | None] = mapped_column(Text)            # product names joined with ", "
     note: Mapped[str | None] = mapped_column(Text)
+    # Where the order was created when it did not come from a file or the form: "whatsapp_chat" for
+    # an order accepted from a WhatsApp chat export (so those can be deleted together).
+    source: Mapped[str | None] = mapped_column(String(20), index=True)
     # Optional 0–100 engagement score from the import. NULL means "not provided";
     # it is never treated as zero by the health score.
     engagement_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))

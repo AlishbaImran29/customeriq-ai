@@ -1,4 +1,5 @@
-import { CheckCircle2, Circle } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Circle, MessagesSquare } from "lucide-react";
 import { DataImporter } from "@/components/data-importer";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ const sources = [
   { name: "CSV upload", status: live ? "Connected" : "Preview only (demo)", ok: live },
   { name: "Excel (.xlsx)", status: live ? "Connected" : "Needs backend", ok: live },
   { name: "Shopify orders export (CSV)", status: live ? "Supported" : "Needs backend", ok: live },
+  { name: "WhatsApp chat export (.txt)", status: live ? "Supported" : "Needs backend", ok: live },
   { name: "Shopify API sync", status: "Not built yet", ok: false },
   { name: "WooCommerce", status: "Not built yet", ok: false },
   { name: "CRM integrations", status: "Not built yet", ok: false },
@@ -33,6 +35,15 @@ export default function ImportPage() {
       <PageHeader
         title="Import Customer Data"
         description="Upload customer and order history from a CSV or Excel export to power segmentation, churn, and CLV analysis."
+        actions={
+          <Link
+            href="/import/whatsapp"
+            className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm font-medium text-ink-2 transition hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+          >
+            <MessagesSquare className="h-4 w-4" aria-hidden="true" />
+            Import a WhatsApp chat
+          </Link>
+        }
       />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

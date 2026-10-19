@@ -20,7 +20,7 @@ const textareaClass =
 const bigInput = "h-12 text-base";
 
 /** A labelled field with its error underneath (an icon and words, never colour alone). */
-function Field({
+export function Field({
   id, label, error, hint, children,
 }: {
   id: string;

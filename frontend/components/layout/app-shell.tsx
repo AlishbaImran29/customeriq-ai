@@ -11,6 +11,7 @@ import {
   Lightbulb,
   CirclePlus,
   Menu,
+  MessagesSquare,
   PackageX,
   Sparkles,
   TrendingUp,
@@ -55,12 +56,14 @@ const navGroups = [
     items: [
       { href: "/orders/new", label: "Add Order", icon: CirclePlus },
       { href: "/import", label: "Import Data", icon: Upload },
+      { href: "/import/whatsapp", label: "Import WhatsApp Chat", icon: MessagesSquare },
     ],
   },
 ];
 
 function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  // "/" and "/import" only match themselves, because "/import/whatsapp" has its own menu item.
+  return href === "/" || href === "/import" ? pathname === href : pathname.startsWith(href);
 }
 
 // Matches Tailwind's `lg` breakpoint, where the sidebar is always visible.
