@@ -150,6 +150,14 @@ export const URDU: Record<string, string> = {
   "Placed on a Friday": "آرڈر جمعہ کے دن دیا گیا",
   "Placed on a Saturday": "آرڈر ہفتہ کے دن دیا گیا",
   "Placed on a Sunday": "آرڈر اتوار کے دن دیا گیا",
+  // Order Risk: actions and the WhatsApp button. The three actions come from the backend
+  // (RISK_ACTIONS in backend/app/services/order_risk_config.py) and must match it.
+  "Ship normally": "عام طریقے سے بھیجیں",
+  "Confirm on WhatsApp": "واٹس ایپ پر تصدیق کریں",
+  "Ask for advance payment or call the customer": "ایڈوانس ادائیگی مانگیں یا کسٹمر کو کال کریں",
+  "Message language": "پیغام کی زبان",
+  "No phone number in the data for this customer, so WhatsApp cannot be opened.": "اس کسٹمر کا فون نمبر ڈیٹا میں نہیں ہے، اس لیے واٹس ایپ نہیں کھل سکتا۔",
+  "Opens WhatsApp with the message ready. Nothing is sent until you press send.": "واٹس ایپ پیغام کے ساتھ کھلتا ہے۔ جب تک آپ بھیجیں نہ دبائیں، کچھ نہیں بھیجا جاتا۔",
 };
 
 let current: Language = "en";

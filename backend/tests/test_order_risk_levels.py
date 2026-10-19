@@ -1,6 +1,7 @@
 """Risk levels: the thresholds, the actions, and that nothing is assessed without a trusted model."""
 
 import math
+from pathlib import Path
 
 import pytest
 
@@ -46,3 +47,12 @@ def test_orders_are_assessed_only_when_the_model_is_trusted():
     one = next(iter(assessed.values()))
     assert one.level == risk_level(one.probability) and one.action == action_for(one.level)
     assert {a.level for a in assessed.values()} <= set(LEVELS)
+
+
+def test_every_action_has_an_urdu_translation():
+    """The actions are shown through the frontend's translation table (exact English text)."""
+    table = Path(__file__).resolve().parents[2] / "frontend" / "lib" / "i18n.ts"
+    if not table.exists():
+        pytest.skip("frontend folder not available")
+    text = table.read_text(encoding="utf-8")
+    assert [a for a in config.RISK_ACTIONS.values() if f'"{a}":' not in text] == []
