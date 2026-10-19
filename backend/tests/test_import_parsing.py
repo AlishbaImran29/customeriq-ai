@@ -82,7 +82,7 @@ def test_missing_required_columns_lists_them():
     with pytest.raises(ApiError) as exc:
         validate_rows(parsed)
     assert exc.value.status_code == 422
-    assert exc.value.details["missingColumns"] == ["order_id", "order_date", "order_value"]
+    assert exc.value.details["missingColumns"] == ["order_date", "order_value"]   # the order number is optional now
 
 
 def test_duplicate_column_rejected():
@@ -153,7 +153,7 @@ def test_bad_rows_rejected_with_row_numbers_and_no_values():
         csv_bytes(
             HEADER + ",engagement",
             "C1,good@example.com,O1,2026-01-01,10,50",       # row 2: valid
-            "C2,not-an-email,O2,03/04/2026,abc,150",         # row 3: four problems
+            "C2,not-an-email,O2,April 3rd,abc,150",          # row 3: four problems
             ",x@example.com,O3,2026-01-01,-5,",              # row 4: one problem (the email is enough to identify them)
             "C4,d@example.com,O1,2026-01-02,5,",             # row 5: duplicate order
         ),
@@ -169,7 +169,7 @@ def test_bad_rows_rejected_with_row_numbers_and_no_values():
         (5, "order_id"),
     }
     text = " ".join(e.message for e in result.errors)
-    for value in ("not-an-email", "03/04/2026", "abc", "150", "-5"):
+    for value in ("not-an-email", "April 3rd", "abc", "150", "-5"):
         assert value not in text
 
 

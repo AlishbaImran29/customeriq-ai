@@ -345,6 +345,11 @@ export const URDU: Record<string, string> = {
   "Deleted {orders} orders and {customers} customers.": "{orders} آرڈرز اور {customers} کسٹمرز مٹا دیے گئے۔",
   "Unzip the export and upload the .txt file inside it.": "ایکسپورٹ کو ان زپ کریں اور اندر والی .txt فائل اپ لوڈ کریں۔",
   "WhatsApp chat export (.txt)": "واٹس ایپ چیٹ ایکسپورٹ (.txt)",
+  // Seller sheet / templates.
+  "Keep your orders in a sheet?": "کیا آپ آرڈرز شیٹ میں رکھتے ہیں؟",
+  "Download the template, fill in one order per row, and upload it here. Upload it again as it grows: orders already imported are not added twice.": "ٹیمپلیٹ ڈاؤن لوڈ کریں، ہر قطار میں ایک آرڈر لکھیں اور یہاں اپ لوڈ کریں۔ شیٹ بڑھنے پر دوبارہ اپ لوڈ کریں: پہلے سے درآمد شدہ آرڈرز دوبارہ نہیں جڑتے۔",
+  "Excel template": "ایکسل ٹیمپلیٹ",
+  "In Google Sheets: File, Import, Upload the CSV template. When you are done, File, Download, CSV.": "گوگل شیٹس میں: File، Import، پھر CSV ٹیمپلیٹ اپ لوڈ کریں۔ کام ختم ہونے پر File، Download، CSV۔",
 };
 
 let current: Language = "en";

@@ -14,7 +14,10 @@ export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
 export const ACCEPTED_EXTENSIONS = [".csv", ".xlsx"] as const;
 
-export const REQUIRED_COLUMNS = ["order_id", "order_date", "order_value"] as const;
+export const REQUIRED_COLUMNS = ["order_date", "order_value"] as const;
+
+/** Another name a column may have in a seller's own sheet. */
+export const HEADER_ALIASES: Record<string, string> = { amount: "order_value" };
 
 /** A row must say who ordered: any ONE of these columns is enough (a seller on WhatsApp has a phone, not an email). */
 export const IDENTITY_COLUMNS = ["customer_id", "email", "phone"] as const;
@@ -27,6 +30,13 @@ export const OPTIONAL_COLUMNS = [
   "product_category",
   "channel",
   "engagement",
+  // Columns of the seller sheet (the same as the Add Order form).
+  "order_id",
+  "customer_name",
+  "city",
+  "products",
+  "payment_type",
+  "note",
 ] as const;
 
 export const TEMPLATE_CSV = [
@@ -93,14 +103,16 @@ export type CsvAnalysis = {
   invalidOrderValues: number;
 };
 
-const normalise = (header: string) =>
-  header.trim().toLowerCase().replace(/[\s-]+/g, "_");
+const normalise = (header: string) => {
+  const name = header.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return HEADER_ALIASES[name] ?? name;
+};
 
 export function analyseCsv(table: string[][]): CsvAnalysis {
   const [rawHeaders = [], ...rows] = table;
   const headers = rawHeaders.map(normalise);
   const index = (name: string) => headers.indexOf(name);
-  const known: string[] = [...REQUIRED_COLUMNS, ...IDENTITY_COLUMNS, ...OPTIONAL_COLUMNS];
+  const known: string[] = [...REQUIRED_COLUMNS, ...IDENTITY_COLUMNS, ...OPTIONAL_COLUMNS, "order_value"];
 
   if (!headers.includes("order_id") && SHOPIFY_MARKERS.every((m) => headers.includes(m))) {
     // Shopify rows are line items (order numbers repeat), so the standard
@@ -148,7 +160,8 @@ export function analyseCsv(table: string[][]): CsvAnalysis {
       ? 0
       : rows.filter((r) => {
           const value = r[valueIndex]?.trim();
-          return value !== undefined && value !== "" && Number.isNaN(Number(value));
+          // "4,500" is fine: a comma as thousands separator.
+          return value !== undefined && value !== "" && Number.isNaN(Number(value.replace(/,/g, "")));
         }).length;
 
   return {

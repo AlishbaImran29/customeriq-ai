@@ -146,6 +146,10 @@ def _save_rows(db: Session, job_id: uuid.UUID, rows: list[OrderRow]) -> tuple[in
             "product_category": r.product_category,
             "channel": r.channel,
             "sales_channel": r.sales_channel or "other",
+            "city": r.city,
+            "products": r.products,
+            "payment_type": r.payment_type,
+            "note": r.note,
             "engagement_score": r.engagement,
             "ordered_at": r.ordered_at,
             "item_count": r.item_count,
@@ -175,6 +179,10 @@ def _save_rows(db: Session, job_id: uuid.UUID, rows: list[OrderRow]) -> tuple[in
                 "channel": func.coalesce(excluded.channel, Order.channel),
                 # "other" means "the file did not say": keep the channel that is already saved.
                 "sales_channel": func.coalesce(func.nullif(excluded.sales_channel, "other"), Order.sales_channel),
+                "city": func.coalesce(excluded.city, Order.city),
+                "products": func.coalesce(excluded.products, Order.products),
+                "payment_type": func.coalesce(excluded.payment_type, Order.payment_type),
+                "note": func.coalesce(excluded.note, Order.note),
                 "engagement_score": func.coalesce(
                     excluded.engagement_score, Order.engagement_score
                 ),

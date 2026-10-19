@@ -1,5 +1,6 @@
 """Validate imported rows. Error messages describe problems without echoing values."""
 
+import hashlib
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -11,7 +12,9 @@ from app.services.channels import normalise_channel
 from app.services.phone import NOT_A_PK_MOBILE, normalise_pk_phone
 from app.services.import_files import Cell, ParsedFile
 
-REQUIRED_COLUMNS = ("order_id", "order_date", "order_value")
+REQUIRED_COLUMNS = ("order_date", "order_value")
+# A seller's own sheet usually has no order number and calls the amount "amount".
+HEADER_ALIASES = {"amount": "order_value"}
 # A row must say WHO ordered, and any one of these is enough: a customer id, an email, or a
 # phone number (sellers on WhatsApp or Instagram often have only a phone number).
 IDENTITY_COLUMNS = ("customer_id", "email", "phone")
@@ -24,6 +27,14 @@ OPTIONAL_COLUMNS = (
     "channel",
     "engagement",
 )
+# Columns of the seller template (the same as the Add Order form). Blank means "not provided".
+SELLER_COLUMNS = (
+    "customer_name",      # the whole name; used as first_name when there is no first_name column
+    "city",
+    "products",           # product names in one cell, separated by commas
+    "payment_type",       # COD or prepaid
+    "note",
+)
 # Optional columns for the Order Risk Check. Blank means "not provided", never zero.
 RISK_COLUMNS = (
     "order_datetime",     # YYYY-MM-DD HH:MM[:SS]: the time of day; order_date is still the day
@@ -35,7 +46,7 @@ RISK_COLUMNS = (
     "phone",
     "address",            # only used for simple checks; the text itself is not stored
 )
-KNOWN_COLUMNS = REQUIRED_COLUMNS + ("customer_id", "email") + OPTIONAL_COLUMNS + RISK_COLUMNS
+KNOWN_COLUMNS = REQUIRED_COLUMNS + ("order_id", "customer_id", "email") + OPTIONAL_COLUMNS + SELLER_COLUMNS + RISK_COLUMNS
 
 MAX_LENGTHS = {
     "customer_id": 100,
@@ -47,6 +58,10 @@ MAX_LENGTHS = {
     "product_category": 100,
     "channel": 50,
     "phone": 40,
+    "customer_name": 100,
+    "city": 100,
+    "products": 1000,
+    "note": 500,
 }
 MAX_ADDRESS_LENGTH = 1000
 MAX_ITEMS = 100_000
@@ -54,6 +69,9 @@ MAX_ORDER_VALUE = Decimal("9999999999.99")  # fits NUMERIC(12, 2)
 _CENTS = Decimal("0.01")
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_DAY_FIRST_DATE = re.compile(r"^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$")  # 18/10/2026, as written in Pakistan
+_COD = re.compile(r"\bcod\b|cash\s+on\s+del|^\s*cash\s*$", re.IGNORECASE)
+_PREPAID = re.compile(r"\b(?:pre-?paid|advance|paid|online|easy\s?paisa|jazz\s?cash|bank|transfer|card)\b", re.IGNORECASE)
 _ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$")
 
 
@@ -96,6 +114,11 @@ class OrderRow:
     # and the clean channel (None when the file had no channel text).
     phone_normalised: str | None = None
     sales_channel: str | None = None
+    # Seller template columns.
+    city: str | None = None
+    products: str | None = None
+    payment_type: str | None = None     # "cod" | "prepaid"
+    note: str | None = None
 
 
 @dataclass
@@ -114,7 +137,7 @@ def column_positions(headers: list[str]) -> dict[str, int]:
     positions: dict[str, int] = {}
     duplicates: list[str] = []
     for index, raw in enumerate(headers):
-        name = normalise_header(raw)
+        name = HEADER_ALIASES.get(normalise_header(raw), normalise_header(raw))
         if name in KNOWN_COLUMNS:
             if name in positions:
                 duplicates.append(name)
@@ -146,6 +169,7 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
     errors: list[RowError] = []
     rejected = 0
     first_seen_order: dict[str, int] = {}
+    generated: dict[str, int] = {}
 
     for sheet_row in parsed.rows:
         values = sheet_row.values
@@ -172,7 +196,7 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
             return value
 
         customer_id = text("customer_id", required=False)
-        order_id = text("order_id", required=True)
+        order_id = text("order_id", required=False)
         email = text("email", required=False)
         if email is not None and not _EMAIL.match(email):
             row_errors.append(RowError(n, "email", "Not a valid email address."))
@@ -182,6 +206,10 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
         engagement = _parse_engagement(cell("engagement"), n, row_errors)
         optional = {c: text(c, required=False) for c in OPTIONAL_COLUMNS if c != "engagement"}
         risk = _parse_risk_columns(cell, text, order_date, n, row_errors)
+        seller = {c: text(c, required=False) for c in ("customer_name", "city", "products", "note")}
+        payment_type = _parse_payment_type(cell("payment_type"), n, row_errors)
+        if not optional.get("first_name"):
+            optional["first_name"] = seller["customer_name"]   # one "name" column fills the first name
         phone_normalised = normalise_pk_phone(risk["phone"])
         channel_text = optional.get("channel")
         # Who ordered: the customer's own id, else their phone number, else their email.
@@ -191,6 +219,14 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
                 row_errors.append(RowError(n, "phone", NOT_A_PK_MOBILE))
             else:
                 row_errors.append(RowError(n, "customer_id", "Needs a customer_id, an email or a phone number."))
+
+        if order_id is None and identity and order_date and order_value is not None and not row_errors:
+            # No order number in the sheet: make one from the order itself, so uploading the same
+            # (growing) sheet again never adds an order twice. Rows that are exactly alike get 2, 3...
+            key = "|".join([identity, order_date.isoformat(), str(order_value), seller["products"] or "", seller["city"] or ""])
+            base = "SH-" + hashlib.sha256(key.encode()).hexdigest()[:12].upper()
+            generated[base] = generated.get(base, 0) + 1
+            order_id = base if generated[base] == 1 else f"{base}-{generated[base]}"
 
         if order_id is not None:
             if order_id in first_seen_order:
@@ -224,6 +260,10 @@ def validate_rows(parsed: ParsedFile) -> ValidationResult:
                 **risk,
                 phone_normalised=phone_normalised,
                 sales_channel=normalise_channel(channel_text) if channel_text else None,
+                city=seller["city"],
+                products=seller["products"],
+                payment_type=payment_type,
+                note=seller["note"],
             )
         )
 
@@ -260,8 +300,19 @@ def _parse_date(value: Cell, row: int, errors: list[RowError]) -> date | None:
                 errors.append(RowError(row, "order_date", "Date is in the future."))
                 return None
             return parsed
+    day_first = _DAY_FIRST_DATE.match(candidate)
+    if day_first:
+        try:
+            parsed = date(int(day_first.group(3)), int(day_first.group(2)), int(day_first.group(1)))
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            if parsed > date.today():
+                errors.append(RowError(row, "order_date", "Date is in the future."))
+                return None
+            return parsed
     errors.append(
-        RowError(row, "order_date", "Not a valid date. Use the format YYYY-MM-DD.")
+        RowError(row, "order_date", "Not a valid date. Use DD/MM/YYYY or YYYY-MM-DD.")
     )
     return None
 
@@ -287,7 +338,8 @@ def _parse_order_value(value: Cell, row: int, errors: list[RowError]) -> Decimal
     if _as_text(value) is None:
         errors.append(RowError(row, "order_value", "Value is required."))
         return None
-    number = _to_decimal(value)
+    # "4,500" is common in sheets (comma as thousands separator).
+    number = _to_decimal(value.replace(",", "") if isinstance(value, str) else value)
     if number is None:
         errors.append(
             RowError(row, "order_value", "Not a number. Use digits only, e.g. 142.50.")
@@ -426,3 +478,16 @@ def is_valid_phone(phone: str) -> bool:
 def has_house_number(address: str) -> bool:
     """A simple check: the address contains at least one digit (house, flat or plot number)."""
     return any(ch.isdigit() for ch in address)
+
+
+def _parse_payment_type(value: Cell, row: int, errors: list[RowError]) -> str | None:
+    """"cod" or "prepaid" from the words sellers use (COD, cash on delivery, advance, easypaisa...)."""
+    text = _as_text(value)
+    if text is None:
+        return None
+    if _COD.search(text) and not _PREPAID.search(text):
+        return "cod"
+    if _PREPAID.search(text) and not _COD.search(text):
+        return "prepaid"
+    errors.append(RowError(row, "payment_type", "Must be COD or prepaid, or left blank."))
+    return None

@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { CheckCircle2, Circle, MessagesSquare } from "lucide-react";
+import { CheckCircle2, Circle, Download, MessagesSquare } from "lucide-react";
 import { DataImporter } from "@/components/data-importer";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_MODE } from "@/lib/api/config";
 import { OPTIONAL_COLUMNS, REQUIRED_COLUMNS } from "@/lib/api/data-import";
+import { T } from "@/components/t";
 
 const live = API_MODE === "live";
 
@@ -52,6 +53,35 @@ export default function ImportPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
+              <CardTitle><T>Keep your orders in a sheet?</T></CardTitle>
+              <CardDescription>
+                <T>Download the template, fill in one order per row, and upload it here. Upload it again as it grows: orders already imported are not added twice.</T>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <a
+                href="/seller_orders_template.xlsx"
+                download
+                className="inline-flex items-center gap-2 rounded-xl bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                <T>Excel template</T>
+              </a>
+              <a
+                href="/seller_orders_template.csv"
+                download
+                className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm font-medium text-ink-2 hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                <T>CSV template</T>
+              </a>
+              <p className="w-full text-xs text-muted">
+                <T>In Google Sheets: File, Import, Upload the CSV template. When you are done, File, Download, CSV.</T>
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
               <CardTitle>Expected columns</CardTitle>
               <CardDescription>Header names are case-insensitive.</CardDescription>
             </CardHeader>
@@ -73,8 +103,10 @@ export default function ImportPage() {
                 </div>
               </div>
               <ul className="space-y-1 text-xs text-muted">
-                <li><code>order_date</code>: YYYY-MM-DD (or an Excel date cell).</li>
-                <li><code>order_value</code>: a number such as 142.50, no currency symbol.</li>
+                <li><code>order_date</code>: DD/MM/YYYY or YYYY-MM-DD (or an Excel date cell).</li>
+                <li><code>order_value</code> (or <code>amount</code>): a number such as 142.50, no currency symbol.</li>
+                <li><code>order_id</code> is optional: without it, one is made from the order itself.</li>
+                <li>Each row needs a <code>customer_id</code>, <code>email</code> or <code>phone</code>.</li>
                 <li>
                   <code>engagement</code>: optional 0–100 score. Leave it blank when unknown; blank is
                   never treated as 0.
