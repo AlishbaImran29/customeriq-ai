@@ -157,6 +157,20 @@ def _label_source(orders: list[OrderInput]) -> str | None:
     return next(iter(sources)) if len(sources) == 1 else "mixed: " + " + ".join(sorted(sources))
 
 
+def orders_tested_on(result: OrderRiskResult, orders: list[OrderInput]) -> list[OrderInput]:
+    """The orders the model was TESTED on: complete label, on or after the split date.
+
+    These are the only orders a savings estimate may use, because the model never saw them
+    while learning. [] when the model has no test period (not enough data)."""
+    if result.split_date is None or result.as_of is None:
+        return []
+    mature_until = result.as_of - timedelta(days=result.maturity_days)
+    return [
+        o for o in orders
+        if label(o) is not None and result.split_date <= o.order_date <= mature_until
+    ]
+
+
 def train_order_risk(orders: list[OrderInput]) -> OrderRiskResult:
     """Train on older orders, test on newer ones, and apply the trust rule."""
     if not orders:

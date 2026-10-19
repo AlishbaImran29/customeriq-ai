@@ -4,6 +4,7 @@ Usage (from backend/):
     .venv/Scripts/python.exe scripts/train_order_risk.py                # orders in the database
     .venv/Scripts/python.exe scripts/train_order_risk.py --csv FILE     # a CustomerIQ import file, no database
     add --save to store the result in the database (needs the database; not with --csv)
+    add --shipping-cost N to also print the savings estimate (N = shipping cost per parcel, both ways)
 
 The CSV must have the Order Risk columns (see scripts/convert_uci_online_retail.py).
 """
@@ -18,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services.order_features import OrderInput  # noqa: E402
 from app.services.order_risk_model import OrderRiskResult, train_order_risk  # noqa: E402
+from app.services.order_risk_savings import SavingsEstimate, savings_estimate  # noqa: E402
 
 
 def read_csv(path: Path) -> list[OrderInput]:
@@ -64,10 +66,24 @@ def print_report(result: OrderRiskResult) -> None:
             print(f"  {value:+.2f}  {name}")
 
 
+def print_savings(est: SavingsEstimate) -> None:
+    pct = lambda v: "-" if v is None else f"{v:.1%}"  # noqa: E731
+    print()
+    print(f"Savings ESTIMATE on past orders ({est.test_start} to {est.test_end}, {est.test_orders:,} orders)")
+    print(f"  Flagged {', '.join(est.flagged_levels)}: {est.flagged_orders:,} orders, "
+          f"{est.flagged_returned:,} really returned ({pct(est.flagged_precision)}), {est.false_alarms:,} false alarms")
+    print(f"  All returned orders in the period: {est.total_returned:,}; flagged caught {pct(est.returns_caught)} of them")
+    print(f"  Shipping cost per parcel (both ways): {est.shipping_cost:,.2f}")
+    print(f"  Estimated cost avoided: {est.cost_avoided:,.2f}  (returns cost {est.total_return_cost:,.2f} in all)")
+    print("  An estimate, not a promise: it assumes every flagged order that came back would have been stopped.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--csv", type=Path, help="train from this import file instead of the database")
     parser.add_argument("--save", action="store_true", help="store the result in the database")
+    parser.add_argument("--shipping-cost", type=float, help="print the savings estimate for this cost per parcel")
+    parser.add_argument("--flag", default="High", help="levels that count as flagged in the estimate, e.g. High or High,Medium")
     args = parser.parse_args()
     if args.csv and args.save:
         raise SystemExit("--save needs the database; it cannot be used with --csv.")
@@ -86,6 +102,13 @@ def main() -> None:
     print(f"{len(orders):,} orders loaded")
     result = train_order_risk(orders)
     print_report(result)
+    if args.shipping_cost is not None:
+        estimate = savings_estimate(result, orders, args.shipping_cost, tuple(args.flag.split(",")))
+        if estimate is None:
+            print()
+            print("No savings estimate: the model is not available, so there is nothing to estimate.")
+        else:
+            print_savings(estimate)
 
     if args.save:
         from app.services.order_risk_runs import save_run
