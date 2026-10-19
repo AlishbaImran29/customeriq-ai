@@ -42,3 +42,7 @@ RISK_ACTIONS = {
 }
 if not 0.0 < RISK_LOW_BELOW < RISK_HIGH_ABOVE < 1.0:
     raise ValueError("Risk thresholds must satisfy 0 < RISK_LOW_BELOW < RISK_HIGH_ABOVE < 1.")
+
+# --- "Why?" reasons ------------------------------------------------------------------------
+MAX_REASONS = 3             # reasons shown for one order
+MIN_REASON_WEIGHT = 0.10    # a reason must push the risk up by at least this much (log-odds)

@@ -280,3 +280,18 @@ def score_orders(result: OrderRiskResult, orders: list[OrderInput]) -> dict[str,
     ids = list(features)
     probabilities = result.pipeline.predict_proba(_matrix([features[i] for i in ids], result.countries))[:, 1]
     return dict(zip(ids, (float(p) for p in probabilities), strict=True))
+
+
+def contributions(result: OrderRiskResult, features: list[OrderFeatures]) -> tuple[np.ndarray, np.ndarray]:
+    """How much each input pushed each order's risk up (+) or down (-), in log-odds.
+
+    For a logistic regression this is exact and simple: contribution = coefficient x the
+    standardised value, and the contributions plus the intercept add up to the model's log-odds.
+    "0" means "exactly average", so a positive number is a reason the order is riskier than a
+    typical one. Columns follow `result.feature_names`. Also returns the standardised values
+    (above 0 = higher than usual), which tell the direction of each input."""
+    if not result.available or result.pipeline is None:
+        raise ValueError("Reasons exist only for an available model.")
+    imputed = result.pipeline.named_steps["impute"].transform(_matrix(features, result.countries))
+    scaled = result.pipeline.named_steps["scale"].transform(imputed)
+    return scaled * result.pipeline.named_steps["model"].coef_[0], scaled

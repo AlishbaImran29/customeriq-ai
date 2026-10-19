@@ -122,6 +122,34 @@ export const URDU: Record<string, string> = {
   "Updated orders": "اپ ڈیٹ شدہ آرڈرز",
   "Rejected rows": "مسترد قطاریں",
   "Rows received": "موصول قطاریں",
+
+  // Order Risk: the "Why?" reasons. Words in {braces} are replaced by numbers or names.
+  // These must match the templates in backend/app/services/order_risk_reasons.py.
+  "Returned {returned} of {total} earlier orders": "{total} پچھلے آرڈرز میں سے {returned} واپس ہوئے",
+  "New customer: no earlier orders to learn from": "نیا کسٹمر: سیکھنے کے لیے پچھلے آرڈرز موجود نہیں",
+  "Has {total} earlier orders": "اس کسٹمر کے پچھلے آرڈرز: {total}",
+  "Order value is {ratio}x this customer's usual": "آرڈر کی رقم اس کسٹمر کی عام رقم سے {ratio} گنا ہے",
+  "Days since the previous order: {days} (fewer than usual)": "پچھلے آرڈر کو گزرے دن: {days} (معمول سے کم)",
+  "Days since the previous order: {days} (more than usual)": "پچھلے آرڈر کو گزرے دن: {days} (معمول سے زیادہ)",
+  "Number of items: {count} (more than usual)": "اشیاء کی تعداد: {count} (معمول سے زیادہ)",
+  "Number of items: {count} (fewer than usual)": "اشیاء کی تعداد: {count} (معمول سے کم)",
+  "Different products: {count} (more than usual)": "مختلف مصنوعات: {count} (معمول سے زیادہ)",
+  "Different products: {count} (fewer than usual)": "مختلف مصنوعات: {count} (معمول سے کم)",
+  "Placed around {hour}:00": "آرڈر تقریباً {hour}:00 بجے دیا گیا",
+  "The address is shorter than usual ({characters} characters)": "پتہ معمول سے مختصر ہے ({characters} حروف)",
+  "The address is longer than usual ({characters} characters)": "پتہ معمول سے طویل ہے ({characters} حروف)",
+  "The address has no house number": "پتے میں مکان نمبر نہیں ہے",
+  "No address was provided": "پتہ فراہم نہیں کیا گیا",
+  "The phone number does not look valid": "فون نمبر درست نہیں لگتا",
+  "No phone number was provided": "فون نمبر فراہم نہیں کیا گیا",
+  "Orders from {country} are returned more often in past data": "ماضی کے ڈیٹا میں {country} کے آرڈرز زیادہ واپس ہوتے ہیں",
+  "Placed on a Monday": "آرڈر پیر کے دن دیا گیا",
+  "Placed on a Tuesday": "آرڈر منگل کے دن دیا گیا",
+  "Placed on a Wednesday": "آرڈر بدھ کے دن دیا گیا",
+  "Placed on a Thursday": "آرڈر جمعرات کے دن دیا گیا",
+  "Placed on a Friday": "آرڈر جمعہ کے دن دیا گیا",
+  "Placed on a Saturday": "آرڈر ہفتہ کے دن دیا گیا",
+  "Placed on a Sunday": "آرڈر اتوار کے دن دیا گیا",
 };
 
 let current: Language = "en";
@@ -161,6 +189,13 @@ export function translate(language: Language, text: string) {
   return table?.[text] ?? table?.[text.replace(/\.$/, "")] ?? text;
 }
 
+/** Translates a template such as "Returned {returned} of {total} earlier orders", then fills in the values. */
+export function translateWith(language: Language, template: string, params: Record<string, string | number>) {
+  return translate(language, template).replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in params ? String(params[key]) : match,
+  );
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => {
@@ -172,5 +207,9 @@ function subscribe(listener: () => void) {
 export function useLanguage() {
   const language = useSyncExternalStore(subscribe, () => current, () => "en" as Language);
   useEffect(start, []);
-  return { language, t: (text: string) => translate(language, text) };
+  return {
+    language,
+    t: (text: string) => translate(language, text),
+    tf: (template: string, params: Record<string, string | number>) => translateWith(language, template, params),
+  };
 }
