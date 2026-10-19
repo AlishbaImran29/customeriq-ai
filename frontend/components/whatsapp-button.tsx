@@ -45,12 +45,15 @@ export function WhatsAppButton({
   amount,
   phone,
   messageLanguage,
+  showReason = true,
 }: {
   level: "Low" | "Medium" | "High";
   orderId: string;
   amount: number;
   phone: string | null;
   messageLanguage: MessageLanguage;
+  /** False in a long list: the reason is then given once for the whole list, and only as a hint here. */
+  showReason?: boolean;
 }) {
   const { t } = useLanguage();
   const { state } = useCurrency();
@@ -65,14 +68,21 @@ export function WhatsAppButton({
   const reasonId = `whatsapp-reason-${orderId}`;
 
   if (!link) {
+    const reason = t("No usable phone number in the data for this customer, so WhatsApp cannot be opened.");
     return (
       <div className="flex flex-col gap-1">
-        <button type="button" disabled aria-describedby={reasonId} className={`${buttonClass} cursor-not-allowed opacity-50`}>
+        <button
+          type="button"
+          disabled
+          aria-describedby={reasonId}
+          title={reason}
+          className={`${buttonClass} cursor-not-allowed opacity-50`}
+        >
           <MessageCircle className="h-4 w-4" aria-hidden="true" />
           {t("Confirm on WhatsApp")}
         </button>
-        <p id={reasonId} className="text-xs text-muted">
-          {t("No phone number in the data for this customer, so WhatsApp cannot be opened.")}
+        <p id={reasonId} className={showReason ? "text-xs text-muted" : "sr-only"}>
+          {reason}
         </p>
       </div>
     );

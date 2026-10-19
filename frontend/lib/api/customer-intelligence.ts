@@ -20,6 +20,7 @@ import type {
   HealthFactors,
   Kpis,
   ModelInfo,
+  OrderRiskOverview,
   Recommendation,
   RevenueAtRiskPoint,
   RevenueDriverGroup,
@@ -321,4 +322,24 @@ export type RecommendationList = { meta: DataMeta; items: Recommendation[] };
 export async function getRecommendations(): Promise<RecommendationList> {
   if (API_MODE === "demo") return { meta: DEMO_META, items: mock.recommendations };
   return live<RecommendationList>("/api/v1/recommendations");
+}
+
+// --- Order Risk ----------------------------------------------------------------------------
+
+const DEMO_ORDER_RISK: OrderRiskOverview = {
+  meta: DEMO_META,
+  model: {
+    status: "unavailable", reason: "Demo mode has no order history.", metric: "ROC-AUC",
+    modelScore: null, baselineScore: null, modelPrecisionTop: null, baselinePrecisionTop: null,
+    topFraction: 0.1, splitDate: null, trainEnd: null, asOf: null, maturityDays: 90, trainRows: 0,
+    testRows: 0, testReturnRate: null, labelSource: null, lowBelow: 0.2, highAbove: 0.5,
+  },
+  windowDays: 30, windowStart: null, windowOrders: 0, levelCounts: { Low: 0, Medium: 0, High: 0 },
+  orders: [], truncated: false, savingsHigh: null, savingsMediumHigh: null,
+};
+
+/** GET /api/v1/order-risk (live data only: there is no sample order history, so nothing is invented) */
+export async function getOrderRisk(limit = 300): Promise<OrderRiskOverview> {
+  if (API_MODE === "demo") return DEMO_ORDER_RISK;
+  return live<OrderRiskOverview>(`/api/v1/order-risk?limit=${limit}`);
 }

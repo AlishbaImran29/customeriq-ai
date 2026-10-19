@@ -172,3 +172,75 @@ export type ExecutiveSummary = {
   /** "rules" = generated from real numbers with fixed rules (no AI). */
   method?: "rules" | "sample";
 };
+
+// --- Order Risk Check ---------------------------------------------------------------------
+
+export type OrderRiskLevel = "Low" | "Medium" | "High";
+
+/** A "Why?" reason: an English template with {placeholders}; translate the template, then fill in `params`. */
+export type OrderRiskReason = { template: string; params: Record<string, string>; text: string };
+
+export type OrderRiskRow = {
+  orderId: string;
+  orderDate: string;
+  customerId: string;
+  customerName: string;
+  /** In the currency of the imported data. */
+  amount: number;
+  /** 0-1: the model's estimate, not a fact. */
+  probability: number;
+  level: OrderRiskLevel;
+  action: string;
+  reasons: OrderRiskReason[];
+  /** International digits for the wa.me link; null = no usable phone number in the data. */
+  whatsappPhone: string | null;
+};
+
+/** The trust rule's decision and the evidence behind it (present even when the model is hidden). */
+export type OrderRiskModel = {
+  status: "available" | "unavailable";
+  reason: string | null;
+  metric: string;
+  modelScore: number | null;
+  baselineScore: number | null;
+  modelPrecisionTop: number | null;
+  baselinePrecisionTop: number | null;
+  topFraction: number;
+  splitDate: string | null;
+  trainEnd: string | null;
+  asOf: string | null;
+  maturityDays: number;
+  trainRows: number;
+  testRows: number;
+  testReturnRate: number | null;
+  /** "proxy: cancellations" or "courier data" (or a mix). */
+  labelSource: string | null;
+  lowBelow: number;
+  highAbove: number;
+};
+
+/** Counts from the test period; the page multiplies `flaggedReturned` by the shipping cost. */
+export type SavingsCounts = {
+  flaggedLevels: string[];
+  testStart: string;
+  testEnd: string;
+  testOrders: number;
+  flaggedOrders: number;
+  flaggedReturned: number;
+  falseAlarms: number;
+  totalReturned: number;
+};
+
+export type OrderRiskOverview = {
+  meta: DataMeta;
+  model: OrderRiskModel;
+  windowDays: number;
+  windowStart: string | null;
+  windowOrders: number;
+  levelCounts: Record<OrderRiskLevel, number>;
+  /** The risky ones first. */
+  orders: OrderRiskRow[];
+  truncated: boolean;
+  savingsHigh: SavingsCounts | null;
+  savingsMediumHigh: SavingsCounts | null;
+};

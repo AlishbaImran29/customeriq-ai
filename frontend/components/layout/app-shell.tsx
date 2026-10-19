@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   Menu,
+  PackageX,
   Sparkles,
   TrendingUp,
   Upload,
@@ -38,6 +39,7 @@ const navGroups = [
       { href: "/clv", label: "Lifetime Value", icon: Wallet },
       { href: "/health", label: "Health Scores", icon: HeartPulse },
       { href: "/revenue", label: "Revenue Intelligence", icon: TrendingUp },
+      { href: "/order-risk", label: "Order Risk", icon: PackageX },
     ],
   },
   {

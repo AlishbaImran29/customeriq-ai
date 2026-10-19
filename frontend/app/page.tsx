@@ -19,6 +19,7 @@ import {
   reasonFor,
 } from "@/components/data-state";
 import { KpiCard } from "@/components/kpi-card";
+import { OrderRiskCard } from "@/components/order-risk-card";
 import { PageHeader } from "@/components/page-header";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { dayCount, formatRange, lastDays, rangeFromParams } from "@/lib/dates";
@@ -160,6 +161,12 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
           icon={Sparkles}
         />
       </section>
+
+      {live ? (
+        <Suspense fallback={null}>
+          <OrderRiskCard />
+        </Suspense>
+      ) : null}
 
       {growthScoreDetails ? <GrowthScoreExplainer details={growthScoreDetails} /> : null}
 

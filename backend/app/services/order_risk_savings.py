@@ -77,13 +77,15 @@ def savings_estimate(
     orders: list[OrderInput],
     shipping_cost: float,
     flagged_levels: tuple[str, ...] = FLAGGED_LEVELS,
+    assessed: dict[str, OrderAssessment] | None = None,
 ) -> SavingsEstimate | None:
-    """The estimate, or None when the model is not available (no prediction, so no savings)."""
+    """The estimate, or None when the model is not available (no prediction, so no savings).
+    `assessed` can hand over levels that were already worked out, to avoid scoring twice."""
     cost = check_shipping_cost(shipping_cost)
     if not result.available:
         return None
     test_orders = orders_tested_on(result, orders)
-    assessed = assess_orders(result, orders)
+    assessed = assessed if assessed is not None else assess_orders(result, orders)
     flagged, flagged_returned, total_returned = count_flagged(test_orders, assessed, flagged_levels)
     return SavingsEstimate(
         shipping_cost=cost,

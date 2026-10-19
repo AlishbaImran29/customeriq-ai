@@ -203,3 +203,22 @@ export function uploadImport(file: File): Promise<ImportResult> {
 export function listImports(limit = 10): Promise<ImportSummary[]> {
   return apiGet<ImportSummary[]>(`/api/v1/imports?limit=${limit}`);
 }
+
+// --- Courier results (Order Risk) -------------------------------------------------------------
+
+export type CourierImportResult = {
+  rowsInFile: number;
+  rowsUpdated: number;
+  rowsReturned: number;
+  rowsRejected: number;
+  errorCount: number;
+  errors: { row: number | null; column: string | null; message: string }[];
+  errorsTruncated: boolean;
+};
+
+/** POST /api/v1/imports/courier: columns order_id, customer_id, status (delivered/returned), date. */
+export function uploadCourierFile(file: File): Promise<CourierImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiPostForm<CourierImportResult>("/api/v1/imports/courier", form);
+}
