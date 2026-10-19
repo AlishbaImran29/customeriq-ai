@@ -24,7 +24,7 @@ import logging
 import math
 import threading
 from bisect import bisect_right
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from statistics import median
@@ -60,6 +60,19 @@ _RECENCY_INDEX = FEATURES.index("recency_days")
 _SPEND_180_INDEX = FEATURES.index("spend_180d")
 
 ModelStatus = Literal["available", "unavailable"]
+
+
+# A shortage of data is said the same way everywhere: how many MORE are needed, in the unit the rule
+# counts (customers, days or months, not orders: the rules count those).
+def _more_days(needed: int, have: int) -> str:
+    return f"Not enough data yet: {needed - have} more days of order history needed (you have {have}; it needs at least {needed})."
+
+
+def _more_customers(needed: int, have: int, days_ago: int) -> str:
+    return (
+        f"Not enough data yet: {needed - have} more customers with order history needed (only {have} had "
+        f"orders {days_ago} days ago; it needs at least {needed})."
+    )
 
 
 @dataclass
@@ -213,18 +226,14 @@ def _train_churn(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResu
     h = CHURN_HORIZON_DAYS
     need = 2 * h
     if _history_days(snapshot) < need + 90:
-        return ModelResult.unavailable(
-            f"Not enough history: needs at least {need + 90} days of orders "
-            f"(you have {_history_days(snapshot)})."
-        ), {}
+        return ModelResult.unavailable(_more_days(need + 90, _history_days(snapshot))), {}
     train_cutoff, test_cutoff = snapshot.as_of - timedelta(days=2 * h), snapshot.as_of - timedelta(days=h)
     x_train, y_train, _ = _dataset(hists, train_cutoff, h, "churn")
     x_test, y_test, _ = _dataset(hists, test_cutoff, h, "churn")
 
-    problems = _class_problems(y_train, y_test)
     if len(y_train) < MIN_TRAIN_ROWS:
-        problems = [f"only {len(y_train)} customers had order history {2 * h} days ago "
-                    f"(needs at least {MIN_TRAIN_ROWS})"] + problems
+        return ModelResult.unavailable(_more_customers(MIN_TRAIN_ROWS, len(y_train), 2 * h)), {}
+    problems = _class_problems(y_train, y_test)
     if problems:
         return ModelResult.unavailable("Not reliable enough yet: " + "; ".join(problems) + "."), {}
 
@@ -277,18 +286,12 @@ def _train_clv(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResult
     assert snapshot.as_of is not None
     h = CLV_HORIZON_DAYS
     if _history_days(snapshot) < 2 * h + 90:
-        return ModelResult.unavailable(
-            f"Not enough history: needs at least {2 * h + 90} days of orders "
-            f"(you have {_history_days(snapshot)})."
-        ), {}
+        return ModelResult.unavailable(_more_days(2 * h + 90, _history_days(snapshot))), {}
     train_cutoff, test_cutoff = snapshot.as_of - timedelta(days=2 * h), snapshot.as_of - timedelta(days=h)
     x_train, y_train, _ = _dataset(hists, train_cutoff, h, "spend")
     x_test, y_test, _ = _dataset(hists, test_cutoff, h, "spend")
     if len(y_train) < MIN_TRAIN_ROWS:
-        return ModelResult.unavailable(
-            f"Not reliable enough yet: only {len(y_train)} customers had order history "
-            f"{2 * h} days ago (needs at least {MIN_TRAIN_ROWS})."
-        ), {}
+        return ModelResult.unavailable(_more_customers(MIN_TRAIN_ROWS, len(y_train), 2 * h)), {}
 
     model = _fit(_regressor(), x_train, y_train)
     prediction = np.maximum(model.predict(x_test), 0.0)
@@ -347,8 +350,8 @@ def _train_forecast(snapshot: Snapshot) -> tuple[ModelResult, list[dict]]:
     complete = [p for p in series if not p["partial"]]
     if len(complete) < MIN_FORECAST_MONTHS:
         return ModelResult.unavailable(
-            f"Not enough history: a forecast needs at least {MIN_FORECAST_MONTHS} complete months "
-            f"of orders (you have {len(complete)})."
+            f"Not enough data yet: {MIN_FORECAST_MONTHS - len(complete)} more complete months of orders needed "
+            f"(you have {len(complete)}; a forecast needs at least {MIN_FORECAST_MONTHS} complete months)."
         ), []
     revenue = np.array([p["actual"] for p in complete], dtype=float)
 
@@ -433,19 +436,23 @@ def _fingerprint(snapshot: Snapshot) -> tuple:
     )
 
 
-_cache: tuple[tuple, Predictions] | None = None
+# Models for the last few datasets (the whole business, and each channel the dashboard is filtered to).
+_CACHE_SIZE = 8
+_cache: OrderedDict[tuple, Predictions] = OrderedDict()
 _lock = threading.Lock()
 
 
 def get_predictions(snapshot: Snapshot) -> Predictions:
     """Models for this data, retrained automatically when the data changes."""
-    global _cache
     key = _fingerprint(snapshot)
     with _lock:
-        if _cache is not None and _cache[0] == key:
-            return _cache[1]
+        if key in _cache:
+            _cache.move_to_end(key)
+            return _cache[key]
         predictions = train_all(snapshot)
-        _cache = (key, predictions)
+        _cache[key] = predictions
+        while len(_cache) > _CACHE_SIZE:
+            _cache.popitem(last=False)
         return predictions
 
 

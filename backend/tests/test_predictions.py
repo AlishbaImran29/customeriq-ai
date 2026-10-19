@@ -25,9 +25,9 @@ _spec.loader.exec_module(gen)
 
 @pytest.fixture(autouse=True)
 def fresh_cache():
-    pr._cache = None
+    pr._cache.clear()
     yield
-    pr._cache = None
+    pr._cache.clear()
 
 
 def fact(customer: str, day: date, value: float = 50.0, engagement: float | None = None) -> a.OrderFact:
@@ -104,9 +104,9 @@ def test_empty_data_is_unavailable():
 def test_short_history_is_unavailable_with_reason():
     facts = [fact(f"C{i}", date(2026, 9, 1) + timedelta(days=i % 30)) for i in range(60)]
     preds = pr.train_all(a.build_snapshot(facts))
-    assert preds.churn.reason.startswith("Not enough history")
-    assert preds.clv.reason.startswith("Not enough history")
-    assert preds.forecast.reason.startswith("Not enough history")
+    assert preds.churn.reason.startswith("Not enough data yet")
+    assert preds.clv.reason.startswith("Not enough data yet")
+    assert preds.forecast.reason.startswith("Not enough data yet")
     assert preds.churn_probability == {} and preds.predicted_spend == {}
 
 
@@ -272,7 +272,7 @@ def test_assistant_context_lists_unavailable_models_with_reasons():
     ctx = build_context(a.build_snapshot(facts))
     assert ctx["predictions"]["models"]["churn"]["status"] == "unavailable"
     assert "churn" not in ctx["predictions"]
-    assert any(item.startswith("churn probability (Not enough history") for item in ctx["notAvailable"])
+    assert any(item.startswith("churn probability (Not enough data yet") for item in ctx["notAvailable"])
 
 
 # --- regression: found with the real public dataset ----------------------------------------------------------

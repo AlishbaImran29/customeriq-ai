@@ -18,7 +18,10 @@ import {
   load,
   reasonFor,
 } from "@/components/data-state";
+import { ChannelFilter } from "@/components/channel-filter";
+import { ChannelRevenueCard } from "@/components/channel-revenue-card";
 import { KpiCard } from "@/components/kpi-card";
+import { NeedMoreCustomers, NoOrdersInChannel } from "@/components/need-more-data";
 import { OrderRiskCard } from "@/components/order-risk-card";
 import { PageHeader } from "@/components/page-header";
 import { DateRangePicker } from "@/components/date-range-picker";
@@ -28,6 +31,7 @@ import { EmptyState } from "@/components/states";
 import { Badge, impactVariant, riskVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOverview } from "@/lib/api/customer-intelligence";
+import { CHANNELS } from "@/lib/quick-order";
 import type { GrowthScoreDetails } from "@/lib/types";
 import { Money } from "@/components/money";
 import { formatNumber, formatPercent } from "@/lib/utils";
@@ -73,7 +77,7 @@ function GrowthScoreExplainer({ details }: { details: GrowthScoreDetails }) {
   );
 }
 
-export default function OverviewPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+export default function OverviewPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; channel?: string }> }) {
   return (
     <div className="space-y-6">
       <PageHeader
@@ -87,10 +91,11 @@ export default function OverviewPage({ searchParams }: { searchParams: Promise<{
   );
 }
 
-async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; channel?: string }> }) {
   const params = await searchParams;
   const range = rangeFromParams(params.from, params.to);
-  const result = await load(() => getOverview(range ?? undefined));
+  const channel = CHANNELS.find((c) => c.value === params.channel)?.value;
+  const result = await load(() => getOverview(range ?? undefined, channel));
   if (!result.ok) return <DataErrorState error={result.error} />;
   const {
     meta,
@@ -102,8 +107,23 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
     segments,
     topRecommendations,
     atRiskCustomers,
+    revenueByChannel,
+    channelPeriodStart,
+    channelPeriodEnd,
+    segmentsNeeded,
   } = result.data;
-  if (meta.source === "live" && !meta.asOf) return <NoDataState />;
+  if (meta.source === "live" && !meta.asOf) {
+    // A channel with no orders is not "no data": say so, and keep the filter so the seller can go back.
+    if (channel) {
+      return (
+        <>
+          <ChannelFilter current={channel} channels={revenueByChannel} keep={{ from: params.from, to: params.to }} />
+          <NoOrdersInChannel channel={CHANNELS.find((c) => c.value === channel)?.label ?? channel} />
+        </>
+      );
+    }
+    return <NoDataState />;
+  }
   const live = meta.source === "live";
   const churnPredicted = meta.models.churn.status === "available";
   const forecastPredicted = meta.models.forecast.status === "available";
@@ -113,6 +133,10 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
   return (
     <>
       <DataSourceBanner meta={meta} />
+
+      {live && revenueByChannel.length > 0 ? (
+        <ChannelFilter current={channel ?? null} channels={revenueByChannel} keep={{ from: params.from, to: params.to }} />
+      ) : null}
 
       {live && meta.asOf ? <DateRangePicker asOf={meta.asOf} current={range ?? lastDays(meta.asOf, 90)} /> : null}
 
@@ -195,11 +219,19 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
             {segments.length > 0 ? (
               <SegmentDonutChart data={segments} />
             ) : (
-              <EmptyState title="Not enough customers to segment" description="Segmentation needs at least 20 customers." />
+              segmentsNeeded > 0 ? (
+                <NeedMoreCustomers needed={segmentsNeeded} minimum={meta.customerCount + segmentsNeeded} />
+              ) : (
+                <EmptyState title="Not enough customers to segment" description="Segmentation needs at least 20 customers." />
+              )
             )}
           </CardContent>
         </Card>
       </div>
+
+      {live && revenueByChannel.length > 0 ? (
+        <ChannelRevenueCard channels={revenueByChannel} start={channelPeriodStart} end={channelPeriodEnd} />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>

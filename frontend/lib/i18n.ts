@@ -350,6 +350,22 @@ export const URDU: Record<string, string> = {
   "Download the template, fill in one order per row, and upload it here. Upload it again as it grows: orders already imported are not added twice.": "ٹیمپلیٹ ڈاؤن لوڈ کریں، ہر قطار میں ایک آرڈر لکھیں اور یہاں اپ لوڈ کریں۔ شیٹ بڑھنے پر دوبارہ اپ لوڈ کریں: پہلے سے درآمد شدہ آرڈرز دوبارہ نہیں جڑتے۔",
   "Excel template": "ایکسل ٹیمپلیٹ",
   "In Google Sheets: File, Import, Upload the CSV template. When you are done, File, Download, CSV.": "گوگل شیٹس میں: File، Import، پھر CSV ٹیمپلیٹ اپ لوڈ کریں۔ کام ختم ہونے پر File، Download، CSV۔",
+  // Dashboard: channel filter, revenue by channel, "how many more needed".
+  "All channels": "تمام چینلز",
+  "Filter by sales channel": "فروخت کے چینل سے چھانٹیں",
+  "Showing figures for {channel} orders only. The revenue by channel chart below still compares all channels.": "صرف {channel} کے آرڈرز کے اعداد و شمار دکھائے جا رہے ہیں۔ نیچے چینل وار آمدنی کا چارٹ پھر بھی تمام چینلز کا موازنہ کرتا ہے۔",
+  "Revenue by channel": "چینل وار آمدنی",
+  "Where the orders came from, {start} to {end}. All channels are shown, whatever the filter is.": "آرڈرز کہاں سے آئے، {start} سے {end} تک۔ فلٹر کوئی بھی ہو، تمام چینلز دکھائے جاتے ہیں۔",
+  "Where the orders came from.": "آرڈرز کہاں سے آئے۔",
+  "Revenue, orders and customers for each sales channel": "ہر فروخت چینل کی آمدنی، آرڈرز اور کسٹمرز",
+  "Channel": "چینل",
+  "Share of revenue": "آمدنی کا حصہ",
+  "Orders": "آرڈرز",
+  "Customers": "کسٹمرز",
+  "Not enough customers to segment": "گروپس بنانے کے لیے کسٹمرز کافی نہیں",
+  "Not enough data yet: {count} more customers needed. Segmentation needs at least {minimum} customers.": "ابھی ڈیٹا کافی نہیں: {count} مزید کسٹمرز چاہییں۔ گروپس بنانے کے لیے کم از کم {minimum} کسٹمرز درکار ہیں۔",
+  "No {channel} orders yet": "ابھی {channel} کا کوئی آرڈر نہیں",
+  "There are no orders from this channel in your data. Add orders with Add Order, or choose another channel above.": "آپ کے ڈیٹا میں اس چینل کا کوئی آرڈر نہیں۔ Add Order سے آرڈرز شامل کریں، یا اوپر سے دوسرا چینل چنیں۔",
 };
 
 let current: Language = "en";

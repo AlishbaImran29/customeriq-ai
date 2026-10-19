@@ -12,6 +12,7 @@ import { API_MODE, ApiError, apiGet } from "@/lib/api/config";
 import * as mock from "@/lib/mock/customer-intelligence";
 import { withSegmentMeta } from "@/lib/segments";
 import type {
+  ChannelRevenue,
   Customer,
   DataMeta,
   ExecutiveSummary,
@@ -70,12 +71,20 @@ export type Overview = {
   segments: SegmentSummary[];
   topRecommendations: Recommendation[];
   atRiskCustomers: Customer[];
+  /** The sales channel the figures are limited to; null = all channels. */
+  channel: string | null;
+  /** Every channel, over the same period, whatever the filter is. */
+  revenueByChannel: ChannelRevenue[];
+  channelPeriodStart: string | null;
+  channelPeriodEnd: string | null;
+  /** More customers needed before customers can be segmented (0 when there are enough). */
+  segmentsNeeded: number;
 };
 
 type OverviewResponse = Omit<Overview, "segments"> & { segments: SegmentStats[] };
 
 /** GET /api/v1/dashboard/overview (optionally for a chosen period; default: the last 90 days of data) */
-export async function getOverview(range?: DateRange): Promise<Overview> {
+export async function getOverview(range?: DateRange, channel?: string): Promise<Overview> {
   if (API_MODE === "demo") {
     return {
       meta: DEMO_META,
@@ -87,9 +96,15 @@ export async function getOverview(range?: DateRange): Promise<Overview> {
       topRecommendations: mock.recommendations.filter((i) => i.impact === "High").slice(0, 3),
       atRiskCustomers: [...mock.customers].sort(byChurnDesc).slice(0, 4),
       growthScoreDetails: null,
+      channel: null,
+      revenueByChannel: [],
+      channelPeriodStart: null,
+      channelPeriodEnd: null,
+      segmentsNeeded: 0,
     };
   }
-  const query = range ? `?start=${range.from}&end=${range.to}` : "";
+  const parts = [range ? `start=${range.from}&end=${range.to}` : "", channel ? `channel=${encodeURIComponent(channel)}` : ""];
+  const query = parts.some(Boolean) ? `?${parts.filter(Boolean).join("&")}` : "";
   const data = await live<OverviewResponse>(`/api/v1/dashboard/overview${query}`);
   return { ...data, segments: withSegmentMeta(data.segments) };
 }

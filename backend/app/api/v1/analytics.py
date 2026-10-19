@@ -13,6 +13,7 @@ from app.core.errors import ApiError
 from app.db.session import get_db
 from app.schemas.analytics import (
     MODEL_NOT_TRAINED,
+    ChannelRevenue,
     ChurnOut,
     ClvOut,
     CohortsOut,
@@ -34,7 +35,8 @@ from app.schemas.analytics import (
 )
 from app.services import analytics as a
 from app.services import predictions as pr
-from app.services.analytics_data import load_snapshot
+from app.services.analytics_data import channel_revenue, latest_order_date, load_snapshot
+from app.services.channels import CHANNELS
 
 router = APIRouter(tags=["analytics"])
 
@@ -173,9 +175,15 @@ def overview(
     start: date | None = Query(None, description="First day of the KPI period (with `end`)."),
     end: date | None = Query(None, description="Last day of the KPI period; later than the data is cut back."),
     days: int = Query(a.WINDOW_DAYS, ge=1, le=MAX_PERIOD_DAYS, description="Period length when `start` is not given."),
+    channel: str | None = Query(None, description="Only this sales channel (instagram, whatsapp, facebook, website, other); all when left out."),
     db: Session = Depends(get_db),
 ) -> OverviewOut:
-    snapshot = load_snapshot(db)
+    if channel in ("", "all"):
+        channel = None
+    if channel is not None and channel not in CHANNELS:
+        raise HTTPException(status_code=422, detail="Choose a channel: all, " + ", ".join(CHANNELS) + ".")
+    requested_end = end
+    snapshot = load_snapshot(db, channel)
     preds = pr.get_predictions(snapshot)
     if snapshot.as_of is not None:
         end = min(end, snapshot.as_of) if end else snapshot.as_of
@@ -205,7 +213,17 @@ def overview(
     else:
         attention = sorted(snapshot.customers, key=lambda c: c.activity_ratio, reverse=True)
     recs = a.recommendations(snapshot)
+    # The chart compares ALL channels over the same period as the figures, whatever the filter is.
+    latest = latest_order_date(db)
+    chart_end = min(requested_end, latest) if requested_end and latest else latest
+    chart_start = chart_end - timedelta(days=days - 1) if chart_end else None
+    by_channel = channel_revenue(db, chart_start, chart_end) if chart_end and chart_start else []
     return OverviewOut(
+        channel=channel,
+        revenue_by_channel=[ChannelRevenue(**row) for row in by_channel],
+        channel_period_start=chart_start,
+        channel_period_end=chart_end,
+        segments_needed=max(0, a.MIN_CUSTOMERS_FOR_SEGMENTS - len(snapshot.customers)),
         meta=_meta(snapshot, preds, "churnRisk", "growthScore", "revenueForecast", growth=growth),
         kpis=Kpis.model_validate(values),
         kpi_deltas=Kpis.model_validate(deltas),

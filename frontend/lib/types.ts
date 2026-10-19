@@ -245,3 +245,11 @@ export type OrderRiskOverview = {
   savingsHigh: SavingsCounts | null;
   savingsMediumHigh: SavingsCounts | null;
 };
+
+/** Revenue of one sales channel in the chosen period (the dashboard's "Revenue by channel"). */
+export type ChannelRevenue = {
+  channel: string;
+  revenue: number;
+  orders: number;
+  customers: number;
+};

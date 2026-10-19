@@ -299,3 +299,25 @@ export function RiskDistributionChart({ data }: { data: RiskBucket[] }) {
     </ChartFrame>
   );
 }
+
+/** Revenue of each sales channel as horizontal bars. The page also shows the same numbers as a table. */
+export function ChannelRevenueChart({ data }: { data: { label: string; revenue: number }[] }) {
+  useCurrency();
+  return (
+    <ChartFrame label="Revenue of each sales channel" height={Math.max(180, data.length * 44 + 40)}>
+      <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
+        <CartesianGrid horizontal={false} stroke={GRID} />
+        <XAxis
+          type="number"
+          tick={AXIS_TICK}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value: number) => formatCompactCurrency(value)}
+        />
+        <YAxis type="category" dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} width={88} />
+        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
+        <Bar dataKey="revenue" name="Revenue" fill={SERIES_1} radius={[0, 4, 4, 0]} />
+      </BarChart>
+    </ChartFrame>
+  );
+}

@@ -82,6 +82,7 @@ class OrderFact:
     category: str | None
     country: str | None
     engagement: Decimal | None
+    sales_channel: str = "other"   # instagram | whatsapp | facebook | website | other
 
 
 # --- per-customer results -----------------------------------------------------

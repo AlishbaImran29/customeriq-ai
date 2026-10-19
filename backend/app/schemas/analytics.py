@@ -198,8 +198,22 @@ class GrowthScoreDetails(CamelModel):
     missing: list[str]
 
 
+class ChannelRevenue(CamelModel):
+    """Revenue of one sales channel in the chosen period (always all channels, whatever the filter)."""
+
+    channel: str          # instagram | whatsapp | facebook | website | other
+    revenue: float
+    orders: int
+    customers: int
+
+
 class OverviewOut(CamelModel):
     meta: Meta
+    channel: str | None                      # the channel the figures are filtered to; None = all
+    revenue_by_channel: list[ChannelRevenue]
+    channel_period_start: date | None
+    channel_period_end: date | None
+    segments_needed: int                     # more customers needed before customers can be segmented
     kpis: Kpis
     kpi_deltas: Kpis
     growth_score_details: GrowthScoreDetails | None
