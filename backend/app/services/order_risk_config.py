@@ -29,3 +29,16 @@ MIN_CLASS_ROWS = 30         # returned AND not-returned examples, in training an
 
 # --- Model ------------------------------------------------------------------------------
 MAX_COUNTRIES = 5           # countries that get their own column; the rest share "other"
+
+# --- Risk levels and the action for each ---------------------------------------------------
+# A return probability below RISK_LOW_BELOW is Low; above RISK_HIGH_ABOVE is High; in between
+# (both ends included) is Medium. Change the two numbers to make the check stricter or looser.
+RISK_LOW_BELOW = 0.20       # under 20%: Low
+RISK_HIGH_ABOVE = 0.50      # over 50%: High
+RISK_ACTIONS = {
+    "Low": "Ship normally",
+    "Medium": "Confirm on WhatsApp",
+    "High": "Ask for advance payment or call the customer",
+}
+if not 0.0 < RISK_LOW_BELOW < RISK_HIGH_ABOVE < 1.0:
+    raise ValueError("Risk thresholds must satisfy 0 < RISK_LOW_BELOW < RISK_HIGH_ABOVE < 1.")
