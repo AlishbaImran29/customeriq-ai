@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_MODE } from "@/lib/api/config";
 import { OPTIONAL_COLUMNS, REQUIRED_COLUMNS } from "@/lib/api/data-import";
+import { ShipmentUpload } from "@/components/shipment-upload";
 import { T } from "@/components/t";
 
 const live = API_MODE === "live";
@@ -51,6 +52,17 @@ export default function ImportPage() {
           <DataImporter />
         </div>
         <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle><T>Courier shipments</T></CardTitle>
+              <CardDescription>
+                <T>Which courier carried each parcel, where, and what happened. This feeds the courier figures and the real delivered or returned result of each order.</T>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ShipmentUpload />
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle><T>Keep your orders in a sheet?</T></CardTitle>

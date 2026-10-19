@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from app.main import app
-from app.models import Customer, Order
+from app.models import Customer, Order, Shipment
 from app.services.quick_order import check_quick_order
 from tests.conftest import requires_database
 
@@ -102,6 +102,47 @@ def test_long_names_cities_and_notes_are_refused():
     assert "too long" in problems(city="x" * 101)["city"]
     assert "too long" in problems(note="x" * 501)["note"]
     assert check_quick_order(good(note="  Call before delivery  "))[0].note == "Call before delivery"
+
+
+# --- courier and city ------------------------------------------------------------------------------------
+
+def test_the_city_is_tidied_to_one_spelling_and_the_courier_too():
+    clean, errors = check_quick_order(good(city=" isb ", courier="t.c.s "))
+    assert errors == {} and (clean.city, clean.city_raw) == ("Islamabad", "isb")
+    assert (clean.courier.name, clean.courier.known) == ("TCS", True)
+    clean, _ = check_quick_order(good(city="Some New Town", courier="  fast rider  "))
+    assert (clean.city, clean.courier.name, clean.courier.known) == ("Some New Town", "Fast Rider", False)
+    assert check_quick_order(good())[0].courier is None and check_quick_order(good(courier="  "))[0].courier is None
+    assert "too long" in problems(courier="x" * 61)["courier"]
+
+
+@requires_database
+def test_a_courier_creates_a_shipment_that_is_on_its_way(db_client, db_session):
+    assert post(db_client, city="isb", courier="TCS Express", amount=4500).status_code == 201
+    order, shipment = db_session.scalar(select(Order)), db_session.scalar(select(Shipment))
+    assert order.city == "Islamabad"
+    assert (shipment.order_id, shipment.customer_id, shipment.courier, shipment.courier_raw) == (order.id, order.customer_id, "TCS", "TCS Express")
+    assert (shipment.city, shipment.city_raw, shipment.status, shipment.source) == ("Islamabad", "isb", "in_transit", "quick_order")
+    assert (shipment.booked_date, shipment.closed_date, str(shipment.cod_amount)) == (order.order_date, None, "4500.00")
+
+
+@requires_database
+def test_only_cash_on_delivery_orders_have_money_to_collect(db_client, db_session):
+    post(db_client, courier="TCS", paymentType="prepaid")
+    assert db_session.scalar(select(Shipment.cod_amount)) is None
+
+
+@requires_database
+def test_no_courier_means_no_shipment(db_client, db_session):
+    post(db_client)
+    assert db_session.scalar(select(func.count()).select_from(Shipment)) == 0
+    assert db_session.scalar(select(Order.city)) == "Lahore"
+
+
+@requires_database
+def test_a_refused_save_creates_no_shipment_either(db_client, db_session):
+    assert post(db_client, courier="TCS", amount=0).status_code == 422
+    assert db_session.scalar(select(func.count()).select_from(Shipment)) == 0
 
 
 # --- "Other" with the platform's own name ----------------------------------------------------------

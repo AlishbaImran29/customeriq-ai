@@ -30,6 +30,7 @@ export const PK_CITIES = [
 /** Platforms offered while typing under "Other". Any name can still be typed. */
 export const PLATFORM_SUGGESTIONS = ["TikTok", "Daraz", "OLX", "Snapchat", "Telegram", "YouTube", "Walk-in", "Phone call"];
 export const MAX_PLATFORM = 50;
+export const MAX_COURIER = 60;
 
 export const MAX_AMOUNT = 9_999_999.99;
 export const MAX_PRODUCTS = 20;
@@ -38,6 +39,8 @@ export type FormValues = {
   phone: string;
   customerName: string;
   city: string;
+  /** The courier the parcel goes with, e.g. TCS (optional). */
+  courier: string;
   /** Products already added as chips. */
   products: string[];
   /** Text typed in the product box and not added yet: it still counts when saving. */
@@ -51,7 +54,7 @@ export type FormValues = {
   note: string;
 };
 
-export type FieldName = "phone" | "customerName" | "city" | "products" | "amount" | "paymentType" | "channel" | "platform" | "orderDate" | "note";
+export type FieldName = "phone" | "customerName" | "city" | "courier" | "products" | "amount" | "paymentType" | "channel" | "platform" | "orderDate" | "note";
 export type FieldErrors = Partial<Record<FieldName, string>>;
 
 /** Add a product to the list: trimmed, and ignored when empty or already there (any capitals). */
@@ -81,6 +84,7 @@ export function validate(values: FormValues, today: string): FieldErrors {
   if (!values.customerName.trim()) errors.customerName = "Enter the customer's name.";
   else if (values.customerName.trim().length > 100) errors.customerName = "The name is too long (100 characters at most).";
   if (!values.city.trim()) errors.city = "Enter the city.";
+  if (values.courier.trim().length > MAX_COURIER) errors.courier = "The courier name is too long (60 characters at most).";
   const products = addProducts(values.products, values.productInput);
   if (products.length === 0) errors.products = "Add at least one product.";
   else if (products.length > MAX_PRODUCTS) errors.products = "Add at most 20 products.";
@@ -104,14 +108,14 @@ export function validate(values: FormValues, today: string): FieldErrors {
 }
 
 /** The first field with a problem, in the order the form shows them (to move the cursor there). */
-export const FIELD_ORDER: FieldName[] = ["phone", "customerName", "city", "products", "amount", "paymentType", "channel", "platform", "orderDate", "note"];
+export const FIELD_ORDER: FieldName[] = ["phone", "customerName", "city", "courier", "products", "amount", "paymentType", "channel", "platform", "orderDate", "note"];
 export function firstError(errors: FieldErrors): FieldName | null {
   return FIELD_ORDER.find((name) => errors[name]) ?? null;
 }
 
 // --- remember what was used last, to make the next order faster -------------------------------
 
-export type LastUsed = { channel: Channel | ""; platform: string; paymentType: PaymentType | ""; products: string[] };
+export type LastUsed = { channel: Channel | ""; platform: string; courier: string; paymentType: PaymentType | ""; products: string[] };
 export const LAST_USED_KEY = "ciq_quick_order_last";
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem">;
@@ -126,7 +130,7 @@ export function saveLastUsed(storage: Storage, used: LastUsed) {
 
 /** What was used last on this device. Anything unreadable or unexpected is ignored, never trusted. */
 export function loadLastUsed(storage: Storage): LastUsed {
-  const empty: LastUsed = { channel: "", platform: "", paymentType: "", products: [] };
+  const empty: LastUsed = { channel: "", platform: "", courier: "", paymentType: "", products: [] };
   try {
     const raw = JSON.parse(storage.getItem(LAST_USED_KEY) ?? "null");
     if (!raw || typeof raw !== "object") return empty;
@@ -136,7 +140,8 @@ export function loadLastUsed(storage: Storage): LastUsed {
       ? raw.products.filter((p: unknown): p is string => typeof p === "string" && p.trim() !== "" && p.length <= 100).slice(0, MAX_PRODUCTS)
       : [];
     const platform = typeof raw.platform === "string" ? raw.platform.trim().slice(0, MAX_PLATFORM) : "";
-    return { channel, platform, paymentType, products };
+    const courier = typeof raw.courier === "string" ? raw.courier.trim().slice(0, MAX_COURIER) : "";
+    return { channel, platform, courier, paymentType, products };
   } catch {
     return empty;
   }

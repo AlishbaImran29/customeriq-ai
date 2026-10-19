@@ -32,6 +32,8 @@ export type QuickOrderRequest = {
   channel: string;
   /** With channel "other": the platform's own name, e.g. TikTok. */
   platform?: string;
+  /** The courier the parcel goes with (optional); a shipment is created for it. */
+  courier?: string;
   orderDate: string;
   note: string | null;
 };

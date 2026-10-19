@@ -1,0 +1,6 @@
+order_id,customer_id,phone,courier_name,city,booked_date,delivered_or_returned_date,status,return_reason,cod_amount,courier_fee
+T-1001,,,TCS,Isb,01/09/2026,04/09/2026,delivered,,4500,250
+T-1002,,,t.c.s ,Islamabad,02/09/2026,07/09/2026,returned,Customer refused to accept,3200,250
+T-1003,,,Leopards,Lahore,2026-09-03,,in_transit,,1800,
+,,0300-1234567,M and P,pindi,05/09/2026,09/09/2026,returned,Address not found,2500,300
+,,,Trax,Multan,06/09/2026,,lost,,900,

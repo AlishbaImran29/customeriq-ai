@@ -8,6 +8,7 @@ import { FilterPills } from "@/components/ui/filter-pills";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api/config";
 import { createQuickOrder, lookupCustomer, type CustomerLookup, type QuickOrderResponse } from "@/lib/api/orders";
+import { getShipmentSummary } from "@/lib/api/shipments";
 import { setCurrencies, useCurrency } from "@/lib/currency";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -49,7 +50,7 @@ export function Field({
 }
 
 const blank = (today: string): FormValues => ({
-  phone: "", customerName: "", city: "", products: [], productInput: "", amount: "", paymentType: "", channel: "",
+  phone: "", customerName: "", city: "", courier: "", products: [], productInput: "", amount: "", paymentType: "", channel: "",
   platform: "", orderDate: today, note: "",
 });
 
@@ -74,13 +75,18 @@ export function QuickOrderForm() {
   const [lookup, setLookup] = useState<{ phone: string; result: CustomerLookup } | null>(null);
   const [prefilled, setPrefilled] = useState(false);
   const phoneRef = useRef<HTMLInputElement>(null);
+  // Courier names offered while typing: the standard list plus any courier already in the data.
+  const [couriers, setCouriers] = useState<string[]>([]);
 
   // Start with the channel, payment type and products used last on this device.
   useEffect(() => {
     const last = loadLastUsed(window.localStorage);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setValues((v) => ({ ...v, channel: last.channel, platform: last.platform, paymentType: last.paymentType }));
+    setValues((v) => ({ ...v, channel: last.channel, platform: last.platform, courier: last.courier, paymentType: last.paymentType }));
     setLastProducts(last.products);
+    getShipmentSummary()
+      .then((s) => setCouriers(s.couriers))
+      .catch(() => undefined); // The suggestions are a convenience; any courier name can still be typed.
   }, []);
 
   // While the phone number is typed, ask the server whether it already belongs to a customer.
@@ -136,10 +142,11 @@ export function QuickOrderForm() {
         customerName: values.customerName.trim(), phone: values.phone.trim(), city: values.city.trim(), products,
         amount: parseAmount(values.amount) ?? 0, paymentType: values.paymentType, channel: values.channel,
         platform: values.channel === "other" ? values.platform.trim() : "",
+        courier: values.courier.trim(),
         orderDate: values.orderDate, note: values.note.trim() || null,
       });
       saveLastUsed(window.localStorage, {
-        channel: values.channel, platform: values.platform.trim(), paymentType: values.paymentType, products,
+        channel: values.channel, platform: values.platform.trim(), courier: values.courier.trim(), paymentType: values.paymentType, products,
       });
       setLastProducts(products);
       setSaved(response);
@@ -148,7 +155,7 @@ export function QuickOrderForm() {
       setPrefilled(false);
       // Ready for the next order: the phone, name, city, amount and note start empty again;
       // the channel, payment type, products and date stay.
-      setValues((v) => ({ ...blank(today), channel: v.channel, platform: v.platform, paymentType: v.paymentType, products, orderDate: v.orderDate }));
+      setValues((v) => ({ ...blank(today), channel: v.channel, platform: v.platform, courier: v.courier, paymentType: v.paymentType, products, orderDate: v.orderDate }));
       phoneRef.current?.focus();
     } catch (error) {
       const fields = (error instanceof ApiError ? (error.details as { fields?: FieldErrors } | undefined)?.fields : undefined);
@@ -279,6 +286,25 @@ export function QuickOrderForm() {
         <datalist id={`${uid}-cities`}>
           {PK_CITIES.map((city) => (
             <option key={city} value={city} />
+          ))}
+        </datalist>
+      </Field>
+
+      <Field id={id("courier")} label={t("Courier (optional)")} error={errors.courier}>
+        <Input
+          id={id("courier")}
+          list={`${uid}-couriers`}
+          autoComplete="off"
+          placeholder={t("For example TCS, Leopards or Trax")}
+          value={values.courier}
+          onChange={(e) => change("courier", e.target.value)}
+          aria-invalid={errors.courier ? true : undefined}
+          aria-describedby={errors.courier ? `${id("courier")}-error` : undefined}
+          className={bigInput}
+        />
+        <datalist id={`${uid}-couriers`}>
+          {couriers.map((name) => (
+            <option key={name} value={name} />
           ))}
         </datalist>
       </Field>

@@ -370,6 +370,23 @@ export const URDU: Record<string, string> = {
   "Which platform? (optional)": "کون سا پلیٹ فارم؟ (اختیاری)",
   "For example TikTok, Daraz or walk-in": "مثال: TikTok، Daraz یا walk-in",
   "The platform name is too long (50 characters at most).": "پلیٹ فارم کا نام بہت لمبا ہے (زیادہ سے زیادہ 50 حروف)۔",
+  // Courier shipments.
+  "Courier shipments": "کورئیر کی شپمنٹس",
+  "Which courier carried each parcel, where, and what happened. This feeds the courier figures and the real delivered or returned result of each order.": "ہر پارسل کس کورئیر نے کہاں پہنچایا اور کیا ہوا۔ اس سے کورئیر کے اعداد و شمار اور ہر آرڈر کا اصل ڈیلیور یا واپس ہونے کا نتیجہ بنتا ہے۔",
+  "Upload a sheet of the parcels you handed to couriers: courier, city, booked date, status (delivered, returned, in_transit or lost), and the date it was delivered or came back.": "کورئیرز کو دیے گئے پارسلز کی شیٹ اپ لوڈ کریں: کورئیر، شہر، بک کرنے کی تاریخ، اسٹیٹس (delivered، returned، in_transit یا lost)، اور ڈیلیور یا واپس ہونے کی تاریخ۔",
+  "Upload shipments": "شپمنٹس اپ لوڈ کریں",
+  "The file is larger than 4 MB. Split it and upload the parts.": "فائل 4 ایم بی سے بڑی ہے۔ اسے تقسیم کر کے حصے اپ لوڈ کریں۔",
+  "{created} new and {updated} updated shipments. {rejected} rows were rejected.": "{created} نئی اور {updated} اپ ڈیٹ شدہ شپمنٹس۔ {rejected} قطاریں مسترد ہوئیں۔",
+  "{linked} are linked to an order, {unlinked} are not (they still count for the courier figures). {orders} orders got the courier's result.": "{linked} کسی آرڈر سے جڑی ہیں، {unlinked} نہیں جڑیں (پھر بھی کورئیر کے اعداد میں گنی جاتی ہیں)۔ {orders} آرڈرز کو کورئیر کا نتیجہ ملا۔",
+  "New courier names (not in the list, kept as typed): {names}. If one is just another spelling of a courier you know, add it to backend/app/data/courier_names.json.": "نئے کورئیر نام (فہرست میں نہیں، جیسے لکھے ویسے رکھے گئے): {names}۔ اگر کوئی جانے پہچانے کورئیر ہی کی دوسری ہجے ہو تو اسے backend/app/data/courier_names.json میں شامل کریں۔",
+  "New city names (kept as typed): {names}. Add a spelling to backend/app/data/city_names.json if needed.": "نئے شہر کے نام (جیسے لکھے ویسے رکھے گئے): {names}۔ ضرورت ہو تو backend/app/data/city_names.json میں ہجے شامل کریں۔",
+  "{count} shipments saved ({linked} linked to orders).": "{count} شپمنٹس محفوظ ({linked} آرڈرز سے جڑی ہوئی)۔",
+  "Demo data.": "ڈیمو ڈیٹا۔",
+  "{count} of these shipments are made up (marked demo (synthetic)). They are not real results.": "ان میں سے {count} شپمنٹس بنائی ہوئی ہیں (demo (synthetic) کا نشان)۔ یہ اصل نتائج نہیں ہیں۔",
+  "Delete demo shipments": "ڈیمو شپمنٹس مٹائیں",
+  "Courier (optional)": "کورئیر (اختیاری)",
+  "For example TCS, Leopards or Trax": "مثال: TCS، Leopards یا Trax",
+  "The courier name is too long (60 characters at most).": "کورئیر کا نام بہت لمبا ہے (زیادہ سے زیادہ 60 حروف)۔",
 };
 
 let current: Language = "en";

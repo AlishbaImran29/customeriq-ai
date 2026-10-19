@@ -9,6 +9,7 @@ Checking is done by hand (not by the framework) so that EVERY problem is reporte
 by field, in plain words; the page shows each message next to its field.
 """
 
+import hashlib
 import secrets
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -20,8 +21,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
-from app.models import Customer, Order
+from app.models import Customer, Order, Shipment
+from app.models.shipment import STATUS_IN_TRANSIT
 from app.services.channels import CHANNELS, normalise_channel
+from app.services.names import Name, normalise_city, normalise_courier
 from app.services.phone import NOT_A_PK_MOBILE, normalise_pk_phone
 
 PAYMENT_TYPES = ("cod", "prepaid")
@@ -46,6 +49,8 @@ class CleanOrder:
     channel_label: str          # the channel as the seller wrote it, e.g. "TikTok" (shown as written)
     order_date: date
     note: str | None
+    city_raw: str = ""                # the city as it was typed ("isb"); `city` is the standard name
+    courier: Name | None = None       # the courier, with its standard name (None when not given)
 
 
 @dataclass(frozen=True)
@@ -82,11 +87,19 @@ def check_quick_order(data: dict[str, Any]) -> tuple[CleanOrder | None, dict[str
     elif phone is None:
         errors["phone"] = NOT_A_PK_MOBILE
 
-    city = _text(data.get("city"))
-    if not city:
+    city_raw = _text(data.get("city"))
+    city = city_raw
+    if not city_raw:
         errors["city"] = "Enter the city."
-    elif len(city) > 100:
+    elif len(city_raw) > 100:
         errors["city"] = "The city name is too long."
+    else:
+        city = normalise_city(city_raw).name          # "isb" and "Islamabad" are the same city
+
+    courier_text = _text(data.get("courier"))
+    courier = normalise_courier(courier_text) if courier_text else None
+    if courier_text and len(courier_text) > 60:
+        errors["courier"] = "The courier name is too long (60 characters at most)."
 
     products, problem = _check_products(data.get("products"))
     if problem:
@@ -121,7 +134,7 @@ def check_quick_order(data: dict[str, Any]) -> tuple[CleanOrder | None, dict[str
     if errors:
         return None, errors
     label = platform or channel.capitalize()
-    return CleanOrder(name, phone, city, products, amount, payment, channel, label, order_date, note), {}
+    return CleanOrder(name, phone, city, products, amount, payment, channel, label, order_date, note, city_raw, courier), {}
 
 
 def _check_products(raw: Any) -> tuple[list[str], str | None]:
@@ -241,12 +254,13 @@ def create_quick_order(
         new_id = order_id or _new_order_id(order.order_date)
         try:
             with db.begin_nested():
-                db.add(Order(
+                new_order = Order(
                     external_id=new_id, customer_id=customer.id, order_date=order.order_date,
                     order_value=order.amount, channel=order.channel_label, sales_channel=order.channel,
                     payment_type=order.payment_type, city=order.city, products=products, note=order.note,
                     source=source,
-                ))
+                )
+                db.add(new_order)
             order_id = new_id
             break
         except IntegrityError:
@@ -255,6 +269,15 @@ def create_quick_order(
         raise ApiError(503, "service_unavailable", "Could not save the order. Please try again.")
 
     db.flush()
+    if order.courier is not None:
+        # The parcel is on its way: a shipment is created, to be updated when the courier reports.
+        db.add(Shipment(
+            order_id=new_order.id, customer_id=customer.id, courier=order.courier.name, courier_raw=order.courier.raw[:100],
+            city=order.city, city_raw=order.city_raw[:100] or None, booked_date=order.order_date, status=STATUS_IN_TRANSIT,
+            cod_amount=order.amount if order.payment_type == "cod" else None, source="quick_order",
+            external_id="SHP-" + hashlib.sha256(f"{order_id}|{order.courier.name}".encode()).hexdigest()[:14].upper(),
+        ))
+        db.flush()
     count = db.scalar(select(func.count()).select_from(Order).where(Order.customer_id == customer.id))
     if commit:
         db.commit()

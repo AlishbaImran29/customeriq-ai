@@ -19,6 +19,7 @@ class QuickOrderIn(CamelModel):
     payment_type: Any = None        # "cod" | "prepaid"
     channel: Any = None             # instagram | whatsapp | facebook | website | other
     platform: Any = None            # with channel "other": the platform's own name, e.g. TikTok
+    courier: Any = None             # the courier the parcel goes with, e.g. TCS (optional)
     order_date: Any = None          # YYYY-MM-DD; today when left out
     note: Any = None
 
