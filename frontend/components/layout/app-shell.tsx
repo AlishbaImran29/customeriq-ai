@@ -20,6 +20,7 @@ import {
   Wallet,
   X,
   Grid3x3,
+  Truck,
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { CurrencyMenu } from "@/components/layout/currency-menu";
@@ -42,6 +43,7 @@ const navGroups = [
       { href: "/health", label: "Health Scores", icon: HeartPulse },
       { href: "/revenue", label: "Revenue Intelligence", icon: TrendingUp },
       { href: "/order-risk", label: "Order Risk", icon: PackageX },
+      { href: "/couriers", label: "Courier Scorecard", icon: Truck },
     ],
   },
   {

@@ -58,6 +58,7 @@ def db_session():
     # so the real data reappears when it is rolled back.
     connection.execute(text("DELETE FROM sessions"))
     connection.execute(text("DELETE FROM users"))
+    connection.execute(text("DELETE FROM shipments"))
     connection.execute(text("DELETE FROM orders"))
     connection.execute(text("DELETE FROM customers"))
     connection.execute(text("DELETE FROM import_jobs"))
