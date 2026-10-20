@@ -20,6 +20,20 @@ class CourierStatsOut(CamelModel):
     average_days: float | None        # booked to delivered, delivered parcels only
     enough: bool                      # closed >= the minimum count
     needed: int                       # more closed parcels needed before the rates are shown
+    average_days_to_pay: float | None # COD money: delivery to payment; None without enough paid parcels
+    paid_parcels: int                 # fully paid COD parcels behind that average
+
+
+class ReturnAlertOut(CamelModel):
+    courier: str
+    city: str
+    returned: int
+    closed: int
+    rate: float
+    others_returned: int
+    others_closed: int
+    others_rate: float
+    p_value: float
 
 
 class ScorecardOut(CamelModel):
@@ -36,3 +50,12 @@ class ScorecardOut(CamelModel):
     rows: list[CourierStatsOut]       # each courier in each city
     all_couriers: list[str]
     all_cities: list[str]
+    alerts: list[ReturnAlertOut]      # unusually high return rates (both groups passed the minimum)
+
+
+class SuggestionOut(CamelModel):
+    city: str
+    available: bool                   # False = "No courier has enough history in this city yet."
+    source_used: str                  # "demo" when the history is made up
+    best: CourierStatsOut | None
+    others: list[CourierStatsOut]

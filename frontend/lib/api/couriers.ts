@@ -23,6 +23,21 @@ export type CourierStats = {
   enough: boolean;
   /** How many more closed parcels are needed before the rates appear. */
   needed: number;
+  /** COD money: days from delivery to payment. null without enough fully paid parcels. */
+  averageDaysToPay: number | null;
+  paidParcels: number;
+};
+
+export type ReturnAlert = {
+  courier: string;
+  city: string;
+  returned: number;
+  closed: number;
+  rate: number;
+  othersReturned: number;
+  othersClosed: number;
+  othersRate: number;
+  pValue: number;
 };
 
 export type Scorecard = {
@@ -40,6 +55,8 @@ export type Scorecard = {
   rows: CourierStats[];
   allCouriers: string[];
   allCities: string[];
+  /** Unusually high return rates; both groups passed the minimum count. */
+  alerts: ReturnAlert[];
 };
 
 export type ScorecardQuery = { source: string; days: number | null; city: string; courier: string };
@@ -51,4 +68,19 @@ export function getScorecard(q: ScorecardQuery): Promise<Scorecard> {
   if (q.city) params.set("city", q.city);
   if (q.courier) params.set("courier", q.courier);
   return apiGet<Scorecard>(`/api/v1/couriers/scorecard?${params}`);
+}
+
+export type CourierSuggestion = {
+  city: string;
+  /** false = no courier has enough history in this city. */
+  available: boolean;
+  /** "demo" when the history is made up. */
+  sourceUsed: string;
+  best: CourierStats | null;
+  others: CourierStats[];
+};
+
+/** GET /api/v1/couriers/suggest: the courier with the fewest returns in a city, only if its history is long enough. */
+export function getCourierSuggestion(city: string): Promise<CourierSuggestion | null> {
+  return apiGet<CourierSuggestion | null>(`/api/v1/couriers/suggest?city=${encodeURIComponent(city)}`);
 }

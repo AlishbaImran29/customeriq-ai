@@ -21,6 +21,8 @@ import {
   X,
   Grid3x3,
   Truck,
+  Banknote,
+  CalendarClock,
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { CurrencyMenu } from "@/components/layout/currency-menu";
@@ -44,6 +46,8 @@ const navGroups = [
       { href: "/revenue", label: "Revenue Intelligence", icon: TrendingUp },
       { href: "/order-risk", label: "Order Risk", icon: PackageX },
       { href: "/couriers", label: "Courier Scorecard", icon: Truck },
+      { href: "/cash", label: "Cash Tracker", icon: Banknote },
+      { href: "/seasons", label: "Season Forecast", icon: CalendarClock },
     ],
   },
   {

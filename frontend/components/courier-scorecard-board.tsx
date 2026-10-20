@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CircleCheck, Clock, FlaskConical, PackageSearch, Truck, Undo2 } from "lucide-react";
+import { CircleCheck, HandCoins, TriangleAlert, Clock, FlaskConical, PackageSearch, Truck, Undo2 } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilterPills } from "@/components/ui/filter-pills";
@@ -148,6 +148,26 @@ export function CourierScorecardBoard() {
         </CardContent>
       </Card>
 
+      {card.alerts.length > 0 ? (
+        <section aria-label={t("Unusual returns")} className="space-y-3">
+          {card.alerts.map((a) => (
+            <div key={`${a.courier}|${a.city}`} role="note" className="flex items-start gap-3 rounded-xl border border-serious/40 bg-serious/10 px-4 py-3 text-sm text-ink">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-serious" aria-hidden="true" />
+              <div className="space-y-1">
+                <p className="font-medium">{t("Unusual returns")}</p>
+                <p>
+                  {tf("{courier}'s return rate in {city} is {rate} vs {others} for other couriers (based on {closed} and {othersClosed} parcels).", {
+                    courier: a.courier, city: a.city, rate: formatPercent(a.rate * 100, 0), others: formatPercent(a.othersRate * 100, 0),
+                    closed: a.closed, othersClosed: a.othersClosed,
+                  })}
+                </p>
+                <p className="text-xs text-ink-2">{t("High returns may also come from customers or products; check before deciding.")}</p>
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
       {card.rows.length === 0 ? (
         <EmptyState icon={PackageSearch} title={t("No shipments match these filters")} description={t("Try a longer period or another city.")} />
       ) : (
@@ -185,6 +205,7 @@ export function CourierScorecardBoard() {
                       <th scope="col" className="py-2 pr-3 font-medium">{t("Delivered")}</th>
                       <th scope="col" className="py-2 pr-3 font-medium">{t("Returned")}</th>
                       <th scope="col" className="py-2 pr-3 font-medium">{t("Average days to deliver")}</th>
+                      <th scope="col" className="py-2 pr-3 font-medium">{t("Average days to pay")}</th>
                       <th scope="col" className="py-2 text-right font-medium">{t("Refused")}</th>
                     </tr>
                   </thead>
@@ -207,6 +228,9 @@ export function CourierScorecardBoard() {
                             <NotEnough stats={r} />
                           </td>
                         )}
+                        <td className="py-2.5 pr-3 tabular-nums">
+                          {r.averageDaysToPay !== null ? tf("{days} days", { days: r.averageDaysToPay }) : <span className="text-muted">{r.paidParcels > 0 || r.enough ? t("Not enough data yet") : "-"}</span>}
+                        </td>
                         <td className="py-2.5 text-right tabular-nums">{stat(r.refused)}</td>
                       </tr>
                     ))}
@@ -258,6 +282,9 @@ function Figures({ stats }: { stats: CourierStats }) {
           <li className="inline-flex items-center gap-1.5"><Undo2 className="h-3.5 w-3.5 text-muted" aria-hidden="true" />{t("Returned")} {stats.returnRate === null ? "-" : formatPercent(stats.returnRate * 100, 0)}</li>
           {stats.averageDays !== null ? (
             <li className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-muted" aria-hidden="true" />{tf("{days} days", { days: stats.averageDays })}</li>
+          ) : null}
+          {stats.averageDaysToPay !== null ? (
+            <li className="inline-flex items-center gap-1.5"><HandCoins className="h-3.5 w-3.5 text-muted" aria-hidden="true" />{t("Average days to pay")} {tf("{days} days", { days: stats.averageDaysToPay })}</li>
           ) : null}
         </ul>
       ) : (

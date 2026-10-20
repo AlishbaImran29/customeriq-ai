@@ -20,7 +20,8 @@ from sqlalchemy.orm import Session
 
 from app.models import Shipment
 from app.models.shipment import SOURCE_DEMO, STATUS_DELIVERED, STATUS_IN_TRANSIT, STATUS_LOST, STATUS_RETURNED
-from app.services import data_rules
+from app.services import cash_tracker, data_rules
+from app.services.courier_alerts import ReturnAlert, unusual_returns
 
 Source = Literal["auto", "all", "real", "demo"]
 SOURCES = ("auto", "all", "real", "demo")
@@ -42,6 +43,8 @@ class Stats:
     return_rate: float | None = None
     enough: bool = False
     needed: int = 0                  # more closed parcels needed before a rate is shown
+    average_days_to_pay: float | None = None   # COD money: delivery to payment (see cash_tracker.py); needs MIN_GROUP_COUNT paid parcels
+    paid_parcels: int = 0
 
     def __post_init__(self) -> None:
         self.closed = self.delivered + self.returned
@@ -69,6 +72,7 @@ class Scorecard:
     rows: list[Stats] = field(default_factory=list)           # each courier in each city
     all_couriers: list[str] = field(default_factory=list)     # for the filters
     all_cities: list[str] = field(default_factory=list)
+    alerts: list[ReturnAlert] = field(default_factory=list)   # "Unusual returns" (see courier_alerts.py)
 
 
 def _source_filter(source: str):
@@ -102,6 +106,12 @@ def _aggregate(db: Session, columns: list, conditions: list) -> list[Stats]:
     return stats
 
 
+def _fill_days_to_pay(stats: Stats, found: tuple[float | None, int] | None) -> None:
+    average, paid = found or (None, 0)
+    stats.paid_parcels = paid
+    stats.average_days_to_pay = average if data_rules.enough(paid) else None
+
+
 def compute_scorecard(
     db: Session, *, source: str = "auto", days: int | None = None, city: str | None = None, courier: str | None = None
 ) -> Scorecard:
@@ -121,6 +131,9 @@ def compute_scorecard(
         start = end - timedelta(days=days - 1)
         conditions.append(Shipment.booked_date >= start)
     names = db.execute(select(Shipment.courier, Shipment.city).where(*conditions).distinct()).all() if conditions else db.execute(select(Shipment.courier, Shipment.city).distinct()).all()
+    # Alerts compare a courier with the OTHER couriers, so they are worked out before the city/courier filters.
+    alerts = unusual_returns(_aggregate(db, [Shipment.courier, Shipment.city], conditions))
+    alerts = [a for a in alerts if (not city or a.city == city) and (not courier or a.courier == courier)]
     if city:
         conditions.append(Shipment.city == city)
     if courier:
@@ -128,11 +141,45 @@ def compute_scorecard(
 
     rows = _aggregate(db, [Shipment.courier, Shipment.city], conditions)
     couriers = _aggregate(db, [Shipment.courier], conditions)
+    # B3: how long the courier takes to hand over the COD money, shown only with enough paid parcels.
+    by_courier, by_city = cash_tracker.paid_stats(db, used)
+    for stats in couriers:
+        _fill_days_to_pay(stats, by_courier.get(stats.courier))
+    for stats in rows:
+        _fill_days_to_pay(stats, by_city.get((stats.courier, stats.city)))
     rows.sort(key=lambda s: ((s.city is None), s.city or "", -s.shipments, s.courier))
     couriers.sort(key=lambda s: (-s.shipments, s.courier))
     return Scorecard(
         source_requested=source, source_used=used, real_shipments=int(real), demo_shipments=int(demo),
         min_group_count=data_rules.MIN_GROUP_COUNT, period_days=days, period_start=start, period_end=end,
         shipments=sum(s.shipments for s in couriers), couriers=couriers, rows=rows,
-        all_couriers=sorted({n[0] for n in names}), all_cities=sorted({n[1] for n in names if n[1]}),
+        all_couriers=sorted({n[0] for n in names}), all_cities=sorted({n[1] for n in names if n[1]}), alerts=alerts,
     )
+
+
+@dataclass
+class Suggestion:
+    city: str
+    available: bool                     # False = no courier in this city has enough history
+    source_used: str
+    best: Stats | None = None
+    others: list[Stats] = field(default_factory=list)   # the other couriers that also have enough history
+
+
+def suggest_courier(db: Session, city_text: str) -> Suggestion | None:
+    """The courier with the lowest return rate in a city, but ONLY among couriers whose history there
+    passes the minimum (project rule 2). Returns None when the city text is empty.
+
+    The advice is about past parcels only. The same real-first rule as the scorecard applies, so made-up
+    demo data never advises on a business that has real shipments.
+    """
+    from app.services.names import normalise_city
+
+    name = normalise_city(city_text)
+    if name is None:
+        return None
+    card = compute_scorecard(db, source="auto", city=name.name)
+    ranked = sorted((r for r in card.rows if r.enough and r.city == name.name), key=lambda r: (r.return_rate, -r.closed))
+    if not ranked:
+        return Suggestion(name.name, False, card.source_used)
+    return Suggestion(name.name, True, card.source_used, ranked[0], ranked[1:])

@@ -115,3 +115,32 @@ def test_endpoint_shape_and_validation(db_client, db_session):
     assert row["courier"] == "TESTCOURIER" and row["deliveryRate"] == 1.0 and row["enough"] is True
     assert db_client.get("/api/v1/couriers/scorecard?source=bogus").status_code == 422
     assert db_client.get("/api/v1/couriers/scorecard?days=0").status_code == 422
+
+
+def test_suggestion_picks_the_lowest_return_rate_among_couriers_with_enough_history(db_session):
+    from app.services.courier_scorecard import suggest_courier
+
+    add(db_session, "AAA", "Lahore", "delivered", 18)
+    add(db_session, "AAA", "Lahore", "returned", 7)            # 28% returned, 25 finished
+    add(db_session, "BBB", "Lahore", "delivered", 22)
+    add(db_session, "BBB", "Lahore", "returned", 3)            # 12% returned, 25 finished
+    add(db_session, "CCC", "Lahore", "delivered", 10)          # 0% returned but only 10 finished: ignored
+    found = suggest_courier(db_session, "lahore ")
+    assert found.available and found.city == "Lahore"
+    assert found.best.courier == "BBB" and [o.courier for o in found.others] == ["AAA"]
+
+
+def test_no_suggestion_when_no_courier_has_enough_history(db_session):
+    from app.services.courier_scorecard import suggest_courier
+
+    add(db_session, "AAA", "Lahore", "delivered", 19)
+    found = suggest_courier(db_session, "Lahore")
+    assert not found.available and found.best is None
+    assert suggest_courier(db_session, "  ") is None
+
+
+def test_suggest_endpoint(db_client, db_session):
+    add(db_session, "AAA", "Lahore", "delivered", 20)
+    body = db_client.get("/api/v1/couriers/suggest?city=Lahore").json()
+    assert body["available"] is True and body["best"]["courier"] == "AAA"
+    assert db_client.get("/api/v1/couriers/suggest?city=Nowhereville").json()["available"] is False

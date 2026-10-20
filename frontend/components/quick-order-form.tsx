@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Loader2, Plus, UserCheck, UserPlus, X } from "lucide-react";
 import { ChannelLabel } from "@/components/channel-icon";
+import { CourierSuggestionNote } from "@/components/courier-suggestion";
 import { Button } from "@/components/ui/button";
 import { FilterPills } from "@/components/ui/filter-pills";
 import { Input } from "@/components/ui/input";
@@ -307,6 +308,7 @@ export function QuickOrderForm() {
             <option key={name} value={name} />
           ))}
         </datalist>
+        <CourierSuggestionNote city={values.city} onPick={(name) => change("courier", name)} />
       </Field>
 
       <Field id={productId} label={t("Products")} error={productsError}>

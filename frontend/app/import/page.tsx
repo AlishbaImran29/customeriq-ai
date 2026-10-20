@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_MODE } from "@/lib/api/config";
 import { OPTIONAL_COLUMNS, REQUIRED_COLUMNS } from "@/lib/api/data-import";
+import { PaymentUpload } from "@/components/payment-upload";
+import { SalesUpload } from "@/components/sales-upload";
 import { ShipmentUpload } from "@/components/shipment-upload";
 import { T } from "@/components/t";
 
@@ -61,6 +63,28 @@ export default function ImportPage() {
             </CardHeader>
             <CardContent>
               <ShipmentUpload />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle><T>Courier payments</T></CardTitle>
+              <CardDescription>
+                <T>The money couriers paid you for cash on delivery parcels. The Cash Tracker uses it to show what is still owed.</T>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PaymentUpload />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle><T>Product sales</T></CardTitle>
+              <CardDescription>
+                <T>Units sold per product over time. The Season Forecast uses it to say how much to stock for Eid or Christmas.</T>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SalesUpload />
             </CardContent>
           </Card>
           <Card>

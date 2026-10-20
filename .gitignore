@@ -16,6 +16,9 @@ data/
 *.xlsx
 *.xls
 !**/fixtures/**
+# The downloadable blank templates (headers and clearly-marked examples only, no real data)
+!frontend/public/*_template.csv
+!frontend/public/*_template.xlsx
 
 # Editor / OS
 .vscode/
