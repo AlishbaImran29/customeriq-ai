@@ -48,6 +48,19 @@ def create_app() -> FastAPI:
                 )
         return await call_next(request)
 
+    @app.middleware("http")
+    async def safe_headers(request: Request, call_next):
+        """Headers that close common browser-side holes on every response."""
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"        # never guess a file type
+        response.headers["X-Frame-Options"] = "DENY"                  # no one may frame the API
+        response.headers["Referrer-Policy"] = "no-referrer"
+        # Customer data must never be kept by a shared cache or a proxy.
+        response.headers.setdefault("Cache-Control", "no-store")
+        if production:
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        return response
+
     register_error_handlers(app)
     app.include_router(api_router)
     return app

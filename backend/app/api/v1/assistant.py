@@ -3,8 +3,10 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_user
 from app.core.config import Settings, get_settings
 from app.db.session import get_db
+from app.models import User
 from app.schemas.assistant import AssistantStatus, ChatRequest, ChatResponse
 from app.services.analytics_data import load_snapshot
 from app.services.assistant import (
@@ -15,10 +17,15 @@ from app.services.assistant import (
     recent_turns,
 )
 from app.services.assistant_context import build_context
+from app.services.rate_limit import check_rate_limit
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
+
+# Every question costs money: one account may ask this many in this many seconds.
+QUESTIONS_PER_WINDOW = 15
+WINDOW_SECONDS = 600
 
 NO_DATA_REPLY = (
     "No customer data has been imported yet, so there is nothing to analyse. "
@@ -49,8 +56,10 @@ def chat(
     request: ChatRequest,
     model: AssistantModel = Depends(get_assistant_model),
     db: Session = Depends(get_db),
+    user: User = Depends(require_user),
 ) -> ChatResponse:
     """Answer a question using only the computed data summary (no names or emails)."""
+    check_rate_limit(f"assistant:{user.id}", limit=QUESTIONS_PER_WINDOW, window_seconds=WINDOW_SECONDS, what="the assistant")
     snapshot = load_snapshot(db)
     if snapshot.empty:
         return ChatResponse(
