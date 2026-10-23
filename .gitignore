@@ -11,7 +11,7 @@ __pycache__/
 
 # Uploaded or real customer data
 backend/uploads/
-data/
+/data/
 *.csv
 *.xlsx
 *.xls

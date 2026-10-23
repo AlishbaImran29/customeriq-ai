@@ -1,0 +1,20 @@
+{
+  "_help": "Editable list of courier names. Each key is the name that is shown; its list holds the other ways people write it. Capitals, spaces, dots and dashes do not matter ('T.C.S', 'tcs ' and 'TCS' are the same). To teach the app a new spelling, add it to the list of the right courier. A courier that is not here is kept as typed and reported as a new name.",
+  "couriers": {
+    "TCS": ["tcs express", "tcs courier", "t c s", "tcs pakistan"],
+    "Leopards": ["leopard", "leopards courier", "leopard courier", "leopards courier services", "lcs"],
+    "M&P": ["m and p", "mnp", "m & p", "mp express", "m&p express", "m&p express logistics", "mulphin"],
+    "Trax": ["trax pk", "trax courier", "trax logistics"],
+    "PostEx": ["post ex", "postex pk", "postex logistics"],
+    "BlueEX": ["blue ex", "blue-ex", "blueex pakistan", "blue ex courier"],
+    "Call Courier": ["callcourier", "call courier services", "cc"],
+    "Kangaroo": ["kangaroo express", "kangaroo courier"],
+    "Stallion": ["stallion courier", "stallion express"],
+    "Swyft": ["swyft logistics", "swyft pk"],
+    "Daraz Express": ["daraz", "daraz logistics", "dex"],
+    "Pakistan Post": ["pakpost", "pak post", "pakistan post office", "ems"],
+    "DHL": ["dhl express", "dhl pakistan"],
+    "FedEx": ["fed ex", "fedex express"],
+    "Rider": ["rider courier", "riderpk", "rider pk"]
+  }
+}

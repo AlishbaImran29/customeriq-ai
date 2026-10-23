@@ -1,0 +1,24 @@
+{
+  "_help": "Extra ways of writing a city. The city names themselves are in app/services/pk_cities.py; add a short form or a spelling here (the key is the name that is shown). Capitals, spaces, dots and dashes do not matter. A city that is not known is kept as typed and reported as a new name.",
+  "cities": {
+    "Islamabad": ["isb", "isl", "islo", "isloo", "islamabd", "islamabad capital territory", "ict"],
+    "Rawalpindi": ["pindi", "rwp", "rawalpindi city", "rawalpindy"],
+    "Karachi": ["khi", "krachi", "karchi", "karachi city"],
+    "Lahore": ["lhr", "lahor", "lahore city"],
+    "Faisalabad": ["fsd", "faislabad", "lyallpur", "faisalabad city"],
+    "Peshawar": ["pwr", "pesh", "peshwar"],
+    "Multan": ["mux", "multan city"],
+    "Hyderabad": ["hyd", "hyderabad sindh"],
+    "Quetta": ["qta", "queta"],
+    "Gujranwala": ["gwl", "gujranwalla"],
+    "Sialkot": ["skt", "sialkot city"],
+    "Bahawalpur": ["bwp", "bahawalpoor"],
+    "Dera Ghazi Khan": ["dgk", "dg khan", "d g khan", "d.g khan"],
+    "Rahim Yar Khan": ["ryk", "r y khan", "rahimyarkhan"],
+    "Sargodha": ["sgd", "sargoda"],
+    "Sheikhupura": ["shk", "sheikupura", "shaikhupura"],
+    "Mirpur": ["mirpur ajk", "mirpur azad kashmir"],
+    "Muzaffarabad": ["muzaffarabad ajk"],
+    "Abbottabad": ["abbotabad", "atd"]
+  }
+}

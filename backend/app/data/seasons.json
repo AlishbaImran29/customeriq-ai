@@ -1,0 +1,33 @@
+{
+  "_about": "The seasons the Season Forecast looks at. EDIT THIS FILE to change them; restart the app after. Dates of the Islamic festivals move about 11 days earlier each year and depend on moon sighting, so the dates below are APPROXIMATE (+/- 1 day): check them against the official calendar and correct them. A season has one window per year (start and end dates). 'fixed' seasons repeat on the same dates every year (give them as MM-DD); 'moving' seasons list the festival day for each year, and the window is the lead_days days up to and including that day. Only years listed here are used. The Christmas window ends on 8 December so that it fits inside the public demo data (Online Retail II), which stops on 9 December 2011; for a real shop change \"end\" to 12-31.",
+  "seasons": [
+    {
+      "id": "eid_ul_fitr",
+      "name": "Eid ul Fitr",
+      "kind": "moving",
+      "lead_days": 21,
+      "dates": {
+        "2021": "2021-05-14", "2022": "2022-05-03", "2023": "2023-04-22", "2024": "2024-04-11",
+        "2025": "2025-04-01", "2026": "2026-03-21", "2027": "2027-03-10"
+      }
+    },
+    {
+      "id": "eid_ul_adha",
+      "name": "Eid ul Adha",
+      "kind": "moving",
+      "lead_days": 14,
+      "dates": {
+        "2021": "2021-07-21", "2022": "2022-07-10", "2023": "2023-06-29", "2024": "2024-06-17",
+        "2025": "2025-06-07", "2026": "2026-05-27", "2027": "2027-05-17"
+      }
+    },
+    {
+      "id": "christmas",
+      "name": "Christmas run-up (1 Nov - 8 Dec)",
+      "kind": "fixed",
+      "start": "11-01",
+      "end": "12-08",
+      "years": [2009, 2010, 2011, 2012, 2021, 2022, 2023, 2024, 2025, 2026, 2027]
+    }
+  ]
+}
