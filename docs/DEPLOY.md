@@ -227,6 +227,15 @@ No new environment variables. Run `scripts/migrate_remote.py` once to apply them
 - **COD confirmation** (`/messenger/cod`): approve the `cod_confirmation` template (Templates, "Add unboxing and review templates"). The customer replies YES or NO (or taps a Confirm / Cancel quick-reply button on the Meta template). No answer in 12 hours: "needs a phone call" and the order shows one Order Risk level higher.
 - **Customer records**: notes, tags and source on each customer's page, a timeline, `/duplicates` to merge customers with the same email, and erase (anonymise keeps the orders as anonymous figures; delete removes them).
 
+## Workflows (migration 0026)
+
+Run `scripts/migrate_remote.py` to add the workflow tables. Workflows are built at **Workflows** and read at **Workflow Logs**.
+
+- Triggers that fire today: a new customer, a new order, an order status change, stock falling to its warning level, a customer's WhatsApp message, a customer silent for N days, every day, every Monday.
+- Actions: send a WhatsApp or email message (through the same consent, quiet-hours and weekly-limit checks as everything else), add or remove a tag, make a to-do, show a notification, change an order's status (forward only), call an approved web address.
+- Waiting steps and retries are kept in the `jobs` table. The hourly scheduler (see the Auto Messenger section) runs them, so the GitHub Actions schedule must be set up for waits to work. The "Run waiting steps now" button does the same by hand.
+- `WORKFLOW_WEBHOOK_URLS` (optional): comma separated https addresses a workflow may call. Empty means the web-address action is refused.
+
 ## Troubleshooting
 
 | You see | Likely cause and fix |

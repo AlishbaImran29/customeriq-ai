@@ -979,6 +979,21 @@ export const URDU: Record<string, string> = {
   "Delete customer and orders": "کسٹمر اور آرڈرز حذف کریں",
   "Merge": "ضم کریں",
   "Audit trail": "آڈٹ ٹریل",
+  "Automation": "آٹومیشن",
+  "Workflows": "ورک فلوز",
+  "Workflow Logs": "ورک فلو لاگز",
+  "New workflow": "نیا ورک فلو",
+  "Test run": "ٹیسٹ رن",
+  "Pause": "روکیں",
+  "Check": "چیک کریں",
+  "Runs": "رنز",
+  "Steps that failed": "ناکام مراحل",
+  "Try again": "دوبارہ کوشش کریں",
+  "Add a condition": "شرط شامل کریں",
+  "Add an action": "عمل شامل کریں",
+  "When this happens": "جب یہ ہو",
+  "Only if (optional)": "صرف اگر (اختیاری)",
+  "Then do this": "تب یہ کریں",
 };
 
 let current: Language = "en";

@@ -104,6 +104,9 @@ def record_incoming(db: Session, provider_id: str, from_digits: str, kind: str, 
         if stop:
             consent_service.set_consent(db, customer.id, "whatsapp", False, "whatsapp_stop", note="Customer replied STOP")
         _mark_replied(db, customer.id, at)
+        from app.services.workflows import hooks
+
+        hooks.message_received(db, customer.id, text, provider_id)
         from app.services.messaging import media                  # imported here: media.py uses the sending code, which uses this file's neighbours
 
         if kind in ("image", "video"):

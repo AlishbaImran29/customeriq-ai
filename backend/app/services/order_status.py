@@ -138,6 +138,9 @@ def record_status(
     db.flush()
     if at >= now - timedelta(days=NOTIFY_MAX_AGE_DAYS):
         inventory.on_status(db, order, status)        # reserve on confirmed, sell on dispatched (fresh statuses only)
+        from app.services.workflows import hooks
+
+        hooks.order_status_changed(db, order, status)  # workflows can react (fresh statuses only, like the stock and the messages)
     if not notify:
         return StatusChange(True, False, history, reason="not_requested")
     if not forward:

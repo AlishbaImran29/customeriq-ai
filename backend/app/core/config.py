@@ -115,6 +115,8 @@ class Settings(BaseSettings):
     # Shopify webhooks (part 2): the app's signing secret, and optionally the one shop that may send.
     shopify_webhook_secret: SecretStr | None = None
     shopify_shop_domain: str | None = None
+    # Workflows may call only these web addresses (https, comma separated). Empty = the "call a web address" action is refused.
+    workflow_webhook_urls: str = ""
     supabase_media_bucket: str = "customer-media"       # private bucket for customer videos (part 3)
 
     # AI assistant (server-side only; never exposed to the browser).

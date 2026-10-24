@@ -33,6 +33,8 @@ import {
   ClipboardCheck,
   Boxes,
   GitMerge,
+  Workflow,
+  ScrollText,
   PhoneCall,
   Send,
   ShieldCheck,
@@ -99,6 +101,13 @@ const navGroups = [
     ],
   },
   {
+    label: "Automation",
+    items: [
+      { href: "/workflows", label: "Workflows", icon: Workflow },
+      { href: "/workflows/runs", label: "Workflow Logs", icon: ScrollText },
+    ],
+  },
+  {
     label: "Actions",
     items: [
       { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
@@ -119,7 +128,7 @@ const navGroups = [
 
 function isActive(pathname: string, href: string) {
   // "/", "/import" and "/launch" only match themselves, because "/import/whatsapp" and "/launch/trends" have their own menu items.
-  return href === "/" || href === "/import" || href === "/launch" ? pathname === href : pathname.startsWith(href);
+  return href === "/" || href === "/import" || href === "/launch" || href === "/workflows" ? pathname === href : pathname.startsWith(href);
 }
 
 // Matches Tailwind's `lg` breakpoint, where the sidebar is always visible.

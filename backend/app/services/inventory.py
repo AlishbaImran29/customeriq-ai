@@ -86,11 +86,15 @@ def _seen(db: Session, key: str) -> StockMovement | None:
 
 
 def _move(db: Session, item: StockItem, kind: str, quantity: int, stock_delta: int, reserved_delta: int, *, order_id: int | None = None, key: str | None = None, note: str | None = None) -> StockMovement:
+    before = item.stock - item.reserved
     item.stock += stock_delta
     item.reserved = max(0, item.reserved + reserved_delta)
     movement = StockMovement(item_id=item.id, kind=kind, quantity=quantity, stock_delta=stock_delta, reserved_delta=reserved_delta, order_id=order_id, idempotency_key=key, note=note)
     db.add(movement)
     db.flush()
+    from app.services.workflows import hooks
+
+    hooks.stock_changed(db, item, before, movement.id)      # lets a "stock is low" workflow react
     return movement
 
 

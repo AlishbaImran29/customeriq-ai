@@ -39,6 +39,11 @@ const REASONS: Record<string, string> = {
   not_forward: "The status went back, so the customer was not messaged.",
   too_old: "The change is too old to tell the customer about.",
   not_requested: "You chose not to message the customer.",
+  invalid_transition: "The order cannot go back to that status.",
+  webhook_not_approved: "This web address is not in the approved list (WORKFLOW_WEBHOOK_URLS).",
+  webhook_not_https: "The web address must start with https://.",
+  no_customer: "The customer no longer exists.",
+  no_order: "The order no longer exists.",
 };
 
 export function reasonPhrase(code: string | null | undefined): Phrase | null {

@@ -76,6 +76,9 @@ def _after_order_added(db: Session, result, whatsapp_ok: bool) -> None:
         if order is not None:
             order_status.record_status(db, get_settings(), order, "confirmed", source="manual")
             cod_confirm.ask(db, get_settings(), order)       # a COD order: ask the customer to confirm (only if a template is approved)
+            from app.services.workflows import hooks
+
+            hooks.order_created(db, order, new_customer=not result.returning)      # workflows can react (never fails the order)
         db.commit()
     except Exception:  # noqa: BLE001
         logging.getLogger(__name__).exception("Could not record the consent or status of a new order")
