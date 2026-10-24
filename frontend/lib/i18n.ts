@@ -850,6 +850,8 @@ export const URDU: Record<string, string> = {
   "Doing worse than the estimate.": "اندازے سے خراب جا رہا ہے۔",
   "Before ad spend.": "اشتہاری خرچ سے پہلے۔",
   "Quality": "معیار",
+  "Download a sample file": "نمونہ فائل ڈاؤن لوڈ کریں",
+  "The sample file is made-up data in the same format Google uses. Use it to try the page; it is not real search data.": "نمونہ فائل گوگل کے انداز میں بنایا ہوا ڈیٹا ہے۔ صفحہ آزمانے کے لیے استعمال کریں؛ یہ اصل سرچ ڈیٹا نہیں۔",
   "Growth": "اضافہ",
   "New": "نیا",
   "{count} products have too few sales to compare (Not enough data yet).": "{count} مصنوعات کی فروخت موازنے کے لیے بہت کم ہے (ابھی ڈیٹا کافی نہیں)۔",

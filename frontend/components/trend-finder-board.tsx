@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Clock, Loader2, Minus, Plus, RefreshCw, Rocket, Sparkles, Trash2, TrendingDown, TrendingUp, Upload } from "lucide-react";
+import { Clock, Download, Loader2, Minus, Plus, RefreshCw, Rocket, Sparkles, Trash2, TrendingDown, TrendingUp, Upload } from "lucide-react";
 import { LaunchSteps } from "@/components/launch-steps";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -123,10 +123,17 @@ function UploadCard({ onUploaded }: { onUploaded: () => void }) {
       </CardHeader>
       <CardContent className="space-y-2">
         <input ref={input} type="file" accept=".csv,text/csv" className="sr-only" id="trend-file" onChange={(e) => send(e.target.files?.[0])} />
-        <Button disabled={busy} onClick={() => input.current?.click()}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
-          {t("Upload CSV")}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button disabled={busy} onClick={() => input.current?.click()}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
+            {t("Upload CSV")}
+          </Button>
+          <a href="/google_trends_sample_template.csv" download className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm font-medium text-ink-2 hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {t("Download a sample file")}
+          </a>
+        </div>
+        <p className="text-xs text-muted">{t("The sample file is made-up data in the same format Google uses. Use it to try the page; it is not real search data.")}</p>
         <div aria-live="polite">
           {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
           {done ? <p className="text-sm text-success">{done}</p> : null}
