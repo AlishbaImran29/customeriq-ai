@@ -61,6 +61,8 @@ def db_session():
     connection.execute(text("DELETE FROM shipments"))
     connection.execute(text("DELETE FROM courier_payments"))
     connection.execute(text("DELETE FROM product_sales"))
+    connection.execute(text("DELETE FROM launch_projects"))
+    connection.execute(text("DELETE FROM ai_cache"))
     connection.execute(text("DELETE FROM orders"))
     connection.execute(text("DELETE FROM customers"))
     connection.execute(text("DELETE FROM import_jobs"))

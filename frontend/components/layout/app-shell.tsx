@@ -23,6 +23,8 @@ import {
   Truck,
   Banknote,
   CalendarClock,
+  Rocket,
+  Telescope,
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { CurrencyMenu } from "@/components/layout/currency-menu";
@@ -51,6 +53,13 @@ const navGroups = [
     ],
   },
   {
+    label: "Launch Studio",
+    items: [
+      { href: "/launch", label: "Launch projects", icon: Rocket },
+      { href: "/launch/trends", label: "Trend Finder", icon: Telescope },
+    ],
+  },
+  {
     label: "Actions",
     items: [
       { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
@@ -68,8 +77,8 @@ const navGroups = [
 ];
 
 function isActive(pathname: string, href: string) {
-  // "/" and "/import" only match themselves, because "/import/whatsapp" has its own menu item.
-  return href === "/" || href === "/import" ? pathname === href : pathname.startsWith(href);
+  // "/", "/import" and "/launch" only match themselves, because "/import/whatsapp" and "/launch/trends" have their own menu items.
+  return href === "/" || href === "/import" || href === "/launch" ? pathname === href : pathname.startsWith(href);
 }
 
 // Matches Tailwind's `lg` breakpoint, where the sidebar is always visible.
