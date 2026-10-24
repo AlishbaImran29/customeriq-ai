@@ -1,0 +1,41 @@
+# Runs everything that is "due" in Auto Messenger: messages waiting for the end of quiet hours, retries, customer
+# videos waiting to be stored, review requests, campaign batches and journey steps.
+#
+# Why GitHub Actions: the site runs on Vercel, which has no background workers, so something outside has to call the
+# server on a timetable. This is free, needs no extra account, and the timetable below is plain text you can read.
+# Every pass is short and safe to repeat: running it twice never sends a message twice.
+#
+# SETUP (once): in the GitHub repository open Settings > Secrets and variables > Actions and add two repository secrets:
+#   SCHEDULER_URL     the address of the API, for example https://your-api.vercel.app   (no slash at the end)
+#   SCHEDULER_SECRET  the same value as SCHEDULER_SECRET in the API project's settings on Vercel
+# Neither value is written in this file.
+
+name: Auto Messenger scheduler
+
+on:
+  schedule:
+    - cron: "7 * * * *"        # every hour, 7 minutes past (GitHub may start it a few minutes late)
+  workflow_dispatch: {}         # and a "Run workflow" button, to try it by hand
+
+permissions: {}                 # this job needs no access to the repository
+
+jobs:
+  run-due:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ask the server to run what is due
+        env:
+          SCHEDULER_URL: ${{ secrets.SCHEDULER_URL }}
+          SCHEDULER_SECRET: ${{ secrets.SCHEDULER_SECRET }}
+        run: |
+          if [ -z "$SCHEDULER_URL" ] || [ -z "$SCHEDULER_SECRET" ]; then
+            echo "SCHEDULER_URL and SCHEDULER_SECRET must be set as repository secrets."
+            exit 1
+          fi
+          status=$(curl --silent --show-error --max-time 120 --output response.json --write-out "%{http_code}" \
+            --request POST --header "X-Scheduler-Secret: $SCHEDULER_SECRET" "$SCHEDULER_URL/api/v1/internal/run-scheduler")
+          echo "HTTP $status"
+          cat response.json
+          echo
+          test "$status" = "200"

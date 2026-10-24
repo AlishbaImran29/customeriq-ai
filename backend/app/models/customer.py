@@ -32,5 +32,7 @@ class Customer(TimestampMixin, Base):
     phone: Mapped[str | None] = mapped_column(String(40))
     # The Pakistani mobile number as +923XXXXXXXXX (None if there is none, or it is not one).
     phone_normalised: Mapped[str | None] = mapped_column(String(13))
+    # The language this customer likes to be messaged in ("ur" or "en"); None = the seller's default (Auto Messenger).
+    preferred_language: Mapped[str | None] = mapped_column(String(2))
 
     orders: Mapped[list["Order"]] = relationship(back_populates="customer")

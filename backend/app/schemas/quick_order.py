@@ -22,6 +22,7 @@ class QuickOrderIn(CamelModel):
     courier: Any = None             # the courier the parcel goes with, e.g. TCS (optional)
     order_date: Any = None          # YYYY-MM-DD; today when left out
     note: Any = None
+    whatsapp_ok: Any = None         # true = the customer agreed to WhatsApp order updates (Auto Messenger)
 
 
 class QuickOrderOut(CamelModel):

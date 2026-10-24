@@ -71,6 +71,7 @@ export function QuickOrderForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [topError, setTopError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [whatsappOk, setWhatsappOk] = useState(false);
   const [saved, setSaved] = useState<QuickOrderResponse | null>(null);
   const [lastProducts, setLastProducts] = useState<string[]>([]);
   const [lookup, setLookup] = useState<{ phone: string; result: CustomerLookup } | null>(null);
@@ -145,11 +146,13 @@ export function QuickOrderForm() {
         platform: values.channel === "other" ? values.platform.trim() : "",
         courier: values.courier.trim(),
         orderDate: values.orderDate, note: values.note.trim() || null,
+        whatsappOk: whatsappOk || undefined,
       });
       saveLastUsed(window.localStorage, {
         channel: values.channel, platform: values.platform.trim(), courier: values.courier.trim(), paymentType: values.paymentType, products,
       });
       setLastProducts(products);
+      setWhatsappOk(false);
       setSaved(response);
       setErrors({});
       setLookup(null);
@@ -439,6 +442,11 @@ export function QuickOrderForm() {
           className={bigInput}
         />
       </Field>
+
+      <label className="flex items-start gap-2 text-sm text-ink-2">
+        <input type="checkbox" checked={whatsappOk} onChange={(e) => setWhatsappOk(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--color-accent)]" />
+        {t("The customer agreed to get order updates on WhatsApp")}
+      </label>
 
       <Field id={id("note")} label={t("Note (optional)")} error={errors.note}>
         <textarea

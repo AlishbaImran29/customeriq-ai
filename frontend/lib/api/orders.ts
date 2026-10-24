@@ -36,6 +36,8 @@ export type QuickOrderRequest = {
   courier?: string;
   orderDate: string;
   note: string | null;
+  /** The customer agreed to WhatsApp order updates (Auto Messenger). Leave out when they did not say. */
+  whatsappOk?: boolean;
 };
 
 export type QuickOrderResponse = {

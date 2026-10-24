@@ -48,7 +48,7 @@ def _call(settings: Settings, method: str, path: str, body: bytes | None, conten
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:      # noqa: S310 (the address is our own setting)
             raw = response.read()
     except (urllib.error.URLError, TimeoutError):
-        raise ApiError(502, "storage_failed", "The screenshot storage did not answer. Please try again.") from None
+        raise ApiError(502, "storage_failed", "The file storage did not answer. Please try again.") from None
     try:
         return json.loads(raw) if raw else {}
     except json.JSONDecodeError:
@@ -92,5 +92,40 @@ def delete_screenshot(settings: Settings, path: str) -> None:
         return
     try:
         _call(settings, "DELETE", f"/object/{urllib.parse.quote(settings.supabase_bucket)}/{path}", None, "application/json")
+    except ApiError:
+        return
+
+
+# --- generic helpers for other buckets (customer videos) ---------------------------------------------------------------
+
+
+def put_object(settings: Settings, bucket: str, path: str, content: bytes, mime: str) -> None:
+    """Save bytes in a private bucket. Raises ApiError 503 when storage is not set up, 502 when it does not answer."""
+    if not storage_configured(settings):
+        raise ApiError(503, "storage_not_configured", "File storage is not set up. Add SUPABASE_URL and SUPABASE_SERVICE_KEY to the backend settings.")
+    _call(settings, "POST", f"/object/{urllib.parse.quote(bucket)}/{path}", content, mime)
+
+
+def signed_url_in(settings: Settings, bucket: str, path: str) -> str | None:
+    """A link to a file that works for an hour, or None when storage is not set up or the call fails."""
+    if not storage_configured(settings):
+        return None
+    try:
+        answer = _call(settings, "POST", f"/object/sign/{urllib.parse.quote(bucket)}/{path}",
+                       json.dumps({"expiresIn": SIGNED_URL_SECONDS}).encode(), "application/json")
+    except ApiError:
+        return None
+    link = answer.get("signedURL") or answer.get("signedUrl")
+    if not link:
+        return None
+    return link if link.startswith("http") else f"{settings.supabase_url.rstrip('/')}/storage/v1{link}"  # type: ignore[union-attr]
+
+
+def delete_object(settings: Settings, bucket: str, path: str) -> None:
+    """Best effort: a failure here must never stop a record from being deleted."""
+    if not storage_configured(settings):
+        return
+    try:
+        _call(settings, "DELETE", f"/object/{urllib.parse.quote(bucket)}/{path}", None, "application/json")
     except ApiError:
         return

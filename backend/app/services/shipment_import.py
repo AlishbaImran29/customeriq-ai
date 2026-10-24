@@ -44,7 +44,7 @@ from app.services.phone import normalise_pk_phone
 REQUIRED_COLUMNS = ("courier_name", "booked_date", "status")
 KNOWN_COLUMNS = REQUIRED_COLUMNS + (
     "order_id", "customer_id", "phone", "city", "delivered_or_returned_date", "return_reason",
-    "cod_amount", "courier_fee", "data_source",
+    "cod_amount", "courier_fee", "data_source", "tracking_number",
 )
 HEADER_ALIASES = {
     "courier": "courier_name", "courier_company": "courier_name",
@@ -53,6 +53,8 @@ HEADER_ALIASES = {
     "closed_date": "delivered_or_returned_date", "delivery_date": "delivered_or_returned_date",
     "reason": "return_reason", "cod": "cod_amount", "cod_value": "cod_amount",
     "fee": "courier_fee", "charges": "courier_fee", "mobile": "phone",
+    "tracking": "tracking_number", "tracking_no": "tracking_number", "tracking_id": "tracking_number",
+    "consignment_number": "tracking_number", "consignment_no": "tracking_number", "cn_number": "tracking_number", "cn": "tracking_number",
 }
 LINK_WINDOW_DAYS = 3
 MAX_REASON = 500
@@ -98,6 +100,7 @@ class ShipmentRow:
     customer_ref: str | None         # customer_id as written
     phone: str | None                # +923XXXXXXXXX
     data_source: str | None
+    tracking_number: str | None = None   # the courier's tracking (CN) number, used in order messages
     external_id: str = ""
 
 
@@ -194,6 +197,9 @@ def validate_shipments(parsed: ParsedFile) -> ShipmentValidation:
         data_source = _as_text(cell("data_source"))
         if data_source is not None and len(data_source) > 30:
             errors.append(RowError(n, "data_source", "Value is longer than 30 characters."))
+        tracking = _as_text(cell("tracking_number"))
+        if tracking is not None and len(tracking) > 80:
+            errors.append(RowError(n, "tracking_number", "Value is longer than 80 characters."))
 
         if errors:
             result.errors.extend(errors)
@@ -205,7 +211,7 @@ def validate_shipments(parsed: ParsedFile) -> ShipmentValidation:
         result.rows.append(ShipmentRow(
             row=n, courier=courier, city=city, booked_date=booked, closed_date=closed, status=status,
             return_reason=reason, refused=refused and status == STATUS_RETURNED, cod_amount=cod,
-            courier_fee=fee, order_ref=order_ref, customer_ref=customer_ref, phone=phone, data_source=data_source,
+            courier_fee=fee, order_ref=order_ref, customer_ref=customer_ref, phone=phone, data_source=data_source, tracking_number=tracking,
             external_id=_fingerprint(who, courier.name, booked, cod, seen),
         ))
     return result
@@ -322,6 +328,8 @@ def import_shipments(db: Session, content: bytes, file_type: str, default_source
                 status=r.status, return_reason=r.return_reason, refused=r.refused, cod_amount=r.cod_amount,
                 courier_fee=r.courier_fee, source=r.data_source or default_source,
             )
+            if r.tracking_number is not None:
+                values["tracking_number"] = r.tracking_number        # a re-import without the column never erases a saved number
             shipment = existing.get(r.external_id)
             if shipment is None:
                 db.add(Shipment(external_id=r.external_id, **values))
@@ -341,6 +349,29 @@ def import_shipments(db: Session, content: bytes, file_type: str, default_source
                     order.outcome, order.outcome_date, order.label_source = r.status, r.closed_date, LABEL_COURIER
                     result.orders_updated += 1
         db.commit()
+        _announce_statuses(db, rows, links, default_source)
     result.new_courier_names = sorted({r.courier.name for r in rows if not r.courier.known})
     result.new_city_names = sorted({r.city.name for r in rows if r.city and not r.city.known})
     return result
+
+
+def _announce_statuses(db: Session, rows: list[ShipmentRow], links: dict, default_source: str) -> None:
+    """Auto Messenger: record where each linked parcel is now, and message the customer about FRESH changes.
+
+    It must never break the import: any problem is logged and the import still succeeds."""
+    import logging
+
+    from app.core.config import get_settings
+    from app.services import order_status
+
+    try:
+        settings = get_settings()
+        for r in rows:
+            order, _ = links.get(r.external_id, (None, None))
+            if order is None or (r.data_source or default_source) == SOURCE_DEMO:
+                continue
+            order_status.record_from_shipment(db, settings, order, r.status, r.closed_date or r.booked_date, r.courier.name, r.tracking_number)
+        db.commit()
+    except Exception:  # noqa: BLE001 (a messaging problem must not undo a good import)
+        logging.getLogger(__name__).exception("Could not record order statuses after the shipment import")
+        db.rollback()

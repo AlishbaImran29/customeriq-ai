@@ -95,7 +95,7 @@ class MailProviderError(Exception):
         self.reason = reason
 
 
-def _send_webhook(settings: Settings, to: str, subject: str, text: str, html: str) -> None:
+def _send_webhook(settings: Settings, to: str, subject: str, text: str, html: str, headers: dict[str, str] | None = None) -> None:
     """Posts the message to a Google Apps Script web app that sends it from the owner's Gmail.
 
     Apps Script answers a POST with a redirect to the result page; urllib follows it with a GET,
@@ -110,6 +110,7 @@ def _send_webhook(settings: Settings, to: str, subject: str, text: str, html: st
             "text": text,
             "html": html,
             "name": APP_NAME,
+            "headers": headers or {},          # the script may ignore them
         }
     ).encode()
     request = urllib.request.Request(
@@ -146,7 +147,7 @@ def _send_smtp(settings: Settings, message: EmailMessage) -> None:
         client.send_message(message)
 
 
-def _send_brevo(settings: Settings, sender: str, to: str, subject: str, text: str, html: str) -> None:
+def _send_brevo(settings: Settings, sender: str, to: str, subject: str, text: str, html: str, headers: dict[str, str] | None = None) -> None:
     """Brevo's HTTPS API. Unlike SMTP it only needs port 443, so it works on hosts that block mail ports."""
     assert settings.brevo_api_key
     body = json.dumps(
@@ -156,6 +157,7 @@ def _send_brevo(settings: Settings, sender: str, to: str, subject: str, text: st
             "subject": subject,
             "textContent": text,
             "htmlContent": html,
+            **({"headers": headers} if headers else {}),
         }
     ).encode()
     request = urllib.request.Request(
@@ -172,20 +174,24 @@ def _send_brevo(settings: Settings, sender: str, to: str, subject: str, text: st
         response.read()
 
 
-def send_email(settings: Settings, to: str, subject: str, text: str, html: str) -> None:
+def send_email(settings: Settings, to: str, subject: str, text: str, html: str, headers: dict[str, str] | None = None) -> None:
+    """`headers` are extra email headers (for example List-Unsubscribe). Newlines are stripped from them."""
+    headers = {k: _single_line(v) for k, v in (headers or {}).items()}
     sender = sender_address(settings)
     try:
         if settings.mail_webhook_url:
-            _send_webhook(settings, to, subject, text, html)
+            _send_webhook(settings, to, subject, text, html, headers)
         elif settings.brevo_api_key:
             assert sender
-            _send_brevo(settings, sender, to, subject, text, html)
+            _send_brevo(settings, sender, to, subject, text, html, headers)
         else:
             assert sender
             message = EmailMessage()
             message["From"] = formataddr((APP_NAME, sender))
             message["To"] = to
             message["Subject"] = subject
+            for name, value in headers.items():
+                message[name] = value
             message.set_content(text)
             message.add_alternative(html, subtype="html")
             _send_smtp(settings, message)

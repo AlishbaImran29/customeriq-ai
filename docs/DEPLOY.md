@@ -180,6 +180,43 @@ The Competitor Board can keep a screenshot with each saved ad. Everything else w
 
 Screenshots are PNG, JPEG or WebP, at most 3 MB, and are shown through links that stop working after an hour.
 
+## Optional: Auto Messenger (WhatsApp and email)
+
+Everything works **without** setting any of this: messages are only recorded (a "dry run"), so you can try every page
+for free. Do the steps below only when you want to really send.
+
+**Always first.** In the API project on Vercel add `MESSAGING_DRY_RUN` = `true`, a long random `MESSAGING_SECRET`, and
+`PUBLIC_API_URL` (the API address, no slash at the end). Then run `migrate_remote.py` (the new tables).
+
+**WhatsApp (Meta's official Cloud API).**
+1. At developers.facebook.com create an app (type *Business*) and add the **WhatsApp** product. Meta gives you a free
+   *test phone number*. In *API Setup* add your own phone as a recipient (the test number can only message people you add).
+2. Copy the **Phone number ID** and the **temporary access token** into `WHATSAPP_PHONE_NUMBER_ID` and `WHATSAPP_ACCESS_TOKEN`.
+   (A temporary token lasts about a day; for lasting use create a *system user* token in Meta Business settings.)
+3. Copy the app secret (*App settings > Basic*) into `WHATSAPP_APP_SECRET`, and invent a `WHATSAPP_VERIFY_TOKEN` (any text).
+4. In *WhatsApp > Configuration > Webhook* click *Edit*: callback URL `https://<your API>/api/v1/webhooks/whatsapp`, verify token = your
+   `WHATSAPP_VERIFY_TOKEN`. Then *subscribe* to the `messages` field. The server checks Meta's signature on every call.
+5. A business can only START a chat with a template Meta has approved. In the app's *Templates* page write your message, click
+   *Preview* to see the text in Meta's form (`{{1}}`, `{{2}}`), create the same template in Meta's WhatsApp Manager, and when Meta
+   approves it set its status to *approved* in CustomerIQ. (Replies inside 24 hours of the customer's message need no template.)
+6. In *Auto Messenger > Settings* turn **Dry run** off. (If `MESSAGING_DRY_RUN=true` is set on the server it stays on.)
+
+**Email** uses the same mail setup as the sign-in codes (see step 4 above); nothing more to add.
+
+**Shopify** (optional). In Shopify *Settings > Notifications > Webhooks* add webhooks (format JSON) for `orders/create`,
+`fulfillments/create`, `fulfillments/update` and `products/create`, all pointing to `https://<your API>/api/v1/webhooks/shopify`.
+Copy the signing secret shown at the bottom of that page into `SHOPIFY_WEBHOOK_SECRET` (and your shop address into `SHOPIFY_SHOP_DOMAIN`).
+A customer's marketing tick-box at checkout counts as **email** consent only; WhatsApp consent is never assumed.
+
+**Scheduler** (runs messages that were waiting, review requests, campaign batches and journeys). The site has no background
+workers, so GitHub knocks on the API every hour. In the API project add `SCHEDULER_SECRET` (a long random text). In the GitHub
+repository open *Settings > Secrets and variables > Actions* and add `SCHEDULER_URL` (the API address) and the same `SCHEDULER_SECRET`.
+The timetable is `.github/workflows/scheduler.yml`; the *Run workflow* button tries it by hand. (If GitHub refuses to accept a push
+that changes a workflow file, add that file on github.com instead.)
+
+**Customer videos** are kept in a second private bucket named `customer-media` in Supabase Storage (create it the same way as
+`competitor-ads`, *Public bucket* off). `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are the ones from the screenshots step.
+
 ## Troubleshooting
 
 | You see | Likely cause and fix |
@@ -193,6 +230,11 @@ Screenshots are PNG, JPEG or WebP, at most 3 MB, and are shown through links tha
 | "Create an account" does not appear | Sign-up needs the email variables (`MAIL_WEBHOOK_URL` + `MAIL_WEBHOOK_SECRET`, or `BREVO_API_KEY` + `MAIL_FROM`, or `SMTP_*`), and `ALLOW_SIGNUP` must not be `false`. The owner account must already exist and be confirmed. |
 | **"That setup code is not correct"** | Use the value of `SETUP_CODE` from the API project's settings. |
 | A screenshot cannot be saved ("Screenshot storage is not set up") | `SUPABASE_URL` or `SUPABASE_SERVICE_KEY` is missing in the API project, or the bucket `competitor-ads` does not exist. |
+| Meta says *The callback URL or verify token couldn't be validated* | `WHATSAPP_VERIFY_TOKEN` on Vercel differs from the one typed in Meta, or the API was not redeployed after you added it. |
+| Messages stay *skipped: no_consent* | The customer has no recorded consent. Record it in *Auto Messenger > Consent* (only if they really agreed). |
+| Messages are *skipped: meta_template_not_approved* | Business-started WhatsApp messages need a template approved by Meta. Set its status to *approved* in *Templates* after Meta approves it. |
+| Nothing happens overnight | Quiet hours (default 21:00 to 10:00 Pakistan time): messages wait in the queue. The scheduler sends them in the morning. |
+| The GitHub *Auto Messenger scheduler* run fails with HTTP 403 | `SCHEDULER_SECRET` in GitHub differs from the one on Vercel. HTTP 503 means it is not set on Vercel. |
 | CSV upload fails on the live site only | The file is over 4.5 MB (see "Free limits"). |
 | The assistant says **no remaining credits** | Add API credits in the Claude Console (a Claude Pro subscription does not include them). |
 

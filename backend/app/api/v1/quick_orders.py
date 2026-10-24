@@ -1,9 +1,12 @@
 """Quick Order Entry endpoints: add one order by hand, and look a customer up by phone number."""
 
+import logging
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.db.session import get_db
 from app.models import Order
@@ -52,7 +55,27 @@ def add_order(body: QuickOrderIn, db: Session = Depends(get_db)) -> QuickOrderOu
     if clean is None:
         raise ApiError(422, "invalid_order", "Some fields need attention.", {"fields": errors})
     result = create_quick_order(db, clean)
+    _after_order_added(db, result, body.whatsapp_ok is True)
     return QuickOrderOut(
         order_id=result.order_id, customer_id=result.customer_id, customer_name=result.customer_name,
         phone=result.phone, returning=result.returning, customer_orders=result.customer_orders,
     )
+
+
+def _after_order_added(db: Session, result, whatsapp_ok: bool) -> None:
+    """Auto Messenger: remember the customer's consent if the seller ticked the box, and start the order's status
+    history at "confirmed" (which sends the confirmation when the customer agreed). Never allowed to fail the order."""
+    from app.services import order_status
+    from app.services.messaging import consent
+
+    try:
+        customer = find_customer(db, result.phone)
+        order = db.scalar(select(Order).where(Order.external_id == result.order_id))
+        if customer is not None and whatsapp_ok:
+            consent.set_consent(db, customer.id, "whatsapp", True, "add_order", note="The seller ticked: customer agreed to WhatsApp order updates")
+        if order is not None:
+            order_status.record_status(db, get_settings(), order, "confirmed", source="manual")
+        db.commit()
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).exception("Could not record the consent or status of a new order")
+        db.rollback()

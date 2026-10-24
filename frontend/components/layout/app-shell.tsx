@@ -30,6 +30,15 @@ import {
   Palette,
   Calculator,
   Flag,
+  Send,
+  ShieldCheck,
+  FileText,
+  Inbox,
+  Video,
+  Megaphone,
+  Route,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { CurrencyMenu } from "@/components/layout/currency-menu";
@@ -67,6 +76,20 @@ const navGroups = [
       { href: "/launch/creatives", label: "Creative Studio", icon: Palette },
       { href: "/launch/profit", label: "Profit Check", icon: Calculator },
       { href: "/launch/finish", label: "Launch", icon: Flag },
+    ],
+  },
+  {
+    label: "Auto Messenger",
+    items: [
+      { href: "/messenger/settings", label: "Messenger Settings", icon: Settings },
+      { href: "/messenger/templates", label: "Templates", icon: FileText },
+      { href: "/messenger/consent", label: "Consent", icon: ShieldCheck },
+      { href: "/messenger/messages", label: "Messages", icon: Inbox },
+      { href: "/messenger/orders", label: "Order Updates", icon: Send },
+      { href: "/messenger/videos", label: "Customer Videos", icon: Video },
+      { href: "/messenger/campaigns", label: "Announcements", icon: Megaphone },
+      { href: "/messenger/journeys", label: "Journeys", icon: Route },
+      { href: "/messenger/results", label: "Messaging Results", icon: BarChart3 },
     ],
   },
   {

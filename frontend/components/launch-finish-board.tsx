@@ -8,6 +8,9 @@ import { Money } from "@/components/money";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import { Megaphone } from "lucide-react";
+import { productFromLaunch, MESSENGER_AVAILABLE } from "@/lib/api/messaging";
 import { getResults, linkProduct, listLinked, markLaunched, searchProductNames, unlinkProduct, type Results } from "@/lib/api/launch-steps";
 import { updateProject, type Project } from "@/lib/api/launch";
 import { ApiError } from "@/lib/api/config";
@@ -27,6 +30,7 @@ export function LaunchFinishBoard() {
 }
 
 function FinishStep({ project, reload }: { project: Project; reload: () => void }) {
+  const router = useRouter();
   const { t, tf } = useLanguage();
   const [date, setDate] = useState(project.launchedOn ?? today());
   const [linked, setLinked] = useState<{ id: number; name: string }[]>([]);
@@ -65,6 +69,16 @@ function FinishStep({ project, reload }: { project: Project; reload: () => void 
     }
   }
 
+  async function announce() {
+    setError(null);
+    try {
+      await productFromLaunch(project.id);
+      router.push("/messenger/campaigns");
+    } catch {
+      setError(t("Something went wrong. Please try again."));
+    }
+  }
+
   return (
     <div className="space-y-5">
       <Card>
@@ -81,6 +95,7 @@ function FinishStep({ project, reload }: { project: Project; reload: () => void 
             {project.launchedOn ? t("Change the launch date") : t("Mark as launched")}
           </Button>
           {project.launchedOn && project.status === "launched" ? <Button variant="ghost" onClick={undo}>{t("Move back to Ready")}</Button> : null}
+          {MESSENGER_AVAILABLE ? <Button variant="secondary" onClick={announce}><Megaphone className="h-4 w-4" aria-hidden="true" />{t("Announce this product to customers")}</Button> : null}
         </CardContent>
       </Card>
       <div aria-live="polite">{error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}</div>

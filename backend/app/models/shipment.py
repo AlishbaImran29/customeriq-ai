@@ -52,4 +52,5 @@ class Shipment(TimestampMixin, Base):
     refused: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")  # "refused by customer"
     cod_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     courier_fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    tracking_number: Mapped[str | None] = mapped_column(String(80))          # the courier's tracking (CN) number, for order messages
     source: Mapped[str | None] = mapped_column(String(30))                   # "import", "quick_order" or SOURCE_DEMO

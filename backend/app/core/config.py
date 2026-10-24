@@ -97,6 +97,26 @@ class Settings(BaseSettings):
     supabase_service_key: SecretStr | None = None
     supabase_bucket: str = "competitor-ads"
 
+    # Auto Messenger. Every secret here lives ONLY in the API project settings, never in code or the browser.
+    # WhatsApp Cloud API (Meta). The test phone number from Meta works for demos.
+    whatsapp_access_token: SecretStr | None = None
+    whatsapp_phone_number_id: str | None = None
+    whatsapp_app_secret: SecretStr | None = None        # checks the signature Meta puts on every webhook call
+    whatsapp_verify_token: SecretStr | None = None      # the word you type in Meta when you register the webhook
+    whatsapp_api_version: str = "v21.0"
+    # True = NOTHING is really sent (messages are only written to the log and the database). It wins over the
+    # toggle in the settings page, so a demo or a test server can be made safe with one variable.
+    messaging_dry_run: bool | None = None
+    # Signs the unsubscribe link in emails so nobody can unsubscribe someone else. Make it long and random.
+    messaging_secret: SecretStr | None = None
+    public_api_url: str | None = None                   # the address of this API, used inside unsubscribe links
+    # Protects the endpoint a scheduler calls to run due messages (part 5).
+    scheduler_secret: SecretStr | None = None
+    # Shopify webhooks (part 2): the app's signing secret, and optionally the one shop that may send.
+    shopify_webhook_secret: SecretStr | None = None
+    shopify_shop_domain: str | None = None
+    supabase_media_bucket: str = "customer-media"       # private bucket for customer videos (part 3)
+
     # AI assistant (server-side only; never exposed to the browser).
     # Provider: "anthropic" (Claude, default) or "openai".
     ai_provider: Literal["anthropic", "openai"] = "anthropic"
