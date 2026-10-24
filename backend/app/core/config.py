@@ -92,6 +92,11 @@ class Settings(BaseSettings):
     def setup_code_required(self) -> bool:
         return bool(self.setup_code and self.setup_code.get_secret_value().strip())
 
+    # Screenshot storage for Launch Studio (Supabase Storage, a PRIVATE bucket). The service key stays on the server.
+    supabase_url: str | None = None
+    supabase_service_key: SecretStr | None = None
+    supabase_bucket: str = "competitor-ads"
+
     # AI assistant (server-side only; never exposed to the browser).
     # Provider: "anthropic" (Claude, default) or "openai".
     ai_provider: Literal["anthropic", "openai"] = "anthropic"

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_user
-from app.api.v1 import analytics, assistant, auth, cash, couriers, health, imports, launch, order_risk, quick_orders, seasons, shipments, whatsapp_import
+from app.api.v1 import analytics, assistant, auth, cash, couriers, health, imports, launch, launch_steps, order_risk, quick_orders, seasons, shipments, whatsapp_import
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -22,3 +22,4 @@ api_router.include_router(couriers.router, dependencies=_signed_in)
 api_router.include_router(cash.router, dependencies=_signed_in)
 api_router.include_router(seasons.router, dependencies=_signed_in)
 api_router.include_router(launch.router, dependencies=_signed_in)
+api_router.include_router(launch_steps.router, dependencies=_signed_in)

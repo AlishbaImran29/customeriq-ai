@@ -131,3 +131,13 @@ export function apiPatchJson<T>(path: string, body: unknown, init?: RequestInit)
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
 }
+
+/** PUT a JSON body and parse the JSON response. */
+export function apiPutJson<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  return request<T>(path, {
+    ...init,
+    method: "PUT",
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", ...init?.headers },
+  });
+}

@@ -25,6 +25,11 @@ import {
   CalendarClock,
   Rocket,
   Telescope,
+  BookUser,
+  Eye,
+  Palette,
+  Calculator,
+  Flag,
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { CurrencyMenu } from "@/components/layout/currency-menu";
@@ -57,6 +62,11 @@ const navGroups = [
     items: [
       { href: "/launch", label: "Launch projects", icon: Rocket },
       { href: "/launch/trends", label: "Trend Finder", icon: Telescope },
+      { href: "/launch/vendors", label: "Vendor Book", icon: BookUser },
+      { href: "/launch/competitors", label: "Competitor Board", icon: Eye },
+      { href: "/launch/creatives", label: "Creative Studio", icon: Palette },
+      { href: "/launch/profit", label: "Profit Check", icon: Calculator },
+      { href: "/launch/finish", label: "Launch", icon: Flag },
     ],
   },
   {

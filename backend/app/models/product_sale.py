@@ -15,7 +15,7 @@ class ProductSale(TimestampMixin, Base):
 
     __tablename__ = "product_sales"
     __table_args__ = (
-        UniqueConstraint("product", "week_start", name="product_week"),
+        UniqueConstraint("product", "week_start", name="uq_product_sales_product_week"),
         CheckConstraint("units >= 0", name="units_non_negative"),
     )
 

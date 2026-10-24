@@ -169,6 +169,17 @@ Variables**, change `FRONTEND_ORIGINS` to the website address exactly (for examp
 - **Passwords and accounts:** teammates and password resets use `manage_users.py`; point it at the
   hosted database the same way as `migrate_remote.py` (ask for help before doing this).
 
+## Optional: screenshots in Launch Studio
+
+The Competitor Board can keep a screenshot with each saved ad. Everything else works without this.
+
+1. In Supabase open **Storage** and click **New bucket**. Name it `competitor-ads` and leave **Public bucket** OFF.
+2. In Supabase open **Project Settings > API**. Copy the project URL and the **service_role** key.
+3. In the **API** project on Vercel add `SUPABASE_URL` (the project URL) and `SUPABASE_SERVICE_KEY` (the service_role key),
+   then redeploy the API. Never add the service key to the website project.
+
+Screenshots are PNG, JPEG or WebP, at most 3 MB, and are shown through links that stop working after an hour.
+
 ## Troubleshooting
 
 | You see | Likely cause and fix |
@@ -181,6 +192,7 @@ Variables**, change `FRONTEND_ORIGINS` to the website address exactly (for examp
 | No email arrives, or the page says "We couldn't send the email" | Check the spam folder first. The message now ends with the reason: `[OSError, error 99]` means this host cannot reach SMTP servers (use the mail relay); "unexpected way" means the script is not deployed with access **Anyone** or the address does not end in `/exec`; "refused the login" means `MAIL_WEBHOOK_SECRET` differs from the one in the script. Fix it and redeploy the API. |
 | "Create an account" does not appear | Sign-up needs the email variables (`MAIL_WEBHOOK_URL` + `MAIL_WEBHOOK_SECRET`, or `BREVO_API_KEY` + `MAIL_FROM`, or `SMTP_*`), and `ALLOW_SIGNUP` must not be `false`. The owner account must already exist and be confirmed. |
 | **"That setup code is not correct"** | Use the value of `SETUP_CODE` from the API project's settings. |
+| A screenshot cannot be saved ("Screenshot storage is not set up") | `SUPABASE_URL` or `SUPABASE_SERVICE_KEY` is missing in the API project, or the bucket `competitor-ads` does not exist. |
 | CSV upload fails on the live site only | The file is over 4.5 MB (see "Free limits"). |
 | The assistant says **no remaining credits** | Add API credits in the Claude Console (a Claude Pro subscription does not include them). |
 

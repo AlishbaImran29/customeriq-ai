@@ -55,15 +55,7 @@ def build_inputs(trends: list[dict], categories: list[str], growing: list[str]) 
 
 def validate_ideas(text: str) -> list[dict]:
     """Turn the model's answer into a clean list of ideas, or raise a plain error if it cannot be trusted."""
-    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip(), flags=re.IGNORECASE)
-    try:
-        data = json.loads(cleaned)
-    except json.JSONDecodeError:
-        start, end = cleaned.find("{"), cleaned.rfind("}")           # tolerate a sentence around the JSON
-        try:
-            data = json.loads(cleaned[start : end + 1]) if 0 <= start < end else None
-        except json.JSONDecodeError:
-            data = None
+    data = parse_json_object(text)
     ideas = data.get("ideas") if isinstance(data, dict) else None
     if not isinstance(ideas, list):
         raise ApiError(502, "ai_bad_answer", "The AI did not answer in the expected format. Please try again.")
@@ -87,19 +79,54 @@ def cache_key(kind: str, inputs: dict) -> str:
     return hashlib.sha256((kind + json.dumps(inputs, sort_keys=True, separators=(",", ":"))).encode()).hexdigest()
 
 
-def ask_for_ideas(db: Session, settings: Settings, inputs: dict, *, force: bool = False) -> tuple[list[dict], bool, str | None]:
-    """(ideas, from_cache, model name). The cache is checked first; `force` asks again."""
-    key = cache_key(KIND_IDEAS, inputs)
+def parse_json_object(text: str) -> dict | None:
+    """The first JSON object in a model answer (tolerates code fences and a sentence around it), or None."""
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip(), flags=re.IGNORECASE)
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        start, end = cleaned.find("{"), cleaned.rfind("}")
+        try:
+            data = json.loads(cleaned[start : end + 1]) if 0 <= start < end else None
+        except json.JSONDecodeError:
+            data = None
+    return data if isinstance(data, dict) else None
+
+
+def run_cached(
+    db: Session, settings: Settings, kind: str, inputs: dict, instructions: str, check, *, force: bool = False
+) -> tuple[dict, bool, str | None]:
+    """The one way every Launch Studio AI call is made.
+
+    1. The answer for these exact inputs is looked up first (ai_cache): asking again costs nothing.
+    2. Otherwise the model is called (a missing API key raises a clear 503), the answer is checked by
+       `check(text) -> payload dict` (which raises a plain 502 if it cannot be trusted), and only a
+       CHECKED answer is saved, so a bad answer is never served from the cache.
+    Returns (payload, from_cache, model name).
+    """
+    key = cache_key(kind, inputs)
     cached = db.get(AiCache, key)
     if cached is not None and not force:
-        return cached.payload["ideas"], True, cached.payload.get("model")
-    model = get_model(settings)                       # raises a clear 503 when the API key is missing
-    answer = model.answer(INSTRUCTIONS, [ChatTurn("user", json.dumps(inputs, separators=(",", ":")))])
-    ideas = validate_ideas(answer)
-    payload = {"ideas": ideas, "model": model.model}
+        return cached.payload["result"], True, cached.payload.get("model")
+    model = get_model(settings)
+    answer = model.answer(instructions, [ChatTurn("user", json.dumps(inputs, separators=(",", ":"), ensure_ascii=False))])
+    result = check(answer)
+    payload = {"result": result, "model": model.model}
     if cached is None:
-        db.add(AiCache(key=key, kind=KIND_IDEAS, payload=payload))
+        db.add(AiCache(key=key, kind=kind, payload=payload))
     else:
         cached.payload = payload
     db.commit()
-    return ideas, False, model.model
+    return result, False, model.model
+
+
+def is_cached(db: Session, kind: str, inputs: dict) -> bool:
+    return db.get(AiCache, cache_key(kind, inputs)) is not None
+
+
+def ask_for_ideas(db: Session, settings: Settings, inputs: dict, *, force: bool = False) -> tuple[list[dict], bool, str | None]:
+    """(ideas, from_cache, model name)."""
+    result, cached, model = run_cached(
+        db, settings, KIND_IDEAS, inputs, INSTRUCTIONS, lambda text: {"ideas": validate_ideas(text)}, force=force
+    )
+    return result["ideas"], cached, model
