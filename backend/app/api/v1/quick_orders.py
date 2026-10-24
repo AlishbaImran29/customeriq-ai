@@ -66,7 +66,7 @@ def _after_order_added(db: Session, result, whatsapp_ok: bool) -> None:
     """Auto Messenger: remember the customer's consent if the seller ticked the box, and start the order's status
     history at "confirmed" (which sends the confirmation when the customer agreed). Never allowed to fail the order."""
     from app.services import order_status
-    from app.services.messaging import consent
+    from app.services.messaging import cod_confirm, consent
 
     try:
         customer = find_customer(db, result.phone)
@@ -75,6 +75,7 @@ def _after_order_added(db: Session, result, whatsapp_ok: bool) -> None:
             consent.set_consent(db, customer.id, "whatsapp", True, "add_order", note="The seller ticked: customer agreed to WhatsApp order updates")
         if order is not None:
             order_status.record_status(db, get_settings(), order, "confirmed", source="manual")
+            cod_confirm.ask(db, get_settings(), order)       # a COD order: ask the customer to confirm (only if a template is approved)
         db.commit()
     except Exception:  # noqa: BLE001
         logging.getLogger(__name__).exception("Could not record the consent or status of a new order")

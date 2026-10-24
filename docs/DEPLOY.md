@@ -217,6 +217,16 @@ that changes a workflow file, add that file on github.com instead.)
 **Customer videos** are kept in a second private bucket named `customer-media` in Supabase Storage (create it the same way as
 `competitor-ads`, *Public bucket* off). `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are the ones from the screenshots step.
 
+## Batch 1 additions (migrations 0022 to 0025)
+
+No new environment variables. Run `scripts/migrate_remote.py` once to apply them (it applies every pending migration).
+
+- **Model Report Card** (`/models`): each model's score next to its baseline and the Shown/Hidden decision. A history line is saved only when a decision or score changes (table `model_reports`).
+- **Churn "Why?"**: three reasons on each customer's page, measured by asking the model again with one input set to a typical value.
+- **Inventory** (`/inventory`): stock items with a SKU; a confirmed order reserves stock, a dispatched order sells it. Orders find items by SKU or name (`Name x2` means two units). Release a cancelled order's reservation, or restock a returned order, with `POST /api/v1/inventory/orders/{id}/release` and `/restock`.
+- **COD confirmation** (`/messenger/cod`): approve the `cod_confirmation` template (Templates, "Add unboxing and review templates"). The customer replies YES or NO (or taps a Confirm / Cancel quick-reply button on the Meta template). No answer in 12 hours: "needs a phone call" and the order shows one Order Risk level higher.
+- **Customer records**: notes, tags and source on each customer's page, a timeline, `/duplicates` to merge customers with the same email, and erase (anonymise keeps the orders as anonymous figures; delete removes them).
+
 ## Troubleshooting
 
 | You see | Likely cause and fix |

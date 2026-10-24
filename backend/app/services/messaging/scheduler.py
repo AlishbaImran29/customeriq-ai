@@ -29,6 +29,9 @@ def run_due(db: Session, settings: Settings, now: datetime | None = None) -> dic
     }
     from app.services.messaging import campaigns, journeys            # imported here: they use the sending code above
 
+    from app.services.messaging import cod_confirm
+
+    parts["cod"] = lambda: cod_confirm.mark_overdue(db, now)
     parts["campaigns"] = lambda: campaigns.send_due_batches(db, settings, now)
     parts["journeys"] = lambda: journeys.run_journeys(db, settings, now)
     results: dict[str, dict] = {}

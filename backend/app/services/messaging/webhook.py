@@ -24,6 +24,9 @@ from app.services.messaging.tokens import read_unsubscribe_token
 
 logger = logging.getLogger(__name__)
 
+# What a tapped quick-reply button means. Buttons are not typed text, so they are never read as STOP.
+BUTTON_ANSWERS = {"confirm": "yes", "yes": "yes", "confirmed": "yes", "cancel": "no", "no": "no", "reject": "no"}
+
 RANK = {"queued": 0, "sent": 1, "delivered": 2, "read": 3, "replied": 4}
 REPLY_WINDOW_DAYS = 3                                   # a reply counts as an answer to messages sent in this period
 
@@ -93,7 +96,7 @@ def record_incoming(db: Session, provider_id: str, from_digits: str, kind: str, 
     incoming = IncomingMessage(
         customer_id=customer.id if customer else None, channel="whatsapp", from_address=f"+{from_digits}", provider_message_id=provider_id,
         message_type=kind, body=text, media_id=media_id, mime_type=mime, received_at=at, is_stop=stop,
-        answer=yes_or_no(text) if kind == "text" and not stop else None,
+        answer=(yes_or_no(text) if kind == "text" and not stop else BUTTON_ANSWERS.get((text or "").strip().casefold()) if kind == "button" else None),
     )
     db.add(incoming)
     db.flush()
@@ -106,7 +109,11 @@ def record_incoming(db: Session, provider_id: str, from_digits: str, kind: str, 
         if kind in ("image", "video"):
             media.queue_media(db, incoming, at)                   # a video after a delivery: to be downloaded and stored
         elif incoming.answer:
-            media.apply_share_answer(db, customer.id, incoming.answer, at)    # YES / NO to "may we share your video?"
+            from app.services.messaging import cod_confirm
+
+            # YES / NO first answers an open "confirm your COD order" question; otherwise it answers "may we share your video?"
+            if cod_confirm.apply_answer(db, customer.id, incoming.answer, text, at) is None:
+                media.apply_share_answer(db, customer.id, incoming.answer, at)
     else:
         logger.info("Incoming WhatsApp message from a number that is not a customer")
     return incoming
@@ -128,9 +135,15 @@ def process_whatsapp_payload(db: Session, payload: dict, now: datetime | None = 
             for message in value.get("messages", []) or []:
                 if not isinstance(message, dict) or not message.get("id") or not message.get("from"):
                     continue
-                kind = message.get("type") if message.get("type") in ("text", "image", "video") else "other"
+                kind = message.get("type") if message.get("type") in ("text", "image", "video", "button", "interactive") else "other"
                 media = message.get(kind, {}) if kind in ("image", "video") else {}
                 text = (message.get("text") or {}).get("body") if kind == "text" else (media.get("caption") if media else None)
+                if kind == "button":                                    # a quick-reply button on a template: its title or payload
+                    button = message.get("button") or {}
+                    text = button.get("payload") or button.get("text")
+                elif kind == "interactive":                             # a button on an interactive message
+                    reply = (message.get("interactive") or {}).get("button_reply") or {}
+                    kind, text = "button", reply.get("id") or reply.get("title")
                 saved = record_incoming(db, message["id"], str(message["from"]), kind, text, _when(message.get("timestamp"), now), media.get("id"), media.get("mime_type"))
                 if saved is not None:
                     counts["incoming"] += 1

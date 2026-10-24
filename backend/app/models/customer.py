@@ -1,6 +1,9 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Index, String, text
+import datetime as dt
+
+from sqlalchemy import CheckConstraint, DateTime, Index, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -19,6 +22,7 @@ class Customer(TimestampMixin, Base):
             "uq_customers_phone_normalised", "phone_normalised", unique=True,
             postgresql_where=text("phone_normalised IS NOT NULL"),
         ),
+        CheckConstraint("status IN ('active', 'blocked', 'anonymised')", name="customer_status_known"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -34,5 +38,11 @@ class Customer(TimestampMixin, Base):
     phone_normalised: Mapped[str | None] = mapped_column(String(13))
     # The language this customer likes to be messaged in ("ur" or "en"); None = the seller's default (Auto Messenger).
     preferred_language: Mapped[str | None] = mapped_column(String(2))
+    # Customer records: the seller's own labels and notes, where the customer came from, and whether they were erased.
+    tags: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
+    notes: Mapped[str | None] = mapped_column(Text)
+    acquisition_source: Mapped[str | None] = mapped_column(String(60))
+    status: Mapped[str] = mapped_column(String(12), default="active", server_default="active")
+    anonymised_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
 
     orders: Mapped[list["Order"]] = relationship(back_populates="customer")

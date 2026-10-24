@@ -89,9 +89,19 @@ class OrderOut(CamelModel):
     channel: str | None
 
 
+class ReasonOut(CamelModel):
+    """A "Why?" reason: an English template with {placeholders}, the values, and the finished text."""
+
+    template: str
+    params: dict[str, str]
+    text: str
+
+
 class CustomerDetailOut(CamelModel):
     meta: Meta
     customer: CustomerOut
+    # Why the churn risk is what it is (top 3). Empty when the churn model is not available.
+    churn_reasons: list[ReasonOut] = []
     first_order: date
     average_order_value: float
     # null with fewer than two orders.

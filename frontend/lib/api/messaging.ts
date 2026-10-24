@@ -309,3 +309,24 @@ export type MessengerResults = {
 };
 
 export const getResults = (days: number, includeDryRun: boolean) => apiGet<MessengerResults>(`${P}/results?days=${days}&includeDryRun=${includeDryRun}`);
+
+// --- COD confirmation ----------------------------------------------------------------------------------------------------------------
+
+export type CodState = "awaiting" | "confirmed" | "cancelled" | "needs_call";
+export type CodRow = {
+  orderId: number;
+  orderNumber: string;
+  customerName: string;
+  phone: string | null;
+  amount: number;
+  state: CodState;
+  resolvedBy: "customer" | "seller" | null;
+  replyText: string | null;
+  askedAt: string;
+  deadlineAt: string;
+  answeredAt: string | null;
+};
+
+export const listCod = (state?: CodState) => apiGet<CodRow[]>(`${P}/cod${state ? `?state=${state}` : ""}`);
+export const askCod = (orderId: number) => apiPostJson<CodRow>(`${P}/cod/${orderId}/ask`, {});
+export const resolveCod = (orderId: number, result: "confirmed" | "cancelled") => apiPostJson<CodRow>(`${P}/cod/${orderId}/resolve`, { result });

@@ -319,7 +319,7 @@ def test_seed_defaults_endpoint(db_client):
     added = db_client.post("/api/v1/messaging/templates/seed-defaults", json={"groups": ["orders"]}).json()["added"]
     assert added == 24
     assert db_client.post("/api/v1/messaging/templates/seed-defaults", json={"groups": ["orders"]}).json()["added"] == 0
-    assert db_client.post("/api/v1/messaging/templates/seed-defaults", json={}).json()["added"] == 10
+    assert db_client.post("/api/v1/messaging/templates/seed-defaults", json={}).json()["added"] == 12
     assert db_client.post("/api/v1/messaging/templates/seed-defaults", json={"groups": ["spam"]}).status_code == 422
 
 

@@ -20,6 +20,7 @@ WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", 
 
 T_RETURNED = "Returned {returned} of {total} earlier orders"
 T_NEW = "New customer: no earlier orders to learn from"
+T_COD_NO_REPLY = "No reply to the cash-on-delivery confirmation message, so the risk was raised one level"
 T_MANY_ORDERS = "Has {total} earlier orders"
 T_VALUE = "Order value is {ratio}x this customer's usual"
 T_DAYS_FEWER = "Days since the previous order: {days} (fewer than usual)"

@@ -28,12 +28,14 @@ from app.schemas.analytics import (
     ModelsMeta,
     OrderOut,
     OverviewOut,
+    ReasonOut,
     RecommendationsOut,
     RevenueOut,
     SegmentsOut,
     Unavailable,
 )
 from app.services import analytics as a
+from app.services import churn_reasons
 from app.services import predictions as pr
 from app.services.analytics_data import channel_revenue, latest_order_date, load_snapshot
 from app.services.channels import CHANNELS
@@ -367,6 +369,7 @@ def customer_detail(
     return CustomerDetailOut(
         meta=_meta(snapshot, preds, "churnProbability", "predictedClv"),
         customer=_customer(found, preds),
+        churn_reasons=[ReasonOut(**r) for r in churn_reasons.as_reasons(preds.churn.reasons.get(id, []))] if preds.churn.available else [],
         first_order=found.first_order,
         average_order_value=round(found.revenue / found.orders, 2),
         average_days_between_orders=round(sum(gaps) / len(gaps), 1) if gaps else None,

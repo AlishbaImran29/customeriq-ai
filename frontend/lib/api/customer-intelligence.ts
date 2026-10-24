@@ -145,6 +145,8 @@ export type CustomerDetail = {
   firstOrder: string | null;
   averageOrderValue: number | null;
   averageDaysBetweenOrders: number | null;
+  /** Why the churn risk is what it is (top 3); empty when the churn model is not available. */
+  churnReasons?: { template: string; params: Record<string, string>; text: string }[];
   ordersTotal: number;
   /** Newest first, capped; `ordersTotal` can be larger. Empty in demo mode (no order history). */
   orders: CustomerOrder[];

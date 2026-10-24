@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, UserX } from "lucide-react";
 import { DataErrorState, DataSourceBanner, NoDataState, PageSkeleton, load } from "@/components/data-state";
+import { ChurnReasons } from "@/components/churn-reasons";
+import { CustomerTools } from "@/components/customer-tools";
 import { Money } from "@/components/money";
 import { NotAvailableCell } from "@/components/not-available";
 import { Badge, riskVariant } from "@/components/ui/badge";
@@ -103,6 +105,10 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
         </Stat>
         <Stat label="Health score" note="0–100, from the four factors below">{customer.healthScore}</Stat>
       </section>
+
+      <ChurnReasons reasons={detail.churnReasons ?? []} />
+
+      <CustomerTools customerId={customer.id} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>

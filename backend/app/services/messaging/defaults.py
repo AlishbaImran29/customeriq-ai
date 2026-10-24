@@ -61,6 +61,12 @@ _FOLLOWUPS = {
         "ur": ("کیا ہم آپ کی ویڈیو شیئر کر سکتے ہیں؟",
                "شکریہ {{first_name}}! کیا ہم اسے اپنے پیج پر شیئر کر سکتے ہیں؟ جواب میں YES یا NO لکھیں۔"),
     },
+    "cod_confirmation": {
+        "en": ("Please confirm your order {{order_number}}",
+               "Hello {{first_name}}, you placed a cash-on-delivery order {{order_number}} ({{items}}) for {{amount}}. Reply YES to confirm it, or NO to cancel it."),
+        "ur": ("براہ کرم اپنا آرڈر {{order_number}} کنفرم کریں",
+               "السلام علیکم {{first_name}}، آپ نے کیش آن ڈیلیوری آرڈر {{order_number}} ({{items}}) بقیمت {{amount}} دیا ہے۔ کنفرم کرنے کے لیے YES اور منسوخ کرنے کے لیے NO لکھیں۔"),
+    },
     "review_request": {
         "en": ("How is your order {{order_number}}?",
                "Hello {{first_name}}, we hope you are enjoying your order {{order_number}}. If you have a minute, please share your honest review: {{review_link}}"),
@@ -92,7 +98,7 @@ def _rows() -> list[dict]:
     for event, languages in _FOLLOWUPS.items():
         for language, (subject, body) in languages.items():
             for channel in ("whatsapp", "email"):
-                if event == "media_share_question" and channel == "email":
+                if event in ("media_share_question", "cod_confirmation") and channel == "email":
                     continue                       # the YES/NO answer comes back on WhatsApp
                 add(event, channel, language, subject, body)
     return rows

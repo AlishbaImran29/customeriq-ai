@@ -26,6 +26,7 @@ from app.core.config import Settings
 from app.core.errors import ApiError
 from app.models import Customer, Message, MessageTemplate, Order, OrderStatusHistory, Shipment
 from app.models.order_status import ORDER_STATUSES, STATUS_SOURCES
+from app.services import inventory
 from app.services.messaging import service
 from app.services.messaging.settings_store import get_row
 
@@ -135,6 +136,8 @@ def record_status(
                                  tracking_number=(tracking or None) and tracking[:80], note=(note or None) and note[:200])
     db.add(history)
     db.flush()
+    if at >= now - timedelta(days=NOTIFY_MAX_AGE_DAYS):
+        inventory.on_status(db, order, status)        # reserve on confirmed, sell on dispatched (fresh statuses only)
     if not notify:
         return StatusChange(True, False, history, reason="not_requested")
     if not forward:

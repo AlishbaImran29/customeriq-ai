@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import math
+import warnings
 import threading
 from bisect import bisect_right
 from collections import OrderedDict, defaultdict
@@ -35,6 +36,7 @@ from scipy.stats import t as student_t
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
 from sklearn.metrics import brier_score_loss, mean_absolute_error, roc_auc_score
 
+from app.services import churn_reasons
 from app.services.analytics import SINGLE_ORDER_GAP_DAYS, Snapshot, monthly_revenue
 
 logger = logging.getLogger(__name__)
@@ -80,10 +82,19 @@ class ModelResult:
     status: ModelStatus
     reason: str | None = None
     metrics: list[tuple[str, str]] = field(default_factory=list)
+    # The same scores as plain numbers, for the Model Report Card (None when the model never got as far as a test).
+    metric: str | None = None
+    model_score: float | None = None
+    baseline_score: float | None = None
+    higher_is_better: bool = True
+    test_size: int | None = None
+    split_date: date | None = None  # the first day of the test period
+    # Churn only: customer id -> the top reasons for that customer's risk (see churn_reasons.py).
+    reasons: dict[str, list[dict]] = field(default_factory=dict)
 
     @classmethod
-    def unavailable(cls, reason: str) -> ModelResult:
-        return cls(status="unavailable", reason=reason)
+    def unavailable(cls, reason: str, **scores) -> ModelResult:
+        return cls(status="unavailable", reason=reason, **scores)
 
     @property
     def available(self) -> bool:
@@ -242,21 +253,27 @@ def _train_churn(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResu
     auc = float(roc_auc_score(y_test, p_test))
     baseline_auc = float(roc_auc_score(y_test, x_test[:, _RECENCY_INDEX]))  # longer silence = riskier
     brier = float(brier_score_loss(y_test, p_test))
+    scores = dict(metric="ROC-AUC", model_score=auc, baseline_score=baseline_auc, higher_is_better=True, test_size=len(y_test), split_date=test_cutoff)
     if auc < MIN_CHURN_AUC:
         return ModelResult.unavailable(
             f"Not reliable enough yet: accuracy on the test period was {auc:.2f} (AUC), "
-            f"below the {MIN_CHURN_AUC:.2f} needed."
+            f"below the {MIN_CHURN_AUC:.2f} needed.", **scores
         ), {}
     if auc <= baseline_auc:
         return ModelResult.unavailable(
             f"Not reliable enough yet: the model ({auc:.2f} AUC) was no better than a simple "
-            f"'longer since last order = riskier' rule ({baseline_auc:.2f})."
+            f"'longer since last order = riskier' rule ({baseline_auc:.2f}).", **scores
         ), {}
 
     # Final model learns from both periods, then scores every customer as of today.
     final = _fit(_classifier(), np.vstack([x_train, x_test]), np.concatenate([y_train, y_test]))
     x_now, _, ids = _dataset(hists, snapshot.as_of, h, "churn")
     probabilities = dict(zip(ids, (float(p) for p in final.predict(x_now)), strict=True))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # a column with no values at all (engagement) is fine
+        medians = np.nanmedian(np.vstack([x_train, x_test]), axis=0)
+    explained = churn_reasons.explain(final, x_now, medians, FEATURES)
+    reasons = {customer_id: explained[i] for i, customer_id in enumerate(ids)}
     metrics = [
         ("Accuracy on unseen period (AUC)", f"{auc:.2f}"),
         ("Simple recency rule (AUC)", f"{baseline_auc:.2f}"),
@@ -264,7 +281,7 @@ def _train_churn(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResu
         ("Tested on", f"the last {h} days of orders, not used for training"),
         ("Trained on", f"{len(y_train) + len(y_test):,} customer snapshots"),
     ]
-    return ModelResult("available", None, metrics), probabilities
+    return ModelResult("available", None, metrics, reasons=reasons, **scores), probabilities
 
 
 def _class_problems(y_train: np.ndarray, y_test: np.ndarray) -> list[str]:
@@ -298,10 +315,11 @@ def _train_clv(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResult
     mae = float(mean_absolute_error(y_test, prediction))
     # Baseline: assume each customer spends the next 180 days what they spent in the last 180.
     baseline_mae = float(mean_absolute_error(y_test, x_test[:, _SPEND_180_INDEX]))
+    scores = dict(metric="MAE ($)", model_score=mae, baseline_score=baseline_mae, higher_is_better=False, test_size=len(y_test), split_date=test_cutoff)
     if mae >= baseline_mae:
         return ModelResult.unavailable(
             f"Not reliable enough yet: the model's average error (${mae:,.0f}) was no better than "
-            f"assuming customers repeat their last {h} days (${baseline_mae:,.0f})."
+            f"assuming customers repeat their last {h} days (${baseline_mae:,.0f}).", **scores
         ), {}
 
     final = _fit(_regressor(), np.vstack([x_train, x_test]), np.concatenate([y_train, y_test]))
@@ -314,7 +332,7 @@ def _train_clv(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResult
         ("Tested on", f"the last {h} days of orders, not used for training"),
         ("Trained on", f"{len(y_train) + len(y_test):,} customer snapshots"),
     ]
-    return ModelResult("available", None, metrics), spend
+    return ModelResult("available", None, metrics, **scores), spend
 
 
 # --- revenue forecast ---------------------------------------------------------------------
@@ -365,10 +383,11 @@ def _train_forecast(snapshot: Snapshot) -> tuple[ModelResult, list[dict]]:
     mape = float(np.mean(np.abs(held - backtest) / held) * 100)
     naive = np.full(FORECAST_MONTHS, earlier[-FORECAST_MONTHS:].mean())
     naive_mape = float(np.mean(np.abs(held - naive) / held) * 100)
+    scores = dict(metric="MAPE (%)", model_score=mape, baseline_score=naive_mape, higher_is_better=False, test_size=len(held), split_date=_month_start(complete[-FORECAST_MONTHS]["month"]))
     if mape >= naive_mape:
         return ModelResult.unavailable(
             f"Not reliable enough yet: on past data the trend forecast was off by {mape:.0f}% on "
-            f"average, no better than repeating the recent average ({naive_mape:.0f}%)."
+            f"average, no better than repeating the recent average ({naive_mape:.0f}%).", **scores
         ), []
 
     fit = revenue[-FORECAST_FIT_MONTHS:]
@@ -393,7 +412,7 @@ def _train_forecast(snapshot: Snapshot) -> tuple[ModelResult, list[dict]]:
         ("Shaded range", f"{int(INTERVAL_LEVEL * 100)}% prediction range"),
         ("Seasonality", "not modelled (needs 2+ years of history)"),
     ]
-    return ModelResult("available", None, metrics), points
+    return ModelResult("available", None, metrics, **scores), points
 
 
 # --- entry points ------------------------------------------------------------------------------

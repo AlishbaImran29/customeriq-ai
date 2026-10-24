@@ -368,7 +368,7 @@ def test_the_day_changes_at_midnight_pakistan_time_not_utc(db_session, monkeypat
 
 def test_run_due_runs_every_part_and_one_failing_part_does_not_stop_the_others(db_session, monkeypatch):
     results = scheduler.run_due(db_session, settings(), NOW)
-    assert set(results) == {"queue", "media", "reviews", "campaigns", "journeys"} and "error" not in {k for r in results.values() for k in r}
+    assert set(results) == {"queue", "media", "reviews", "cod", "campaigns", "journeys"} and "error" not in {k for r in results.values() for k in r}
 
     def boom(*args, **kwargs):
         raise RuntimeError("the campaign code broke")
@@ -392,7 +392,7 @@ def test_the_scheduler_endpoint_needs_the_secret(db_client):
     assert call(**{"X-Scheduler-Secret": "wrong"}).status_code == 403
     assert call(**{"X-Scheduler-Secret": "test-scheduler-secret "}).status_code == 403
     ok = call(**{"X-Scheduler-Secret": "test-scheduler-secret"})
-    assert ok.status_code == 200 and ok.json()["ok"] is True and set(ok.json()["results"]) == {"queue", "media", "reviews", "campaigns", "journeys"}
+    assert ok.status_code == 200 and ok.json()["ok"] is True and set(ok.json()["results"]) == {"queue", "media", "reviews", "cod", "campaigns", "journeys"}
 
 
 # --- HTTP ----------------------------------------------------------------------------------------------------------------------------------------

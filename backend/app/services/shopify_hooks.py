@@ -140,6 +140,9 @@ def handle(db: Session, settings: Settings, topic: str, payload: dict, now: date
         if order is None:
             return {"ignored": "no order number"}
         change = order_status.record_status(db, settings, order, "confirmed", at=now, source="shopify", now=now)
+        from app.services.messaging import cod_confirm
+
+        cod_confirm.ask(db, settings, order, now)
         return {"order": order.external_id, "recorded": change.recorded, "messages": [m.status for m in change.messages]}
     if topic in ("fulfillments/create", "fulfillments/update"):
         order = db.scalar(select(Order).where(Order.external_id == f"SHOPIFY-{payload.get('order_id')}"))
