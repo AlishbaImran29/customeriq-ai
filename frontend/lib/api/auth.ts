@@ -7,6 +7,8 @@ export type AuthUser = {
   email: string;
   name: string;
   lastLoginAt: string | null;
+  /** owner can do everything, staff the daily work, viewer can only look. The server enforces it. */
+  role?: "owner" | "staff" | "viewer";
 };
 
 /** What the sign-in page needs to know before anyone is signed in. */

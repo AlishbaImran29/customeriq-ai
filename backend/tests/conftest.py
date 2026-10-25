@@ -39,7 +39,7 @@ def signed_in_test_user(request):
         yield
         return
     app.dependency_overrides[require_user] = lambda: SimpleNamespace(
-        id=uuid.uuid4(), email="test@example.com", name="Test User"
+        id=uuid.uuid4(), email="test@example.com", name="Test User", role="owner"
     )
     yield
     app.dependency_overrides.pop(require_user, None)
@@ -61,6 +61,7 @@ def db_session():
     connection.execute(text("DELETE FROM shipments"))
     connection.execute(text("DELETE FROM courier_payments"))
     connection.execute(text("DELETE FROM product_sales"))
+    connection.execute(text("DELETE FROM audit_log"))
     connection.execute(text("DELETE FROM ticket_notes"))
     connection.execute(text("DELETE FROM tickets"))
     connection.execute(text("DELETE FROM refunds"))

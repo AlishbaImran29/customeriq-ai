@@ -29,7 +29,7 @@ _SETUP_LOCK_ID = 727_001  # serialises "create the first account" across request
 
 
 def _user_out(user: User) -> UserOut:
-    return UserOut(id=str(user.id), email=user.email, name=user.name, last_login_at=user.last_login_at)
+    return UserOut(id=str(user.id), email=user.email, name=user.name, last_login_at=user.last_login_at, role=user.role)  # type: ignore[arg-type]
 
 
 def _set_cookie(response: Response, settings: Settings, token: str, max_age: int | None) -> None:
@@ -87,7 +87,7 @@ def setup(
     svc.check_setup_code(settings, body.setup_code)
     svc.delete_unverified(db)  # a previous attempt that never confirmed (for example a typo in the email)
     verify = settings.email_verification_required
-    user = svc.create_user(db, email=body.email, name=body.name, password=body.password, verified=not verify)
+    user = svc.create_user(db, email=body.email, name=body.name, password=body.password, verified=not verify, role="owner")   # the first account is the owner
     if verify:
         svc.issue_code(db, user, settings)
         db.commit()

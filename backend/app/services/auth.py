@@ -113,7 +113,7 @@ def _checked_details(email: str, name: str, password: str) -> tuple[str, str]:
     return email, name
 
 
-def create_user(db: Session, *, email: str, name: str, password: str, verified: bool = True) -> User:
+def create_user(db: Session, *, email: str, name: str, password: str, verified: bool = True, role: str = "viewer") -> User:
     """Validate and create an account. Raises ApiError(422/409) with friendly messages.
 
     `verified=False` leaves the email unconfirmed until the person enters the code we send.
@@ -122,7 +122,7 @@ def create_user(db: Session, *, email: str, name: str, password: str, verified: 
     if db.scalar(select(User.id).where(User.email == email)) is not None:
         raise ApiError(409, "email_taken", "An account with this email already exists.", {"field": "email"})
     user = User(
-        email=email, name=name, password_hash=hash_password(password),
+        email=email, name=name, password_hash=hash_password(password), role=role,
         email_verified_at=datetime.now(UTC) if verified else None,
     )
     db.add(user)

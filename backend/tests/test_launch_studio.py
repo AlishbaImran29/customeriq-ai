@@ -263,7 +263,7 @@ def test_asking_for_ideas_is_limited_per_account(db_client, monkeypatch):
     reset_rate_limits()
     monkeypatch.setattr(launch, "IDEAS_PER_WINDOW", 2)
     monkeypatch.setattr(launch_ai, "get_model", lambda settings: FakeModel(json.dumps(GOOD)))
-    same = SimpleNamespace(id=uuid.uuid4(), email="t@example.com", name="T")
+    same = SimpleNamespace(id=uuid.uuid4(), email="t@example.com", name="T", role="owner")
     app.dependency_overrides[require_user] = lambda: same
     upload_trend(db_client)
     codes = [db_client.post("/api/v1/launch/ideas", json={"force": True}).status_code for _ in range(3)]

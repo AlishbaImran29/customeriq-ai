@@ -248,6 +248,17 @@ Run `scripts/migrate_remote.py` to apply them. New optional settings (names only
 - Returns: evidence photos and videos go to a private Supabase bucket named `return-evidence` (`SUPABASE_EVIDENCE_BUCKET`). Create the bucket as private. Files over 4 MB are refused because the host limits request size.
 - Refunds are only RECORDED by you after you pay the customer yourself. The app never moves money.
 
+## Roles and the action log (migration 0030)
+
+**Run `scripts/migrate_remote.py` BEFORE the new backend goes live.** From this version every sign-in reads the new `users.role` column, so a backend deployed before the migration cannot sign anyone in.
+
+- Roles: **owner** (everything), **staff** (daily work), **viewer** (look only). The rules are one table in `backend/app/core/permissions.py`, enforced on the server for every signed-in request.
+- The oldest existing account becomes the owner. Everyone else becomes a viewer until the owner raises them at **Team**. People who sign up later start as viewers; the first account on a new site is the owner.
+- Owner only: settings, test messages, anything that deletes, erasing or merging customers, customer export, recording refund payments, switching workflows on or off, Team, Action Log.
+- **Action Log** lists every change and every refused attempt (who, which route, which ids). It never stores what was typed (no names, phones, emails or message text).
+- There must always be one active owner: the last owner cannot be demoted or switched off.
+- This is a single-shop app, so there is no per-shop data separation to configure.
+
 ## Troubleshooting
 
 | You see | Likely cause and fix |

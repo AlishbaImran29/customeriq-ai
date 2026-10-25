@@ -51,7 +51,7 @@ def test_the_assistant_endpoint_is_limited_per_account(db_client, monkeypatch):
     from app.main import app
 
     monkeypatch.setattr(assistant, "QUESTIONS_PER_WINDOW", 2)
-    same_account = SimpleNamespace(id=uuid.uuid4(), email="test@example.com", name="Test User")
+    same_account = SimpleNamespace(id=uuid.uuid4(), email="test@example.com", name="Test User", role="owner")
     app.dependency_overrides[require_user] = lambda: same_account
     body = {"messages": [{"role": "user", "content": "How many customers do I have?"}]}
     statuses = [db_client.post("/api/v1/assistant/chat", json=body).status_code for _ in range(3)]

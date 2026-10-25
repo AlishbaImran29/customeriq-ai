@@ -36,6 +36,8 @@ import {
   Undo2,
   LifeBuoy,
   GitMerge,
+  UsersRound,
+  History,
   Workflow,
   ScrollText,
   PhoneCall,
@@ -130,6 +132,8 @@ const navGroups = [
       { href: "/duplicates", label: "Duplicate Customers", icon: GitMerge },
       { href: "/import", label: "Import Data", icon: Upload },
       { href: "/import/whatsapp", label: "Import WhatsApp Chat", icon: MessagesSquare },
+      { href: "/team", label: "Team", icon: UsersRound },
+      { href: "/action-log", label: "Action Log", icon: History },
     ],
   },
 ];

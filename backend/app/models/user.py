@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -11,12 +11,15 @@ class User(TimestampMixin, Base):
     """A person who can sign in. Passwords are stored only as scrypt hashes."""
 
     __tablename__ = "users"
+    __table_args__ = (CheckConstraint("role IN ('owner', 'staff', 'viewer')", name="user_role_known"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)  # lower-cased
     name: Mapped[str] = mapped_column(String(100))
     password_hash: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # owner > staff > viewer (see core/permissions.py). The first account is the owner; people who sign up later start as viewers.
+    role: Mapped[str] = mapped_column(String(10), default="viewer", server_default="viewer")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Set once the person has proved they own the address (a code sent by email).
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

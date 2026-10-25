@@ -1003,6 +1003,13 @@ export const URDU: Record<string, string> = {
   "Approve": "منظور کریں",
   "Goods received": "سامان واپس مل گیا",
   "Reopen": "دوبارہ کھولیں",
+  "Team": "ٹیم",
+  "Action Log": "ایکشن لاگ",
+  "Owner": "مالک",
+  "Staff": "اسٹاف",
+  "Viewer": "دیکھنے والا",
+  "Roles": "کردار",
+  "Can sign in": "سائن ان کر سکتا ہے",
 };
 
 let current: Language = "en";

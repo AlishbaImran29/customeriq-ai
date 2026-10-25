@@ -343,7 +343,7 @@ def test_ai_calls_are_limited_per_account(db_client, monkeypatch):
 
     reset_rate_limits()
     monkeypatch.setattr(steps, "AI_CALLS_PER_WINDOW", 2)
-    same = SimpleNamespace(id=uuid.uuid4(), email="t@example.com", name="T")
+    same = SimpleNamespace(id=uuid.uuid4(), email="t@example.com", name="T", role="owner")
     app.dependency_overrides[require_user] = lambda: same
     p = project(db_client)
     use_model(monkeypatch, full_creatives())

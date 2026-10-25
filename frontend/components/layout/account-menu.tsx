@@ -106,7 +106,7 @@ function SignedInMenu() {
       >
         <div className="px-3 py-2">
           <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
-          <p className="truncate text-xs text-muted">{user.email}</p>
+          <p className="truncate text-xs text-muted">{user.email}{user.role ? ` · ${t(user.role === "owner" ? "Owner" : user.role === "staff" ? "Staff" : "Viewer")}` : ""}</p>
         </div>
         <div className="my-1 border-t border-line/60" />
         <Link

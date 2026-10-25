@@ -424,8 +424,8 @@ def test_generating_for_an_empty_audience_and_the_ai_limit(db_client, db_session
     import app.api.v1.campaigns as api
 
     monkeypatch.setattr(api, "AI_CALLS_PER_WINDOW", 1)
-    app.dependency_overrides[require_user] = lambda: SimpleNamespace(id=uuid.uuid4(), email="t@example.com", name="T")
-    same = SimpleNamespace(id=uuid.uuid4(), email="t@example.com", name="T")
+    app.dependency_overrides[require_user] = lambda: SimpleNamespace(id=uuid.uuid4(), email="t@example.com", name="T", role="owner")
+    same = SimpleNamespace(id=uuid.uuid4(), email="t@example.com", name="T", role="owner")
     app.dependency_overrides[require_user] = lambda: same
     c = customer(db_session)
     with_segments(monkeypatch, {c.id: "champions"})

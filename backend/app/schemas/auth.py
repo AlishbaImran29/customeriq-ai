@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import Field
 
@@ -10,6 +11,7 @@ class UserOut(CamelModel):
     email: str
     name: str
     last_login_at: datetime | None
+    role: Literal["owner", "staff", "viewer"] = "viewer"
 
 
 class AuthStatus(CamelModel):

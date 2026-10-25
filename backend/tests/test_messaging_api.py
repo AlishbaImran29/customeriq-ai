@@ -94,7 +94,7 @@ def test_test_send_is_rate_limited_per_account(db_client):
 
     reset_rate_limits()
     use_settings()
-    same = SimpleNamespace(id=uuid.uuid4(), email="test@example.com", name="T")
+    same = SimpleNamespace(id=uuid.uuid4(), email="test@example.com", name="T", role="owner")
     app.dependency_overrides[require_user] = lambda: same
     codes = [db_client.post("/api/v1/messaging/test-send", json={"channel": "whatsapp", "to": "03001234567"}).status_code for _ in range(6)]
     assert codes == [200] * 5 + [429]
