@@ -162,3 +162,5 @@ class MessagingSettings(TimestampMixin, Base):
     campaign_batch_size: Mapped[int] = mapped_column(Integer, default=30, server_default="30")
     early_access_hours: Mapped[int] = mapped_column(Integer, default=24, server_default="24")
     holdout_percent: Mapped[int] = mapped_column(Integer, default=10, server_default="10")
+    cart_first_minutes: Mapped[int] = mapped_column(Integer, default=60, server_default="60")      # abandoned cart: first reminder after this long
+    cart_second_hours: Mapped[int] = mapped_column(Integer, default=24, server_default="24")       # second reminder this long after the first; 0 = none

@@ -87,7 +87,8 @@ def _mark_replied(db: Session, customer_id: int, at: datetime) -> None:
             latest.delivered_at = at
 
 
-def record_incoming(db: Session, provider_id: str, from_digits: str, kind: str, text: str | None, at: datetime, media_id: str | None = None, mime: str | None = None) -> IncomingMessage | None:
+def record_incoming(db: Session, provider_id: str, from_digits: str, kind: str, text: str | None, at: datetime, media_id: str | None = None, mime: str | None = None,
+                    referral: dict | None = None, profile_name: str | None = None) -> IncomingMessage | None:
     """Save a customer's message once (a repeated delivery of the same message is ignored) and act on STOP."""
     if db.scalar(select(IncomingMessage.id).where(IncomingMessage.provider_message_id == provider_id)) is not None:
         return None
@@ -119,7 +120,20 @@ def record_incoming(db: Session, provider_id: str, from_digits: str, kind: str, 
                 media.apply_share_answer(db, customer.id, incoming.answer, at)
     else:
         logger.info("Incoming WhatsApp message from a number that is not a customer")
+        if referral:                                              # they tapped a Click-to-WhatsApp ad: that is a lead
+            _lead_from_ad(db, from_digits, profile_name, text, referral)
     return incoming
+
+
+def _lead_from_ad(db: Session, from_digits: str, name: str | None, text: str | None, referral: dict) -> None:
+    from app.core.errors import ApiError
+    from app.services import leads
+
+    try:
+        leads.create_lead(db, source="click_to_whatsapp", name=name, phone=f"+{from_digits}", campaign=referral.get("headline") or referral.get("source_id"),
+                          product_interest=(text or None), notes=f"Came from a Click-to-WhatsApp ad ({referral.get('source_url') or 'no link'})")
+    except ApiError:
+        logger.info("Click-to-WhatsApp message without a usable number: no lead saved")
 
 
 def process_whatsapp_payload(db: Session, payload: dict, now: datetime | None = None) -> dict[str, int]:
@@ -147,7 +161,10 @@ def process_whatsapp_payload(db: Session, payload: dict, now: datetime | None = 
                 elif kind == "interactive":                             # a button on an interactive message
                     reply = (message.get("interactive") or {}).get("button_reply") or {}
                     kind, text = "button", reply.get("id") or reply.get("title")
-                saved = record_incoming(db, message["id"], str(message["from"]), kind, text, _when(message.get("timestamp"), now), media.get("id"), media.get("mime_type"))
+                names = {c.get("wa_id"): (c.get("profile") or {}).get("name") for c in value.get("contacts", []) or [] if isinstance(c, dict)}
+                referral = message.get("referral") if isinstance(message.get("referral"), dict) else None
+                saved = record_incoming(db, message["id"], str(message["from"]), kind, text, _when(message.get("timestamp"), now), media.get("id"), media.get("mime_type"),
+                                        referral=referral, profile_name=names.get(str(message["from"])))
                 if saved is not None:
                     counts["incoming"] += 1
                     counts["stops"] += int(saved.is_stop)

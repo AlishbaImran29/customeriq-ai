@@ -156,6 +156,8 @@ function RulesCard({ settings, onChanged }: { settings: MessengerSettings; onCha
   const [batch, setBatch] = useState(String(settings.campaignBatchSize));
   const [early, setEarly] = useState(String(settings.earlyAccessHours));
   const [holdout, setHoldout] = useState(String(settings.holdoutPercent));
+  const [cartFirst, setCartFirst] = useState(String(settings.cartFirstMinutes));
+  const [cartSecond, setCartSecond] = useState(String(settings.cartSecondHours));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -170,7 +172,7 @@ function RulesCard({ settings, onChanged }: { settings: MessengerSettings; onCha
     try {
       onChanged(await saveSettings({
         quietStart, quietEnd, weeklyMarketingCap: Number(cap), defaultLanguage: language, storeName: store, reviewUrl: review,
-        costUtility: money(utility), costMarketing: money(marketing), campaignBatchSize: Number(batch), earlyAccessHours: Number(early), holdoutPercent: Number(holdout),
+        costUtility: money(utility), costMarketing: money(marketing), campaignBatchSize: Number(batch), earlyAccessHours: Number(early), holdoutPercent: Number(holdout), cartFirstMinutes: Number(cartFirst), cartSecondHours: Number(cartSecond),
       }));
       setSaved(true);
     } catch (e) {
@@ -201,6 +203,8 @@ function RulesCard({ settings, onChanged }: { settings: MessengerSettings; onCha
           <label className={fieldClass}>{t("Customers per campaign batch")}<Input inputMode="numeric" value={batch} onChange={(e) => setBatch(e.target.value.replace(/\D/g, ""))} /></label>
           <label className={fieldClass}>{t("Early access for Champions (hours)")}<Input inputMode="numeric" value={early} onChange={(e) => setEarly(e.target.value.replace(/\D/g, ""))} /></label>
           <label className={fieldClass}>{t("Journey holdout (% of customers who get no message)")}<Input inputMode="numeric" value={holdout} onChange={(e) => setHoldout(e.target.value.replace(/\D/g, ""))} /></label>
+          <label className={fieldClass}>{t("Abandoned cart: first reminder after (minutes)")}<Input inputMode="numeric" value={cartFirst} onChange={(e) => setCartFirst(e.target.value.replace(/\D/g, ""))} /></label>
+          <label className={fieldClass}>{t("Abandoned cart: second reminder after (hours, 0 = none)")}<Input inputMode="numeric" value={cartSecond} onChange={(e) => setCartSecond(e.target.value.replace(/\D/g, ""))} /></label>
           <p className="text-xs text-muted sm:col-span-2 lg:col-span-3">
             {t("Timezone")}: {settings.timezone}. {t("The prices are yours to enter: Meta changes its prices, so none is built in.")}
           </p>

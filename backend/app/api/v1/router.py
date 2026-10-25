@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_user
-from app.api.v1 import analytics, assistant, auth, campaigns, cash, couriers, customer_records, health, imports, internal, inventory, launch, launch_steps, messaging, messaging_automation, messaging_cod, messaging_media, messaging_orders, model_report, order_risk, quick_orders, seasons, shipments, webhooks, whatsapp_import, workflows
+from app.api.v1 import analytics, assistant, auth, campaigns, carts, cash, couriers, customer_records, health, imports, internal, inventory, launch, launch_steps, leads, messaging, messaging_automation, messaging_cod, messaging_media, messaging_orders, model_report, order_risk, quick_orders, returns, seasons, shipments, webhooks, whatsapp_import, workflows
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -37,3 +37,6 @@ api_router.include_router(inventory.router, dependencies=_signed_in)
 api_router.include_router(messaging_cod.router, dependencies=_signed_in)
 api_router.include_router(customer_records.router, dependencies=_signed_in)
 api_router.include_router(workflows.router, dependencies=_signed_in)
+api_router.include_router(leads.router, dependencies=_signed_in)
+api_router.include_router(carts.router, dependencies=_signed_in)
+api_router.include_router(returns.router, dependencies=_signed_in)

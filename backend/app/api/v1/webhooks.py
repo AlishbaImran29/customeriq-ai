@@ -117,3 +117,86 @@ async def shopify_receive(request: Request, db: Session = Depends(get_db), setti
     result = shopify_hooks.handle(db, settings, request.headers.get("x-shopify-topic", ""), payload)
     db.commit()
     return {"ok": True, **result}
+
+
+# --- leads -------------------------------------------------------------------------------------------------------------------
+
+
+@router.get("/webhooks/meta-leads", response_class=PlainTextResponse, summary="Meta's check when the Lead Ads webhook is registered")
+def meta_leads_verify(
+    mode: str | None = Query(default=None, alias="hub.mode"), token: str | None = Query(default=None, alias="hub.verify_token"),
+    challenge: str | None = Query(default=None, alias="hub.challenge"), settings: Settings = Depends(get_settings),
+):
+    if webhook.verify_challenge(settings, mode, token) and challenge is not None:
+        return PlainTextResponse(challenge)
+    return JSONResponse(status_code=403, content=error_body("forbidden", "The verify token does not match."))
+
+
+@router.post("/webhooks/meta-leads", summary="New Lead Ads leads from Meta")
+async def meta_leads_receive(request: Request, db: Session = Depends(get_db), settings: Settings = Depends(get_settings)):
+    from app.core.errors import ApiError
+    from app.services import leads as lead_service
+
+    body = await request.body()
+    if len(body) > MAX_WEBHOOK_BYTES:
+        return JSONResponse(status_code=413, content=error_body("payload_too_large", "The request is too large."))
+    secret = settings.whatsapp_app_secret.get_secret_value() if settings.whatsapp_app_secret else None
+    if not webhook.verify_signature(secret, body, request.headers.get("x-hub-signature-256")):
+        logger.warning("Meta leads webhook refused: bad or missing signature")
+        return JSONResponse(status_code=403, content=error_body("bad_signature", "The signature is not valid."))
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        return JSONResponse(status_code=400, content=error_body("bad_json", "The body is not JSON."))
+    saved = 0
+    for entry in payload.get("entry", []) if isinstance(payload, dict) else []:
+        for change in entry.get("changes", []) if isinstance(entry, dict) else []:
+            value = change.get("value", {}) if isinstance(change, dict) and change.get("field") == "leadgen" else {}
+            leadgen_id = str(value.get("leadgen_id") or "")
+            if not leadgen_id:
+                continue
+            try:
+                details = lead_service.fetch_meta_lead(settings, leadgen_id)
+                _, created = lead_service.from_meta_fields(db, leadgen_id, details.get("field_data") or [], campaign=str(value.get("ad_id") or value.get("form_id") or "") or None)
+                saved += int(created)
+            except ApiError as exc:
+                if exc.status_code == 502:
+                    db.rollback()
+                    return JSONResponse(status_code=502, content=error_body(exc.code, exc.message))      # Meta will send it again
+                logger.warning("Lead %s not saved: %s", leadgen_id, exc.code)                            # not configured, or an unusable lead: do not make Meta retry forever
+    db.commit()
+    return {"ok": True, "saved": saved}
+
+
+@router.post("/public/leads", summary="Your website's contact form (off until PUBLIC_LEADS_ENABLED is set)")
+async def public_lead(request: Request, db: Session = Depends(get_db), settings: Settings = Depends(get_settings)):
+    from app.core.errors import ApiError
+    from app.services import leads as lead_service
+    from app.services.rate_limit import check_rate_limit
+
+    if not settings.public_leads_enabled:
+        return JSONResponse(status_code=404, content=error_body("not_found", "Not found."))
+    body = await request.body()
+    if len(body) > 10_000:
+        return JSONResponse(status_code=413, content=error_body("payload_too_large", "The request is too large."))
+    try:
+        data = json.loads(body)
+    except ValueError:
+        return JSONResponse(status_code=400, content=error_body("bad_json", "The body is not JSON."))
+    if not isinstance(data, dict):
+        return JSONResponse(status_code=400, content=error_body("bad_json", "The body is not JSON."))
+    if data.get("website"):                                          # a hidden field a person never fills: only bots do
+        return {"ok": True}
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "unknown")).split(",")[0].strip()
+    check_rate_limit(f"lead-form:{ip}", limit=10, window_seconds=3600, what="the form")
+    check_rate_limit("lead-form:all", limit=300, window_seconds=3600, what="the form")
+    try:
+        lead_service.create_lead(
+            db, source="website_form", name=data.get("name"), phone=data.get("phone"), email=data.get("email"), campaign=data.get("campaign"),
+            utm_source=data.get("utmSource"), utm_medium=data.get("utmMedium"), utm_campaign=data.get("utmCampaign"),
+            product_interest=data.get("productInterest"), notes=data.get("message"),
+        )
+    except ApiError as exc:
+        return JSONResponse(status_code=exc.status_code, content=error_body(exc.code, exc.message))
+    db.commit()
+    return {"ok": True}

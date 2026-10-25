@@ -36,6 +36,8 @@ export type MessengerSettings = {
   campaignBatchSize: number;
   earlyAccessHours: number;
   holdoutPercent: number;
+  cartFirstMinutes: number;
+  cartSecondHours: number;
   whatsapp: Connection;
   email: Connection;
   unsubscribeReady: boolean;
@@ -59,6 +61,8 @@ export type SettingsPatch = Partial<{
   campaignBatchSize: number;
   earlyAccessHours: number;
   holdoutPercent: number;
+  cartFirstMinutes: number;
+  cartSecondHours: number;
 }>;
 
 export const getSettings = () => apiGet<MessengerSettings>(`${P}/settings`);
@@ -99,7 +103,7 @@ export const approveTemplate = (id: number) => apiPostJson<Template>(`${P}/templ
 export const unapproveTemplate = (id: number) => apiPostJson<Template>(`${P}/templates/${id}/unapprove`, {});
 export const deleteTemplate = (id: number) => apiDelete<void>(`${P}/templates/${id}`);
 export const previewTemplate = (body: { body: string; subject?: string; language: Lang }) => apiPostJson<Preview>(`${P}/templates/preview`, body);
-export const seedTemplates = (groups: ("orders" | "followups" | "journeys")[]) => apiPostJson<{ added: number }>(`${P}/templates/seed-defaults`, { groups });
+export const seedTemplates = (groups: ("orders" | "followups" | "journeys" | "carts")[]) => apiPostJson<{ added: number }>(`${P}/templates/seed-defaults`, { groups });
 
 // --- consent ----------------------------------------------------------------------------------------------------------
 

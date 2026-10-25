@@ -57,7 +57,7 @@ function TemplatesContent() {
     setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
   }
 
-  async function seed(groups: ("orders" | "followups" | "journeys")[]) {
+  async function seed(groups: ("orders" | "followups" | "journeys" | "carts")[]) {
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -96,6 +96,7 @@ function TemplatesContent() {
         <CardContent className="flex flex-wrap gap-2">
           <Button variant="secondary" disabled={busy} onClick={() => seed(["orders"])}><Sparkles className="h-4 w-4" aria-hidden="true" />{t("Add order update templates")}</Button>
           <Button variant="secondary" disabled={busy} onClick={() => seed(["followups"])}><Sparkles className="h-4 w-4" aria-hidden="true" />{t("Add unboxing and review templates")}</Button>
+          <Button variant="secondary" disabled={busy} onClick={() => seed(["carts"])}><Sparkles className="h-4 w-4" aria-hidden="true" />{t("Add cart reminder templates")}</Button>
           <Button variant="secondary" disabled={busy} onClick={() => seed(["journeys"])}><Sparkles className="h-4 w-4" aria-hidden="true" />{t("Add journey templates")}</Button>
           <Button onClick={() => setDraft({ ...blank })}><Plus className="h-4 w-4" aria-hidden="true" />{t("New template")}</Button>
         </CardContent>

@@ -236,6 +236,18 @@ Run `scripts/migrate_remote.py` to add the workflow tables. Workflows are built 
 - Waiting steps and retries are kept in the `jobs` table. The hourly scheduler (see the Auto Messenger section) runs them, so the GitHub Actions schedule must be set up for waits to work. The "Run waiting steps now" button does the same by hand.
 - `WORKFLOW_WEBHOOK_URLS` (optional): comma separated https addresses a workflow may call. Empty means the web-address action is refused.
 
+## Leads, abandoned carts, returns and complaints (migrations 0027 to 0029)
+
+Run `scripts/migrate_remote.py` to apply them. New optional settings (names only, see `backend/.env.example`):
+
+- `LEAD_SLA_HOURS` (default 24): a lead still "new" after this long raises one alert.
+- `PUBLIC_LEADS_ENABLED` (default false): switches on `POST /api/v1/public/leads`, the contact-form endpoint (rate limited, with a hidden `website` field that bots fill). A form on another website also needs that website's address allowed by the API's CORS list.
+- `META_PAGE_TOKEN`: to read Meta Lead Ads. Register `/api/v1/webhooks/meta-leads` in your Meta app (same verify token and app secret as WhatsApp). Without a token, use **Leads > test mode** (`POST /api/v1/leads/meta/test`).
+- Click-to-WhatsApp: a first message from an unknown number that carries an ad referral becomes a lead automatically.
+- Abandoned carts: in Shopify add the webhooks `checkouts/create` and `checkouts/update` (and `orders/create`, already used) pointing to `/api/v1/webhooks/shopify`. Approve the cart reminder templates (Templates > "Add cart reminder templates"). Delays are in Messenger Settings.
+- Returns: evidence photos and videos go to a private Supabase bucket named `return-evidence` (`SUPABASE_EVIDENCE_BUCKET`). Create the bucket as private. Files over 4 MB are refused because the host limits request size.
+- Refunds are only RECORDED by you after you pay the customer yourself. The app never moves money.
+
 ## Troubleshooting
 
 | You see | Likely cause and fix |

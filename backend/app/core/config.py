@@ -117,6 +117,11 @@ class Settings(BaseSettings):
     shopify_shop_domain: str | None = None
     # Workflows may call only these web addresses (https, comma separated). Empty = the "call a web address" action is refused.
     workflow_webhook_urls: str = ""
+    # Leads: how long a new lead may wait before an alert; the public website form (off until you switch it on); Meta Lead Ads.
+    lead_sla_hours: int = 24
+    public_leads_enabled: bool = False
+    meta_page_token: SecretStr | None = None
+    supabase_evidence_bucket: str = "return-evidence"   # private bucket for return photos and videos
     supabase_media_bucket: str = "customer-media"       # private bucket for customer videos (part 3)
 
     # AI assistant (server-side only; never exposed to the browser).

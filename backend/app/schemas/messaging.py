@@ -44,6 +44,8 @@ class SettingsOut(CamelModel):
     campaign_batch_size: int
     early_access_hours: int
     holdout_percent: int
+    cart_first_minutes: int
+    cart_second_hours: int
     whatsapp: ConnectionOut
     email: ConnectionOut
     unsubscribe_ready: bool            # MESSAGING_SECRET and PUBLIC_API_URL are set
@@ -69,6 +71,8 @@ class SettingsIn(CamelModel):
     campaign_batch_size: int | None = Field(default=None, ge=1, le=500)
     early_access_hours: int | None = Field(default=None, ge=0, le=168)
     holdout_percent: int | None = Field(default=None, ge=0, le=50)
+    cart_first_minutes: int | None = Field(default=None, ge=15, le=1440)
+    cart_second_hours: int | None = Field(default=None, ge=0, le=72)
 
 
 class TestSendIn(CamelModel):

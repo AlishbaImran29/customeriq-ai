@@ -50,6 +50,12 @@ def build(db: Session, payload: dict[str, Any], needed: set[str], today: date | 
             facts["customer_segment"] = campaigns.SEGMENT_LABELS.get(campaigns.segment_by_customer(db).get(customer.id, campaigns.OTHER))
     if payload.get("text") is not None:
         facts["message_text"] = str(payload["text"])[:500]
+    if payload.get("lead_id"):
+        from app.models.lead import Lead
+
+        lead = db.get(Lead, payload["lead_id"])
+        if lead is not None:
+            facts.update(lead_source=lead.source, lead_product_interest=lead.product_interest, lead_campaign=lead.campaign)
     if payload.get("item_id"):
         item = db.get(StockItem, payload["item_id"])
         if item is not None:

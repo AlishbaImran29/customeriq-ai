@@ -35,6 +35,7 @@ VARIABLES: dict[str, str] = {
     "last_purchase_line": "A ready sentence about their last purchase (empty if unknown)",
     "segment": "The customer's segment, for example Champions",
     "offer_text": "The offer you typed for the campaign (empty if none)",
+    "checkout_url": "The link back to the shopper's unfinished checkout (abandoned cart reminders)",
 }
 OPTIONAL = {"tracking_line", "cod_note", "last_product", "last_category", "last_purchase_line", "offer_text", "items"}
 

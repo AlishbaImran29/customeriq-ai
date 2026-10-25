@@ -12,7 +12,7 @@ OrderStatus = Literal["confirmed", "dispatched", "in_transit", "out_for_delivery
 
 
 class SeedIn(CamelModel):
-    groups: list[Literal["orders", "followups", "journeys"]] | None = None
+    groups: list[Literal["orders", "followups", "journeys", "carts", "returns"]] | None = None
 
 
 class SeedOut(CamelModel):

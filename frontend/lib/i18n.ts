@@ -994,6 +994,15 @@ export const URDU: Record<string, string> = {
   "When this happens": "جب یہ ہو",
   "Only if (optional)": "صرف اگر (اختیاری)",
   "Then do this": "تب یہ کریں",
+  "Leads": "لیڈز",
+  "Returns and Refunds": "واپسی اور ریفنڈ",
+  "Complaints": "شکایات",
+  "Abandoned Carts": "چھوڑی ہوئی ٹوکریاں",
+  "Auto Messenger: Abandoned Carts": "آٹو میسنجر: چھوڑی ہوئی ٹوکریاں",
+  "Refund": "ریفنڈ",
+  "Approve": "منظور کریں",
+  "Goods received": "سامان واپس مل گیا",
+  "Reopen": "دوبارہ کھولیں",
 };
 
 let current: Language = "en";

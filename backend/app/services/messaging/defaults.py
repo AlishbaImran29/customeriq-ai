@@ -76,6 +76,36 @@ _FOLLOWUPS = {
 }
 
 
+# --- abandoned cart reminders (marketing, because they invite a purchase) -------------------------------------------------
+
+_CARTS = {
+    "cart_reminder_1": {
+        "en": ("You left something behind", "Hello {{first_name}}, you left {{items}} in your cart at {{store_name}}. You can finish your order here: {{checkout_url}}"),
+        "ur": ("آپ کچھ چھوڑ گئے", "السلام علیکم {{first_name}}، آپ نے {{store_name}} پر {{items}} اپنی ٹوکری میں چھوڑا ہے۔ اپنا آرڈر یہاں مکمل کریں: {{checkout_url}}"),
+    },
+    "cart_reminder_2": {
+        "en": ("Still thinking it over?", "Hello {{first_name}}, your cart at {{store_name}} is still waiting: {{items}}. Finish your order any time: {{checkout_url}}"),
+        "ur": ("کیا ابھی سوچ رہے ہیں؟", "السلام علیکم {{first_name}}، {{store_name}} پر آپ کی ٹوکری ابھی موجود ہے: {{items}}۔ جب چاہیں آرڈر مکمل کریں: {{checkout_url}}"),
+    },
+}
+
+
+_RETURNS = {
+    "return_approved": {
+        "en": ("Your return for order {{order_number}} is approved", "Hello {{first_name}}, we approved your return request for order {{order_number}}. We will tell you the next step soon."),
+        "ur": ("آرڈر {{order_number}} کی واپسی منظور ہو گئی", "السلام علیکم {{first_name}}، آپ کے آرڈر {{order_number}} کی واپسی کی درخواست منظور ہو گئی ہے۔ اگلا قدم جلد بتائیں گے۔"),
+    },
+    "return_rejected": {
+        "en": ("About your return request for order {{order_number}}", "Hello {{first_name}}, we could not approve the return request for order {{order_number}}. Please reply to this message if you would like to talk about it."),
+        "ur": ("آرڈر {{order_number}} کی واپسی کے بارے میں", "السلام علیکم {{first_name}}، ہم آرڈر {{order_number}} کی واپسی منظور نہیں کر سکے۔ بات کرنے کے لیے اسی پیغام کا جواب دیں۔"),
+    },
+    "refund_recorded": {
+        "en": ("Your refund for order {{order_number}}", "Hello {{first_name}}, we have sent your refund for order {{order_number}}. If you do not see it soon, please reply and tell us."),
+        "ur": ("آرڈر {{order_number}} کا ریفنڈ", "السلام علیکم {{first_name}}، ہم نے آرڈر {{order_number}} کا ریفنڈ بھیج دیا ہے۔ اگر جلد نظر نہ آئے تو جواب میں بتائیں۔"),
+    },
+}
+
+
 SIGNATURE = "\n\n{{store_name}}"                 # the shop's name under every email
 
 
@@ -101,12 +131,22 @@ def _rows() -> list[dict]:
                 if event in ("media_share_question", "cod_confirmation") and channel == "email":
                     continue                       # the YES/NO answer comes back on WhatsApp
                 add(event, channel, language, subject, body)
+    for event, languages in _RETURNS.items():
+        for language, (subject, body) in languages.items():
+            for channel in ("whatsapp", "email"):
+                add(event, channel, language, subject, body)
+    for event, languages in _CARTS.items():
+        for language, (subject, body) in languages.items():
+            for channel in ("whatsapp", "email"):
+                add(event, channel, language, subject, body, category="marketing")
     return rows
 
 
 DEFAULT_GROUPS = {
     "orders": lambda r: r["event"].startswith("order_"),
     "followups": lambda r: r["event"] in _FOLLOWUPS,
+    "carts": lambda r: r["event"] in _CARTS,
+    "returns": lambda r: r["event"] in _RETURNS,
 }
 
 

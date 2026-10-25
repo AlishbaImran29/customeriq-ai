@@ -19,6 +19,9 @@ TRIGGERS: dict[str, tuple[frozenset[str], str]] = {
     "stock_below_threshold": (frozenset({"stock"}), "Stock falls to the warning level"),
     "message_received": (frozenset({"customer", "message"}), "A customer sends a WhatsApp message"),
     "customer_inactive": (frozenset({"customer"}), "A customer has not ordered for N days"),
+    "return_requested": (frozenset({"customer", "order"}), "A customer asks to return an order"),
+    "lead_created": (frozenset({"lead"}), "A new lead arrives"),
+    "lead_sla_missed": (frozenset({"lead"}), "A lead was not contacted in time"),
     "schedule_daily": (frozenset(), "Every day"),
     "schedule_weekly": (frozenset(), "Every Monday"),
 }
@@ -37,6 +40,9 @@ FIELDS: dict[str, tuple[str, str, str]] = {
     "customer_whatsapp_consent": ("bool", "customer", "Customer agreed to WhatsApp"),
     "customer_email_consent": ("bool", "customer", "Customer agreed to email"),
     "message_text": ("text", "message", "What the customer wrote"),
+    "lead_source": ("text", "lead", "Lead source"),
+    "lead_product_interest": ("text", "lead", "Product the lead asked about"),
+    "lead_campaign": ("text", "lead", "Lead campaign"),
     "stock_available": ("number", "stock", "Units available"),
     "stock_item_name": ("text", "stock", "Stock item name"),
 }

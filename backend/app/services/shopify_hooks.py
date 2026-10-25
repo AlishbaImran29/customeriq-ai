@@ -143,6 +143,9 @@ def handle(db: Session, settings: Settings, topic: str, payload: dict, now: date
         from app.services.messaging import cod_confirm
 
         cod_confirm.ask(db, settings, order, now)
+        from app.services import carts
+
+        carts.mark_recovered(db, order, payload.get("checkout_id"), now)        # they bought: stop any cart reminder
         from app.services.workflows import hooks
 
         hooks.order_created(db, order)
@@ -157,6 +160,11 @@ def handle(db: Session, settings: Settings, topic: str, payload: dict, now: date
         tracking = payload.get("tracking_number") or next(iter(payload.get("tracking_numbers") or []), None)
         change = order_status.record_status(db, settings, order, status, at=now, source="shopify", courier=payload.get("tracking_company"), tracking=tracking, now=now)
         return {"order": order.external_id, "status": status, "recorded": change.recorded, "messages": [m.status for m in change.messages]}
+    if topic in ("checkouts/create", "checkouts/update"):
+        from app.services import carts
+
+        cart = carts.record_checkout(db, payload, now)
+        return {"cart": cart.checkout_id if cart else None, "status": cart.status if cart else "ignored"}
     if topic == "products/create":
         return _new_product(db, payload)
     return {"ignored": topic}

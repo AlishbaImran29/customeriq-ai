@@ -72,6 +72,7 @@ def _settings_out(db: Session, settings: Settings) -> SettingsOut:
         cost_utility=float(row.cost_utility) if row.cost_utility is not None else None,
         cost_marketing=float(row.cost_marketing) if row.cost_marketing is not None else None,
         campaign_batch_size=row.campaign_batch_size, early_access_hours=row.early_access_hours, holdout_percent=row.holdout_percent,
+        cart_first_minutes=row.cart_first_minutes, cart_second_hours=row.cart_second_hours,
         whatsapp=ConnectionOut(
             configured=whatsapp_configured(settings),
             details={
@@ -110,7 +111,7 @@ def put_messaging_settings(body: SettingsIn, db: Session = Depends(get_db), sett
         row.quiet_end = _parse_hhmm(body.quiet_end)
     if row.quiet_start == row.quiet_end:
         raise ApiError(422, "invalid_quiet_hours", "Quiet hours cannot start and end at the same time.")
-    for field in ("weekly_marketing_cap", "default_language", "campaign_batch_size", "early_access_hours", "holdout_percent"):
+    for field in ("weekly_marketing_cap", "default_language", "campaign_batch_size", "early_access_hours", "holdout_percent", "cart_first_minutes", "cart_second_hours"):
         if field in sent and getattr(body, field) is not None:
             setattr(row, field, getattr(body, field))
     if "store_name" in sent:
