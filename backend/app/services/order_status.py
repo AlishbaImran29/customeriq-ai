@@ -141,6 +141,10 @@ def record_status(
         from app.services.workflows import hooks
 
         hooks.order_status_changed(db, order, status)  # workflows can react (fresh statuses only, like the stock and the messages)
+        if status == "delivered":
+            from app.services import meta_ads
+
+            meta_ads.queue_purchase(db, order, at)       # a delivered order is a real purchase for Meta (sent only if the customer agreed)
     if not notify:
         return StatusChange(True, False, history, reason="not_requested")
     if not forward:

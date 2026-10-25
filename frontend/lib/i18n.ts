@@ -1010,6 +1010,16 @@ export const URDU: Record<string, string> = {
   "Viewer": "دیکھنے والا",
   "Roles": "کردار",
   "Can sign in": "سائن ان کر سکتا ہے",
+  "Real Profit": "اصل منافع",
+  "Estimated profit": "اندازاً منافع",
+  "Gross order revenue": "کل آرڈر آمدنی",
+  "Delivered revenue": "ڈیلیور شدہ آمدنی",
+  "Profit per order": "فی آرڈر منافع",
+  "Inbox": "ان باکس",
+  "Use this draft": "یہ ڈرافٹ استعمال کریں",
+  "Your ready answers": "آپ کے تیار جوابات",
+  "Order status": "آرڈر کی حالت",
+  "Product question": "پروڈکٹ کا سوال",
 };
 
 let current: Language = "en";

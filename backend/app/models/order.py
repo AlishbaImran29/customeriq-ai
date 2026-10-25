@@ -68,6 +68,9 @@ class Order(TimestampMixin, Base):
     city: Mapped[str | None] = mapped_column(String(100))
     products: Mapped[str | None] = mapped_column(Text)            # product names joined with ", "
     note: Mapped[str | None] = mapped_column(Text)
+    # Where the order came from in advertising terms (a Shopify landing link's utm tags). Optional; used for true ROAS.
+    utm_source: Mapped[str | None] = mapped_column(String(100))
+    utm_campaign: Mapped[str | None] = mapped_column(String(160))
     # Where the order was created when it did not come from a file or the form: "whatsapp_chat" for
     # an order accepted from a WhatsApp chat export (so those can be deleted together).
     source: Mapped[str | None] = mapped_column(String(20), index=True)

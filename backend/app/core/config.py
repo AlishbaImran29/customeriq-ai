@@ -119,6 +119,11 @@ class Settings(BaseSettings):
     workflow_webhook_urls: str = ""
     # Leads: how long a new lead may wait before an alert; the public website form (off until you switch it on); Meta Lead Ads.
     lead_sla_hours: int = 24
+    # Meta Ads (Custom Audiences, Conversions API, ad spend). Test mode is ON by default: nothing is sent to Meta until you turn it off.
+    meta_ads_access_token: SecretStr | None = None
+    meta_ad_account_id: str | None = None          # digits only, without "act_"
+    meta_pixel_id: str | None = None
+    meta_ads_dry_run: bool = True
     public_leads_enabled: bool = False
     meta_page_token: SecretStr | None = None
     supabase_evidence_bucket: str = "return-evidence"   # private bucket for return photos and videos

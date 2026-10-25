@@ -39,6 +39,9 @@ def run_due(db: Session, settings: Settings, now: datetime | None = None) -> dic
     from app.services import carts as cart_service
 
     parts["carts"] = lambda: cart_service.run_due(db, settings, now)
+    from app.services import meta_ads
+
+    parts["meta_events"] = lambda: meta_ads.send_pending(db, settings, now)
     parts["leads"] = lambda: lead_service.check_sla(db, settings, now)
     parts["workflows"] = lambda: {**workflow_engine.tick(db, settings, now), **workflow_engine.run_due_jobs(db, settings, now)}
     parts["campaigns"] = lambda: campaigns.send_due_batches(db, settings, now)

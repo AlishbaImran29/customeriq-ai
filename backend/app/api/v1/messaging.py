@@ -196,6 +196,7 @@ def list_variables() -> list[VariableOut]:
 @router.get("/templates", response_model=list[TemplateOut], summary="Message templates")
 def list_templates(channel: str | None = Query(default=None, pattern="^(whatsapp|email)$"), db: Session = Depends(get_db)) -> list[TemplateOut]:
     query = select(MessageTemplate).order_by(MessageTemplate.event.is_(None), MessageTemplate.event, MessageTemplate.channel, MessageTemplate.language, MessageTemplate.name)
+    query = query.where(MessageTemplate.event.is_distinct_from("manual_reply"))       # typed inbox replies are not templates the seller manages
     if channel:
         query = query.where(MessageTemplate.channel == channel)
     return [_template_out(t) for t in db.scalars(query.limit(500))]

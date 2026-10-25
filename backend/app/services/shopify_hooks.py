@@ -104,6 +104,14 @@ def find_or_create_customer(db: Session, payload: dict) -> Customer:
     return customer
 
 
+def _utm(payload: dict, name: str, limit: int) -> str | None:
+    """A utm tag from the link the shopper landed on (Shopify's `landing_site`), for matching orders to ad campaigns."""
+    from urllib.parse import parse_qs, urlsplit
+
+    values = parse_qs(urlsplit(str(payload.get("landing_site") or "")).query).get(name)
+    return (values[0].strip()[:limit] or None) if values else None
+
+
 def upsert_order(db: Session, payload: dict) -> Order | None:
     if payload.get("id") is None:
         return None
@@ -125,6 +133,7 @@ def upsert_order(db: Session, payload: dict) -> Order | None:
         channel="Shopify", sales_channel="website", payment_type="cod" if ("cod" in gateways or "cash on delivery" in gateways) else "prepaid",
         city=((payload.get("shipping_address") or {}).get("city") or None), products=", ".join(str(i.get("title") or "").strip() for i in items if i.get("title")) or None,
         item_count=sum(int(i.get("quantity") or 1) for i in items) or None, distinct_products=len(items) or None, source="shopify",
+        utm_source=_utm(payload, "utm_source", 100), utm_campaign=_utm(payload, "utm_campaign", 160),
         note=f"Shopify order {payload.get('name') or '#' + str(payload.get('order_number') or payload['id'])}"[:200],
     )
     db.add(order)

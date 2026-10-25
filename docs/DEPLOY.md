@@ -259,6 +259,15 @@ Run `scripts/migrate_remote.py` to apply them. New optional settings (names only
 - There must always be one active owner: the last owner cannot be demoted or switched off.
 - This is a single-shop app, so there is no per-shop data separation to configure.
 
+## Profit, Inbox and Meta Ads (migrations 0031 to 0033)
+
+Run `scripts/migrate_remote.py` before the new backend goes live. New optional settings (names only, see `backend/.env.example`):
+
+- **Real Profit** (`/profit`): type your packing cost and return shipping cost on that page (owner), and add each item's cost price in Inventory. Orders whose product cost is unknown are left out of profit and counted, never guessed.
+- **Inbox** (`/inbox`): needs the WhatsApp webhook from the Auto Messenger setup. Replies are drafted only from your orders, stock list and the ready answers you type. A typed reply works within WhatsApp's 24-hour window.
+- **Meta Ads** (`/meta-ads`): `META_ADS_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID` (digits only), `META_PIXEL_ID`. `META_ADS_DRY_RUN` is **true by default**, so nothing reaches Meta until you set it to false. Accept the Custom Audience Terms for the ad account first. Customers are shared only if they agreed to WhatsApp or email, and only as SHA-256 hashes.
+- Purchase events are made when an order is **delivered**. True ROAS matches orders to campaigns by the `utm_campaign` tag (Shopify orders get it from the landing link; the campaign name in your spend must match it).
+
 ## Troubleshooting
 
 | You see | Likely cause and fix |
