@@ -3,7 +3,7 @@
 ROLES   viewer < staff < owner
 VIEWER  can look at everything except the owner-only pages, and can run the harmless "ask / test" actions (they change nothing).
 STAFF   can do the daily work: add orders, move leads, manage returns, send messages through the normal checks.
-OWNER   can do everything, including: settings, anything that deletes, erases or merges customers, exports, recording refunds,
+OWNER   can do everything, including: settings, anything that deletes, erases customers, exports, recording refunds,
         switching automations on, and managing who has which role.
 
 `minimum_role(method, path)` answers "which role is needed for this request". The rules are plain data below so they can be read,
@@ -17,7 +17,6 @@ RANK = {role: i for i, role in enumerate(ROLES)}
 
 # Looking is for everyone signed in, except these pages of the owner.
 OWNER_ONLY_READS = (
-    r"^/api/v1/team(/.*)?$",
     r"^/api/v1/customer-records/(audit|export\.csv)$",
 )
 
@@ -31,10 +30,9 @@ VIEWER_SAFE_WRITES = (
 OWNER_ONLY_WRITES = (
     r"^/api/v1/messaging/settings$",
     r"^/api/v1/messaging/test-send$",
-    r"^/api/v1/customer-records/(merge|anonymise|delete)$",
+    r"^/api/v1/customer-records/(anonymise|delete)$",
     r"^/api/v1/refunds/\d+/record$",
     r"^/api/v1/workflows/\d+/(enable|disable)$",
-    r"^/api/v1/team(/.*)?$",
     r"^/api/v1/profit/settings$",
     r"^/api/v1/email-auto/settings$",
     r"^/api/v1/meta-ads/(audiences/push|events/send|ad-spend/sync)$",

@@ -98,10 +98,10 @@ export function LoginForm() {
 
   if (view.kind === "pending") {
     return (
-      <Panel title="Waiting for approval" subtitle={`You are signed in as ${view.email}.`}>
+      <Panel title="No access" subtitle={`You are signed in as ${view.email}.`}>
         <p className="flex items-start gap-2 rounded-xl bg-info/10 px-3 py-2 text-sm text-info" role="status">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          The owner of this site has to approve your account before you can see any customer data. Ask them to open Team and approve you.
+          This site is private: only its owner can see the customer data. Sign in with the owner account instead.
         </p>
         <Button
           variant="secondary"
@@ -234,7 +234,7 @@ export function LoginForm() {
           {creating ? "Sign in" : "Create an account"}
         </button>
       </p>
-      {creating ? <p className="mt-2 text-center text-xs text-faint">The first account on a new site becomes the owner. Later accounts wait for the owner&apos;s approval.</p> : null}
+      {creating ? <p className="mt-2 text-center text-xs text-faint">The first account on a new site becomes the owner. Later accounts cannot see any data.</p> : null}
     </Panel>
   );
 }

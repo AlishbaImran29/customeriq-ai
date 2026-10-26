@@ -8,7 +8,7 @@ import pytest
 from app.api.deps import require_user
 from app.core import permissions as perm
 from app.main import app
-from app.models import AuditLog, User
+from app.models import AuditLog
 
 
 def as_role(role: str, email: str | None = None):
@@ -21,7 +21,6 @@ def as_role(role: str, email: str | None = None):
 @pytest.mark.parametrize("method,path,needed", [
     ("GET", "/api/v1/customers", "viewer"),
     ("GET", "/api/v1/messaging/settings", "viewer"),
-    ("GET", "/api/v1/team/users", "owner"),
     ("GET", "/api/v1/customer-records/export.csv", "owner"),
     ("POST", "/api/v1/orders", "staff"),
     ("POST", "/api/v1/leads/5/move", "staff"),
@@ -30,10 +29,8 @@ def as_role(role: str, email: str | None = None):
     ("POST", "/api/v1/workflows/test", "viewer"),
     ("PUT", "/api/v1/messaging/settings", "owner"),
     ("POST", "/api/v1/customer-records/anonymise", "owner"),
-    ("POST", "/api/v1/customer-records/merge", "owner"),
     ("POST", "/api/v1/refunds/7/record", "owner"),
     ("POST", "/api/v1/workflows/3/enable", "owner"),
-    ("PATCH", "/api/v1/team/users/abc", "owner"),
     ("DELETE", "/api/v1/campaigns/4", "owner"),
     ("DELETE", "/api/v1/anything/at/all", "owner"),
 ])
@@ -56,7 +53,7 @@ def test_a_viewer_can_look_and_ask_but_not_change(db_client):
     assert db_client.post("/api/v1/workflows/validate", json={"name": "x", "trigger": "order_created", "actions": []}).status_code == 200
     blocked = db_client.post("/api/v1/leads", json={"phone": "03001234567"})
     assert blocked.status_code == 403 and blocked.json()["error"]["code"] == "forbidden" and "only look" in blocked.json()["error"]["message"]
-    assert db_client.get("/api/v1/team/users").status_code == 403
+    assert db_client.get("/api/v1/customer-records/export.csv").status_code == 403
 
 
 def test_staff_do_the_daily_work_but_not_settings_deletions_or_refund_payments(db_client):
@@ -68,14 +65,14 @@ def test_staff_do_the_daily_work_but_not_settings_deletions_or_refund_payments(d
     assert db_client.post("/api/v1/refunds/1/record", json={"method": "bank"}).status_code == 403
     assert db_client.delete("/api/v1/workflows/1").status_code == 403
     assert db_client.get("/api/v1/customer-records/export.csv").status_code == 403
-    assert db_client.get("/api/v1/team/users").status_code == 403
-    assert "only the account owner" in db_client.get("/api/v1/team/users").json()["error"]["message"].lower()
+    assert db_client.get("/api/v1/customer-records/export.csv").status_code == 403
+    assert "only the account owner" in db_client.get("/api/v1/customer-records/export.csv").json()["error"]["message"].lower()
 
 
 def test_the_owner_can_do_everything(db_client):
     as_role("owner")
     assert db_client.put("/api/v1/messaging/settings", json={"weeklyMarketingCap": 3}).status_code == 200
-    assert db_client.get("/api/v1/team/users").status_code == 200
+    assert db_client.get("/api/v1/customer-records/export.csv").status_code == 200
 
 
 def test_a_user_without_a_role_is_refused_everything(db_client):
@@ -97,29 +94,3 @@ def test_changes_and_refusals_are_logged_but_reading_is_not(db_client, db_sessio
     logged = " ".join(str(r.detail) + r.route for r in rows)
     assert "Test Secret Name" not in logged and "TX-SECRET" not in logged and "03001234567" not in logged       # what was typed is never logged
     assert created.status_code == 201
-
-
-# --- managing roles -----------------------------------------------------------------------------------------------------------
-
-
-def make_user(db, email, role, active=True):
-    user = User(id=uuid.uuid4(), email=email, name=email.split("@")[0], role=role, is_active=active)
-    db.add(user)
-    db.flush()
-    return user
-
-
-def test_the_owner_changes_roles_and_the_last_owner_is_protected(db_client, db_session):
-    only_owner = make_user(db_session, "boss@test.example", "owner")
-    worker = make_user(db_session, "worker@test.example", "viewer")
-    db_session.commit()
-    as_role("owner")
-    listed = db_client.get("/api/v1/team/users").json()
-    assert {m["email"]: m["role"] for m in listed} == {"boss@test.example": "owner", "worker@test.example": "viewer"}
-    assert db_client.patch(f"/api/v1/team/users/{worker.id}", json={"role": "staff"}).json()["role"] == "staff"
-    assert db_client.patch(f"/api/v1/team/users/{only_owner.id}", json={"role": "staff"}).status_code == 409           # nobody would be left in charge
-    assert db_client.patch(f"/api/v1/team/users/{only_owner.id}", json={"isActive": False}).status_code == 409
-    db_client.patch(f"/api/v1/team/users/{worker.id}", json={"role": "owner"})
-    assert db_client.patch(f"/api/v1/team/users/{only_owner.id}", json={"role": "staff"}).status_code == 200            # now there is another owner
-    assert db_client.patch(f"/api/v1/team/users/{uuid.uuid4()}", json={"role": "staff"}).status_code == 404
-    assert db_client.patch(f"/api/v1/team/users/{worker.id}", json={"role": "boss"}).status_code == 422

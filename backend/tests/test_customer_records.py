@@ -1,4 +1,4 @@
-"""Customer records: duplicates, safe merge, erasing a customer, timeline, export. Everything is made up (marked TEST)."""
+"""Customer records: erasing a customer, timeline, export. Everything is made up (marked TEST)."""
 
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -7,7 +7,7 @@ import pytest
 
 from app.core.config import Settings
 from app.core.errors import ApiError
-from app.models import ConsentEvent, Customer, CustomerAudit, CustomerConsent, IncomingMessage, Message, Order, Shipment
+from app.models import Customer, CustomerAudit, CustomerConsent, IncomingMessage, Message, Order
 from app.services import customer_records as records
 from app.services.messaging import consent
 
@@ -33,53 +33,6 @@ def order(db, c, *, note=None):
 
 def settings():
     return Settings(_env_file=None)
-
-
-def test_customers_sharing_an_email_are_listed_as_duplicates(db_session):
-    a, b = person(db_session, email="Same@Test.Example"), person(db_session, email="same@test.example")
-    person(db_session, email="other@test.example")
-    groups = records.find_duplicates(db_session)
-    assert len(groups) == 1 and {c.id for c in groups[0].customers} == {a.id, b.id}
-
-
-def test_merge_moves_everything_and_fills_empty_fields(db_session):
-    keep = person(db_session, email=None, name="Test Ali", tags=["vip"], notes="likes red")
-    other = person(db_session, email="x@test.example", phone="+923001234567", tags=["Eid", "VIP"], notes="calls at night", language="ur")
-    order(db_session, keep)
-    moved = order(db_session, other)
-    db_session.add(Shipment(external_id="TEST-SHIP-CR1", order_id=moved.id, customer_id=other.id, courier="TCS", booked_date=date(2026, 3, 1), status="delivered"))
-    db_session.flush()
-    records.merge(db_session, keep.id, other.id)
-    db_session.flush()
-    db_session.expire_all()
-    assert db_session.get(Customer, other.id) is None
-    assert db_session.query(Order).filter(Order.customer_id == keep.id).count() == 2
-    assert db_session.query(Shipment).filter(Shipment.customer_id == keep.id).count() == 1
-    assert (keep.email, keep.phone_normalised, keep.preferred_language) == ("x@test.example", "+923001234567", "ur")
-    assert keep.tags == ["vip", "Eid"]                                       # joined, not repeated (VIP = vip)
-    assert keep.notes == "likes red\n---\ncalls at night"
-    audit = db_session.query(CustomerAudit).one()
-    assert audit.action == "merge" and audit.detail["orders"] == 1 and "x@test.example" not in str(audit.detail)
-
-
-def test_merge_keeps_an_opt_out_from_either_side(db_session):
-    keep, other = person(db_session, email="a@test.example"), person(db_session, email="b@test.example")
-    consent.set_consent(db_session, keep.id, "whatsapp", True, "manual")
-    consent.set_consent(db_session, other.id, "whatsapp", False, "whatsapp_stop")
-    consent.set_consent(db_session, other.id, "email", True, "manual")
-    records.merge(db_session, keep.id, other.id)
-    db_session.expire_all()
-    rows = {c.channel: c.opted_in for c in db_session.query(CustomerConsent).filter(CustomerConsent.customer_id == keep.id)}
-    assert rows == {"whatsapp": False, "email": True}
-    assert db_session.query(ConsentEvent).filter(ConsentEvent.customer_id == keep.id).count() == 3      # the history came along
-
-
-def test_merge_refuses_nonsense(db_session):
-    a = person(db_session)
-    with pytest.raises(ApiError):
-        records.merge(db_session, a.id, a.id)
-    with pytest.raises(ApiError):
-        records.merge(db_session, a.id, 999999)
 
 
 def test_anonymise_removes_the_person_but_keeps_the_orders(db_session):
@@ -134,21 +87,15 @@ def test_export_is_safe_for_spreadsheets_and_leaves_erased_customers_out(db_sess
     assert "'=HYPERLINK(1)" in text and "Test Gone" not in text and f"ANON-{gone.id}" not in text
 
 
-def test_api_profile_merge_erase_and_audit(db_client, db_session):
-    a, b = person(db_session, email="dup@test.example", name="Test A"), person(db_session, email="dup@test.example", name="Test B")
+def test_api_profile_erase_and_audit(db_client, db_session):
+    a = person(db_session, email="dup@test.example", name="Test A")
     db_session.commit()
     original_id = a.external_id
     r = db_client.patch("/api/v1/customer-records/profile", params={"id": original_id}, json={"notes": "n", "tags": ["x", "X", " y "], "acquisitionSource": "instagram"})
     assert r.status_code == 200 and r.json()["tags"] == ["x", "y"] and r.json()["acquisitionSource"] == "instagram"
-    groups = db_client.get("/api/v1/customer-records/duplicates").json()
-    assert len(groups) == 1 and len(groups[0]["customers"]) == 2
-    assert db_client.post("/api/v1/customer-records/merge", json={"keepId": a.id, "mergeId": b.id}).status_code == 422       # needs confirm
-    ok = db_client.post("/api/v1/customer-records/merge", json={"keepId": a.id, "mergeId": b.id, "confirm": True})
-    assert ok.status_code == 200 and ok.json()["id"] == a.id
-    assert db_client.get("/api/v1/customer-records/duplicates").json() == []
     assert db_client.post("/api/v1/customer-records/delete", json={"customerId": a.external_id}).status_code == 422
     assert db_client.post("/api/v1/customer-records/anonymise", json={"customerId": a.external_id, "confirm": True}).status_code == 200
     assert db_client.get("/api/v1/customer-records/profile", params={"id": original_id}).status_code == 404            # its id changed
     actions = [x["action"] for x in db_client.get("/api/v1/customer-records/audit").json()]
-    assert actions == ["anonymise", "merge", "edit"]
+    assert actions == ["anonymise", "edit"]
     assert db_client.get("/api/v1/customer-records/export.csv").headers["content-type"].startswith("text/csv")

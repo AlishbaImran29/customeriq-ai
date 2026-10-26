@@ -1,9 +1,4 @@
-"""Customer records: find duplicates, merge two customers safely, erase a customer's personal data, and show one timeline.
-
-MERGE (keep K, absorb M). Everything that belonged to M is moved to K (orders, shipments, messages, replies, videos, consent
-history). Where both have the same thing, the SAFER answer wins: if either customer opted out of a channel, the merged customer
-is opted out. Empty fields on K are filled from M; tags are joined; notes are kept side by side. Then M is deleted and an audit
-line is written. Nothing is lost silently.
+"""Customer records: erase a customer's personal data, and show one timeline.
 
 ANONYMISE keeps the orders (so revenue and retention figures stay true) but removes everything that points to a person: name,
 email, phone, notes, tags, every message and reply, every customer video (file and record) and the consent record. DELETE removes
@@ -23,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.errors import ApiError
 from app.models import (
-    CampaignRecipient, ConsentEvent, Customer, CustomerConsent, CustomerMedia, IncomingMessage, JourneyEnrollment, Message, Order, OrderStatusHistory, Shipment,
+    CampaignRecipient, ConsentEvent, Customer, CustomerConsent, CustomerMedia, IncomingMessage, JourneyEnrollment, Message, Order, OrderStatusHistory,
 )
 from app.models.customer_audit import CustomerAudit
 from app.services import supabase_storage
@@ -49,98 +44,6 @@ def clean_tags(tags: list[str]) -> list[str]:
             seen.add(tag.lower())
             out.append(tag)
     return out[:MAX_TAGS]
-
-
-# --- duplicates ---------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class DuplicateGroup:
-    reason: str                 # "same_email"
-    customers: list[Customer]
-
-
-def find_duplicates(db: Session) -> list[DuplicateGroup]:
-    """Customers that share an email address (not case sensitive). A phone number can never be shared: it is unique."""
-    emails = db.scalars(
-        select(func.lower(Customer.email)).where(Customer.email.is_not(None), Customer.status != "anonymised")
-        .group_by(func.lower(Customer.email)).having(func.count() > 1).limit(100)
-    ).all()
-    groups = []
-    for email in emails:
-        members = list(db.scalars(select(Customer).where(func.lower(Customer.email) == email, Customer.status != "anonymised").order_by(Customer.id)))
-        groups.append(DuplicateGroup("same_email", members))
-    return groups
-
-
-# --- merge ----------------------------------------------------------------------------------------------------------------
-
-
-def _take_consent(db: Session, keep: Customer, other: Customer) -> None:
-    kept = {c.channel: c for c in db.scalars(select(CustomerConsent).where(CustomerConsent.customer_id == keep.id))}
-    for row in list(db.scalars(select(CustomerConsent).where(CustomerConsent.customer_id == other.id))):
-        mine = kept.get(row.channel)
-        if mine is None:
-            row.customer_id = keep.id
-        else:
-            mine.opted_in = mine.opted_in and row.opted_in                  # an opt-out on either side wins
-            if row.changed_on > mine.changed_on:
-                mine.changed_on, mine.source = row.changed_on, row.source
-            db.delete(row)
-    db.flush()
-
-
-def _take_campaigns_and_journeys(db: Session, keep: Customer, other: Customer) -> None:
-    in_campaigns = set(db.scalars(select(CampaignRecipient.campaign_id).where(CampaignRecipient.customer_id == keep.id)))
-    for row in list(db.scalars(select(CampaignRecipient).where(CampaignRecipient.customer_id == other.id))):
-        if row.campaign_id in in_campaigns:
-            db.delete(row)
-        else:
-            row.customer_id = keep.id
-    live = set(db.scalars(select(JourneyEnrollment.journey_id).where(JourneyEnrollment.customer_id == keep.id, JourneyEnrollment.state.in_(("active", "holdout")))))
-    for row in list(db.scalars(select(JourneyEnrollment).where(JourneyEnrollment.customer_id == other.id))):
-        if row.state in ("active", "holdout") and row.journey_id in live:
-            db.delete(row)
-        else:
-            row.customer_id = keep.id
-    db.flush()
-
-
-def merge(db: Session, keep_id: int, other_id: int) -> Customer:
-    """Merge customer `other_id` into `keep_id`. Commits nothing."""
-    if keep_id == other_id:
-        raise ApiError(422, "same_customer", "Choose two different customers.")
-    keep, other = db.get(Customer, keep_id), db.get(Customer, other_id)
-    if keep is None or other is None:
-        raise ApiError(404, "customer_not_found", "No such customer.")
-    if "anonymised" in (keep.status, other.status):
-        raise ApiError(409, "customer_anonymised", "An erased customer cannot be merged.")
-    moved = {}
-    for name, model in (("orders", Order), ("shipments", Shipment), ("messages", Message), ("replies", IncomingMessage), ("videos", CustomerMedia), ("consent_history", ConsentEvent)):
-        result = db.execute(update(model).where(model.customer_id == other.id).values(customer_id=keep.id))
-        moved[name] = result.rowcount or 0
-    _take_consent(db, keep, other)
-    _take_campaigns_and_journeys(db, keep, other)
-    # The phone number is unique, so it is released before K can take it.
-    other_phone, other_phone_norm = other.phone, other.phone_normalised
-    other.phone_normalised = None
-    db.flush()
-    for field in ("email", "first_name", "last_name", "country", "preferred_language", "acquisition_source"):
-        if not getattr(keep, field) and getattr(other, field):
-            setattr(keep, field, getattr(other, field))
-    if not keep.phone_normalised and other_phone_norm:
-        keep.phone, keep.phone_normalised = other_phone, other_phone_norm
-    elif not keep.phone and other_phone:
-        keep.phone = other_phone
-    keep.tags = clean_tags([*(keep.tags or []), *(other.tags or [])])
-    if other.notes:
-        keep.notes = f"{keep.notes}\n---\n{other.notes}" if keep.notes else other.notes
-    audit(db, "merge", keep, absorbed_customer_id=other.id, **moved)
-    db.flush()
-    db.expire(other)
-    db.delete(other)
-    db.flush()
-    return keep
 
 
 # --- erase ----------------------------------------------------------------------------------------------------------------

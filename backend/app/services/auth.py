@@ -8,7 +8,7 @@ HOW A REQUEST IS CHECKED
 3. The person's row in our `users` table (same id as their Supabase account) holds their ROLE and whether they are approved.
 
 WHO GETS IN. Because sign-up needs no email confirmation, anyone could create a Supabase account. So a new account is NOT allowed
-to see customer data until the owner approves it (Team page). The very first account on a fresh site becomes the owner; if
+to see customer data until the owner approves it (there is no Team page: only the first account or OWNER_EMAIL gets in). The very first account on a fresh site becomes the owner; if
 OWNER_EMAIL is set, only that address can claim the owner role.
 """
 

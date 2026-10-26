@@ -83,20 +83,14 @@ def test_later_accounts_wait_for_approval_and_see_no_data(db_client, db_session,
     assert db_client.get("/api/v1/customers", headers=auth("tok-newcomer")).status_code == 403
 
 
-def test_the_owner_approves_a_newcomer_on_the_team_page(db_client, db_session, supabase):
+def test_a_newcomer_stays_blocked_because_there_is_no_one_to_approve_them(db_client, db_session, supabase):
     supabase.add("tok-owner", "owner@test.example")
-    new_id = supabase.add("tok-newcomer", "newcomer@test.example")
+    supabase.add("tok-newcomer", "newcomer@test.example")
     db_client.get("/api/v1/auth/me", headers=auth("tok-owner"))
-    db_client.get("/api/v1/auth/me", headers=auth("tok-newcomer"))
+    assert db_client.get("/api/v1/auth/me", headers=auth("tok-newcomer")).json()["isActive"] is False
     svc.reset_token_cache()
-    team = db_client.get("/api/v1/team/users", headers=auth("tok-owner")).json()
-    assert [(m["email"], m["isActive"]) for m in team] == [("newcomer@test.example", False), ("owner@test.example", True)]       # waiting ones first
-    assert db_client.patch(f"/api/v1/team/users/{new_id}", json={"isActive": True, "role": "staff"}, headers=auth("tok-newcomer")).status_code == 403
-    assert db_client.patch(f"/api/v1/team/users/{new_id}", json={"isActive": True, "role": "staff"}, headers=auth("tok-owner")).status_code == 200
-    svc.reset_token_cache()
-    assert db_client.get("/api/v1/leads", headers=auth("tok-newcomer")).status_code == 200
-    assert db_client.post("/api/v1/leads", json={"phone": "03001234567"}, headers=auth("tok-newcomer")).status_code == 201     # staff can work
-    assert db_client.delete("/api/v1/workflows/1", headers=auth("tok-newcomer")).status_code == 403                             # but not delete
+    assert db_client.get("/api/v1/leads", headers=auth("tok-newcomer")).status_code == 403
+    assert db_client.get("/api/v1/leads", headers=auth("tok-owner")).status_code == 200
 
 
 def test_owner_email_decides_who_may_claim_the_site(db_client, db_session, supabase):

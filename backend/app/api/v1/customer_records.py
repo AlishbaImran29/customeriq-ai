@@ -1,4 +1,4 @@
-"""Customer records: notes and tags, duplicates and merge, a customer's timeline, erasing a customer, export, and the audit trail."""
+"""Customer records: notes and tags, a customer's timeline, erasing a customer, export, and the audit trail."""
 
 from datetime import datetime
 from typing import Literal
@@ -43,17 +43,6 @@ class EventOut(CamelModel):
     at: datetime
     kind: Literal["order", "status", "message", "reply", "consent"]
     text: str
-
-
-class DuplicateGroupOut(CamelModel):
-    reason: str
-    customers: list[ProfileOut]
-
-
-class MergeIn(CamelModel):
-    keep_id: int
-    merge_id: int
-    confirm: bool = False
 
 
 class EraseIn(CamelModel):
@@ -122,20 +111,6 @@ def patch_profile(body: ProfilePatch, id: str = Query(..., min_length=1, max_len
 @router.get("/timeline", response_model=list[EventOut], summary="Orders, status changes, messages, replies and consent of one customer")
 def get_timeline(id: str = Query(..., min_length=1, max_length=100), db: Session = Depends(get_db)) -> list[EventOut]:
     return [EventOut(at=e.at, kind=e.kind, text=e.text) for e in records.timeline(db, _find(db, id))]  # type: ignore[arg-type]
-
-
-@router.get("/duplicates", response_model=list[DuplicateGroupOut], summary="Customers that look like the same person")
-def duplicates(db: Session = Depends(get_db)) -> list[DuplicateGroupOut]:
-    return [DuplicateGroupOut(reason=g.reason, customers=[_profile(c) for c in g.customers]) for g in records.find_duplicates(db)]
-
-
-@router.post("/merge", response_model=ProfileOut, summary="Merge one customer into another (the other one disappears)")
-def merge(body: MergeIn, db: Session = Depends(get_db)) -> ProfileOut:
-    _confirmed(body.confirm)
-    keep = records.merge(db, body.keep_id, body.merge_id)
-    db.commit()
-    db.refresh(keep)
-    return _profile(keep)
 
 
 @router.post("/anonymise", response_model=ProfileOut, summary="Erase a customer's personal data but keep the orders as anonymous figures")
