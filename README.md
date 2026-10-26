@@ -1,15 +1,16 @@
 # CustomerIQ AI
 
 AI-powered customer intelligence dashboard for e-commerce stores: import your
-orders, then see segments, health scores, inactivity, revenue trends,
-recommendations, and ask an AI assistant about your data.
+orders, then see segments, churn risk, lifetime value, revenue trends and
+recommendations. Predictions are shown only when they beat a simple baseline.
 
 | Part | Technology | Folder |
 | --- | --- | --- |
 | Frontend | Next.js 16, TypeScript, Tailwind CSS, Recharts | [`frontend/`](frontend/) |
 | Backend API | Python 3.13, FastAPI | [`backend/`](backend/) |
 | Database | PostgreSQL 18 | (local service) |
-| AI assistant | Anthropic Claude API (default) or OpenAI (optional) | `backend/app/services/assistant.py` |
+| Sign-in | Supabase Auth (email + password) | `frontend/lib/supabase/`, `backend/app/services/auth.py` |
+| AI drafts (optional) | Anthropic Claude API (default) or OpenAI, used by Launch Studio and Auto Messenger | `backend/app/services/llm.py` |
 
 The project specification is in [`docs/specification.pdf`](docs/specification.pdf).
 
@@ -18,11 +19,10 @@ The project specification is in [`docs/specification.pdf`](docs/specification.pd
 | Feature | Status |
 | --- | --- |
 | CSV / Excel (.xlsx) import with row validation | ✅ Real, server-side |
-| Dashboard KPIs, RFM segments, health scores, revenue trends and drivers | ✅ Calculated from your data with fixed formulas |
+| Dashboard KPIs, RFM segments, revenue trends and revenue by country | ✅ Calculated from your data with fixed formulas |
 | Inactivity levels, revenue at risk, recommendations, executive summary | ✅ Rule-based (described as such in the UI) |
-| AI Business Assistant | ✅ Real once `ANTHROPIC_API_KEY` is set; answers only from your summary figures |
-| Churn probability, predicted CLV, 3-month revenue forecast | ✅ Trained models (scikit-learn), **shown only if they pass an accuracy test** on data they were not trained on. Otherwise "Not available" with the reason. Details below. |
-| Growth Score | ✅ Our own 0-100 score from four measured metrics (revenue growth, retention, average health, customer growth). The page shows the inputs and weights; it is not an industry standard and not a prediction. Needs about 6 months of history. |
+| Churn probability | ✅ Trained model (scikit-learn), **shown only if it passes an accuracy test** on data it was not trained on and beats a simple baseline. Otherwise "Not available" with the reason. (Predicted lifetime value and a revenue forecast were tried and removed: neither beat its baseline on Online Retail II.) |
+| Growth Score | ✅ Our own 0-100 score from three measured metrics (revenue growth, retention, customer growth). The page shows the inputs and weights; it is not an industry standard and not a prediction. Needs about 6 months of history. |
 | Revenue at Risk calculator | ✅ A "what if" tool that starts from your At-Risk and Lost customers |
 | Sign-in (accounts, sessions, change password) | ✅ Built. In live mode every page and API call needs a signed-in user. Demo mode has no sign-in. |
 | Public real-world test dataset (UCI Online Retail II) | ✅ Converter included (see "Test data") |
@@ -143,40 +143,20 @@ Stop either server with **Ctrl+C** in its terminal.
 In live mode the site shows a **sign-in page** first. Nothing about your customers
 is visible, and the API refuses every request, until someone is signed in.
 
-- **First time:** open the site. With no accounts yet it shows **Create your
-  account**: your name, email and a password (10+ characters; a few unrelated
-  words like "blue tractor sings loudly" work well). You are signed in straight away.
-- **Real emails only (optional):** put your email settings in `backend/.env` (see `SMTP_*` in
-  `backend/.env.example`; for Gmail you need an **App Password**). Then every new account, including
-  yours, must type a **6-digit code** that is emailed to it before it can sign in, and a
-  **Create an account** link appears so other people can sign up. Without email settings, accounts
-  are created without a code and only the owner account can be created on the site. All signed-in
-  users see the same data, so do not enable public sign-up for confidential data.
-- **Later:** **Sign in** with that email and password. "Keep me signed in on this
-  device" keeps you signed in for 30 days; without it the session ends after 24 hours
-  or when you close the browser.
-- **Your account** (avatar menu, top right): see your details, **change your
-  password** (other devices are signed out), or **Sign out**.
-- **More people / forgotten password:** use the command-line tool (passwords are
-  typed at a hidden prompt):
+- **First time:** open the site and choose **Create an account**: your name, email and a password (8+ characters). There is nothing to
+  confirm by email. The first account on a new site becomes the **owner**.
+- **Later:** **Sign in** with that email and password. Your sign-in is renewed automatically while you use the site.
+- **Your account** (avatar menu, top right): see your details, **change your password**, or **Sign out**.
+- **More people:** they create their own account on the sign-in page; the owner approves them on the **Team** page and picks
+  their role (owner, staff or viewer). A forgotten password is reset in the Supabase dashboard (Authentication, Users).
 
-```powershell
-cd D:\CustomerIQ.AI\backend
-.\.venv\Scripts\python.exe scripts\manage_users.py list
-.\.venv\Scripts\python.exe scripts\manage_users.py create teammate@company.com --name "Teammate"
-.\.venv\Scripts\python.exe scripts\manage_users.py reset-password you@company.com
-.\.venv\Scripts\python.exe scripts\manage_users.py deactivate former@company.com
-```
-
-How it is protected: passwords are stored only as scrypt hashes; the session cookie
-is `HttpOnly` (page scripts cannot read it) and `SameSite=Lax`; only a hash of the
-session token is stored; 8 wrong attempts lock that email for 15 minutes; writes from
+How it is protected: passwords live only in Supabase Auth (never in our database); the API checks the sign-in
+token on every call; new accounts see no data until the owner approves them; writes from
 other websites are refused. Demo mode (no backend address) has no sign-in.
 
-> **Before putting the site on the internet:** set `APP_ENV=production` (secure
-> cookies, hides the API docs) and a `SETUP_CODE` in `backend/.env`, so a stranger who
-> finds the site first cannot create the owner account. Use HTTPS. There is one kind of
-> account (everyone sees everything); roles are not built.
+> **Before putting the site on the internet:** set `APP_ENV=production` (hides the API docs) and `OWNER_EMAIL` in
+> `backend/.env`, so a stranger who finds the site first cannot claim the owner account. Sign-in is Supabase Auth;
+> new accounts wait for the owner's approval. See docs/DEPLOY.md.
 
 ## Using it
 
@@ -271,28 +251,21 @@ cd D:\CustomerIQ.AI\backend
 Only rows whose IDs start with `SYN-` are deleted. (Add `--source public` to remove
 the public dataset's `PUB-` rows instead.)
 
-### Turning on the AI assistant (optional)
+### Turning on the AI drafts (optional)
 
-The assistant uses **Claude** (Anthropic) by default.
+Launch Studio (ideas, ad copy, competitor analysis) and the Auto Messenger campaign drafts use **Claude** (Anthropic) by default.
+Everything else works without a key.
 
-1. Create an API key in the **Claude Console** at <https://platform.claude.com>
-   (API keys page). API usage is billed separately from Claude Pro / Max
-   subscriptions, so the account needs **API credits** (Billing page).
+1. Create an API key in the **Claude Console** at <https://platform.claude.com> (API usage is billed separately from Claude Pro / Max).
 2. Add to `backend/.env` (type the key yourself; never share it):
 
    ```dotenv
    AI_PROVIDER=anthropic
    ANTHROPIC_API_KEY='your-key'
-   ANTHROPIC_MODEL=claude-opus-5-5
    ```
 
-   To use OpenAI instead: `AI_PROVIDER=openai`, `OPENAI_API_KEY='your-key'`,
-   `OPENAI_MODEL=gpt-6-luna`.
-
-3. Restart the backend (Ctrl+C, then start it again).
-
-The assistant only sees summary figures and anonymous customer IDs — never
-names or emails.
+   To use OpenAI instead: `AI_PROVIDER=openai`, `OPENAI_API_KEY='your-key'`.
+3. Restart the backend.
 
 ---
 
@@ -328,22 +301,21 @@ npm.cmd run build
 | Port 3000 is in use | Another project is running. Next.js picks 3001 automatically; use that address. |
 | You are sent to the **sign-in page** again and again | Your session ended (24 hours, or you signed out elsewhere), or the browser blocks cookies for this site. Sign in again; check cookies are allowed. |
 | **"That email or password is not correct."** | Check the email and password (the email ignores capital letters). After 8 wrong tries the email is locked for about 15 minutes. |
-| **"Too many sign-in attempts"** | Wait the number of minutes shown. A forgotten password can be reset with `manage_users.py reset-password`. |
+| **"Too many attempts"** | Wait a few minutes. A forgotten password is reset in the Supabase dashboard (Authentication, Users). |
 | Sign-in page says **"We can't reach the server"** | The backend is not running. Start Terminal 1 and click **Try again**. |
 | Pages say **Couldn't load live data** | The backend is not running or not reachable. Start Terminal 1, then click **Try again**. |
 | Health check shows `"database": "unavailable"` | PostgreSQL is stopped or `DB_PASSWORD` in `backend/.env` is wrong. Details are in the backend terminal. |
-| Assistant says **AI not configured** | Add `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY` with `AI_PROVIDER=openai`) to `backend/.env` and restart the backend. |
-| Assistant says **no remaining credits** | Add API credits in the Claude Console (Billing) — a Claude Pro subscription does not include API credits. |
+| Launch Studio says **AI not configured** | Add `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY` with `AI_PROVIDER=openai`) to `backend/.env` and restart the backend. |
 | Build fails with `Failed to fetch Geist from Google Fonts` | The build downloads fonts; check the internet connection and run it again. |
 
 ## Project layout
 
 ```text
 backend/
-  app/api/v1/        HTTP endpoints (health, auth, imports, analytics, assistant)
-  app/services/      import checks, analytics formulas, predictions, AI assistant, sign-in
+  app/api/v1/        HTTP endpoints (health, auth, imports, analytics)
+  app/services/      import checks, analytics formulas, predictions, shared AI connection, sign-in check
   app/models/        database tables;  alembic/ = migrations
-  scripts/           test-data generator/converter, cleanup, manage_users.py
+  scripts/           test-data generator/converter, cleanup
   tests/             pytest suite
 frontend/
   proxy.ts           sends visitors without a sign-in cookie to /login

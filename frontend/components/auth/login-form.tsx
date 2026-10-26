@@ -3,78 +3,25 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Circle, Eye, EyeOff, Info, Loader2, MailCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, Eye, EyeOff, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  createAccount,
-  getAuthStatus,
-  needsVerification,
-  resendCode,
-  safeNext,
-  signIn,
-  signUp,
-  verifyEmail,
-  type AuthStatus,
-} from "@/lib/api/auth";
-import { API_MODE, ApiError } from "@/lib/api/config";
+import { AuthProblem, MIN_PASSWORD_LENGTH, getMe, safeNext, signIn, signOut, signUp } from "@/lib/api/auth";
+import { API_MODE } from "@/lib/api/config";
+import { supabaseBrowser } from "@/lib/supabase/client";
+import { SUPABASE_CONFIGURED } from "@/lib/supabase/env";
 import { cn } from "@/lib/utils";
 
-type View =
-  | { kind: "loading" }
-  | { kind: "unreachable"; message: string }
-  | { kind: "ready"; status: AuthStatus };
-
-type Field = "name" | "email" | "password" | "confirm" | "setupCode" | "code";
-type Mode = "signin" | "signup" | "verify";
+type Mode = "signin" | "signup";
+type Field = "name" | "email" | "password" | "confirm";
 type FormError = { message: string; field?: Field };
+type View = { kind: "loading" } | { kind: "form" } | { kind: "pending"; email: string };
 
-const MIN_PASSWORD_LENGTH = 10;
-const CODE_LENGTH = 6;
-const RESEND_SECONDS = 60;
 const NOTICES: Record<string, string> = {
   expired: "Your session ended, so please sign in again to continue.",
   signedout: "You've been signed out. See you next time!",
 };
-const SERVER_FIELDS: Record<string, Field> = {
-  email: "email",
-  password: "password",
-  name: "name",
-  setupCode: "setupCode",
-  code: "code",
-};
-
-// Why an email could not be sent (sent by the server as a short code), in words for the site owner.
-const EMAIL_FAILURE_HINTS: Record<string, string> = {
-  login_refused: "The email service refused the login. (Site owner: check MAIL_WEBHOOK_SECRET, or BREVO_API_KEY, or SMTP_USER and the App Password.)",
-  sender_refused: "The email service refused the sender address. (Site owner: verify MAIL_FROM as a sender in Brevo, or check SMTP_USER and SMTP_FROM.)",
-  provider_limit: "The email service has reached its sending limit or plan limit. Please try again later.",
-  address_refused: "The email address was refused. Please check it for typing mistakes.",
-  timeout: "The email service did not answer in time. Please try again.",
-  disconnected: "The email service closed the connection. (Site owner: check SMTP_HOST and SMTP_PORT.)",
-  host_not_found: "The email host name was not found. (Site owner: check SMTP_HOST, it should be smtp.gmail.com for Gmail.)",
-  port_closed: "The email service refused the connection on that port. (Site owner: check SMTP_PORT, try 587 or 465.)",
-  network_blocked: "This server has no network route to the email service. (Site owner: on Vercel use MAIL_WEBHOOK_URL instead of SMTP.)",
-  bad_response:
-    "The email service answered in an unexpected way. (Site owner: deploy the Apps Script as a Web app with access set to Anyone, and use the address that ends in /exec.)",
-  tls_failed: "The secure connection to the email service failed. (Site owner: 587 needs SMTP_SECURITY=starttls, 465 needs SMTP_SECURITY=ssl.)",
-  unreachable: "The server could not reach the email service. (Site owner: check SMTP_HOST and SMTP_PORT.)",
-  smtp_error: "The email service reported an error.",
-};
-
-function describe(error: unknown): FormError {
-  if (error instanceof ApiError) {
-    const details = error.details as { field?: string; reason?: string; kind?: string; errno?: number | null } | null;
-    const hint = error.code === "email_send_failed" && details?.reason ? EMAIL_FAILURE_HINTS[details.reason] : undefined;
-    const technical = hint && details?.kind ? ` [${details.kind}${details.errno ? `, error ${details.errno}` : ""}]` : "";
-    return {
-      message: hint ? `${error.message} ${hint}${technical}` : error.message,
-      field: details?.field ? SERVER_FIELDS[details.field] : undefined,
-    };
-  }
-  return { message: "Something went wrong. Please try again." };
-}
 
 export function LoginForm() {
   const router = useRouter();
@@ -83,44 +30,35 @@ export function LoginForm() {
   const notice = NOTICES[params.get("reason") ?? ""];
 
   const [view, setView] = useState<View>({ kind: "loading" });
+  const [mode, setMode] = useState<Mode>(params.get("mode") === "signup" ? "signup" : "signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [setupCode, setSetupCode] = useState("");
-  const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<FormError | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const [mode, setMode] = useState<Mode>(params.get("mode") === "signup" ? "signup" : "signin");
-  const [pendingEmail, setPendingEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [cooldown, setCooldown] = useState(0);
-  const [info, setInfo] = useState<string | null>(null);
 
+  // Someone who is already signed in goes straight on (or sees the "waiting for approval" screen).
   useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = window.setTimeout(() => setCooldown((seconds) => seconds - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [cooldown]);
-
-  useEffect(() => {
-    if (API_MODE === "demo") return;
+    if (API_MODE === "demo" || !SUPABASE_CONFIGURED) return;
     let cancelled = false;
-    getAuthStatus()
-      .then((status) => {
+    supabaseBrowser().auth.getSession().then(async ({ data }) => {
+      if (cancelled) return;
+      if (!data.session) return setView({ kind: "form" });
+      try {
+        const me = await getMe();
         if (cancelled) return;
-        if (status.authenticated) router.replace(next);
-        else setView({ kind: "ready", status });
-      })
-      .catch((cause: unknown) => {
-        if (!cancelled) setView({ kind: "unreachable", message: describe(cause).message });
-      });
+        if (me.isActive) router.replace(next);
+        else setView({ kind: "pending", email: me.email });
+      } catch {
+        if (!cancelled) setView({ kind: "form" });
+      }
+    });
     return () => {
       cancelled = true;
     };
-  }, [attempt, next, router]);
+  }, [next, router]);
 
   if (API_MODE === "demo") {
     return (
@@ -131,6 +69,16 @@ export function LoginForm() {
         <Link href="/" className="mt-4 inline-flex text-sm font-medium text-accent hover:text-accent">
           Go to the demo dashboard
         </Link>
+      </Panel>
+    );
+  }
+
+  if (!SUPABASE_CONFIGURED) {
+    return (
+      <Panel title="Sign-in is not set up">
+        <p className="text-sm text-ink-2">
+          Site owner: add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to the website settings, then redeploy.
+        </p>
       </Panel>
     );
   }
@@ -148,202 +96,70 @@ export function LoginForm() {
     );
   }
 
-  if (view.kind === "unreachable") {
+  if (view.kind === "pending") {
     return (
-      <Panel title="We can't reach the server">
-        <p className="text-sm text-ink-2">{view.message}</p>
+      <Panel title="Waiting for approval" subtitle={`You are signed in as ${view.email}.`}>
+        <p className="flex items-start gap-2 rounded-xl bg-info/10 px-3 py-2 text-sm text-info" role="status">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          The owner of this site has to approve your account before you can see any customer data. Ask them to open Team and approve you.
+        </p>
         <Button
-          className="mt-4"
           variant="secondary"
-          onClick={() => {
-            setView({ kind: "loading" });
-            setAttempt((n) => n + 1);
+          className="mt-4 h-11 w-full"
+          onClick={async () => {
+            await signOut();
+            setView({ kind: "form" });
           }}
         >
-          Try again
+          Sign out
         </Button>
       </Panel>
     );
   }
 
-  const { setupRequired, setupCodeRequired, signupOpen, verificationEnabled } = view.status;
-  // "Creating" covers the owner's first account and ordinary sign-ups; sign-ins have fewer fields.
-  const creating = setupRequired || (mode === "signup" && signupOpen);
-
-  function startVerify(address: string) {
-    setPendingEmail(address);
-    setCode("");
-    setError(null);
-    setInfo(null);
-    setCooldown(RESEND_SECONDS);
-    setSubmitting(false);
-    setMode("verify");
-  }
-
-  async function onVerify(event: React.FormEvent) {
-    event.preventDefault();
-    if (submitting) return;
-    if (code.length !== CODE_LENGTH) {
-      setError({ message: `Please enter the ${CODE_LENGTH}-digit code from the email.`, field: "code" });
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
-    try {
-      await verifyEmail(pendingEmail, code, remember);
-      router.replace(next);
-      router.refresh();
-    } catch (cause) {
-      setError(describe(cause));
-      setSubmitting(false);
-    }
-  }
-
-  async function onResend() {
-    if (cooldown > 0) return;
-    setError(null);
-    setInfo(null);
-    setCooldown(RESEND_SECONDS);
-    try {
-      await resendCode(pendingEmail);
-      setInfo("If that address is waiting for confirmation, a new code is on its way.");
-    } catch (cause) {
-      setError(describe(cause));
-    }
-  }
+  const creating = mode === "signup";
+  const fieldError = (field: Field) => (error?.field === field ? error.message : undefined);
+  const generalError = error && !error.field ? error.message : null;
 
   function validate(): FormError | null {
-    const trimmed = email.trim();
-    if (!trimmed || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
-      return { message: "Please enter your email address, for example name@company.com.", field: "email" };
-    }
+    if (creating && !name.trim()) return { message: "Please enter your name.", field: "name" };
+    if (!email.trim() || !email.includes("@")) return { message: "Please enter a valid email address.", field: "email" };
     if (!password) return { message: "Please enter your password.", field: "password" };
-    if (creating) {
-      if (password.length < MIN_PASSWORD_LENGTH) {
-        return { message: `Your password needs at least ${MIN_PASSWORD_LENGTH} characters.`, field: "password" };
-      }
-      if (password !== confirm) return { message: "The two passwords don't match yet.", field: "confirm" };
-      if (setupRequired && setupCodeRequired && !setupCode.trim()) {
-        return { message: "Please enter the setup code from the person who set up this site.", field: "setupCode" };
-      }
-    }
+    if (creating && password.length < MIN_PASSWORD_LENGTH) return { message: `Choose a longer password (at least ${MIN_PASSWORD_LENGTH} characters).`, field: "password" };
+    if (creating && password !== confirm) return { message: "The two passwords do not match.", field: "confirm" };
     return null;
   }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (submitting) return;
     const problem = validate();
-    setError(problem);
-    if (problem) return;
+    if (problem) return setError(problem);
+    setError(null);
     setSubmitting(true);
     try {
-      const result = setupRequired
-        ? await createAccount({ name: name.trim(), email, password, setupCode: setupCode.trim() || undefined })
-        : creating
-          ? await signUp({ name: name.trim(), email, password })
-          : await signIn(email, password, remember);
-      if (needsVerification(result)) {
-        startVerify(result.email);
-        return;
+      if (creating) {
+        const result = await signUp(name, email, password);
+        if (!result.signedIn) {
+          setMode("signin");
+          setError({ message: "Account created. Sign in to continue. (If it asks you to confirm your email, the site owner has to switch email confirmation off in Supabase.)" });
+          return;
+        }
+      } else {
+        await signIn(email, password);
       }
-      // Keep the button busy while the next page loads, so it cannot be double-submitted.
-      router.replace(next);
-      router.refresh();
+      const me = await getMe();
+      if (me.isActive) router.replace(next);
+      else setView({ kind: "pending", email: me.email });
     } catch (cause) {
-      // Right password, but the email was never confirmed: we have just sent a new code.
-      if (cause instanceof ApiError && cause.code === "email_not_verified") {
-        startVerify((cause.details as { email?: string } | null)?.email ?? email.trim().toLowerCase());
-        return;
-      }
-      setError(describe(cause));
+      setError(cause instanceof AuthProblem ? { message: cause.message, field: cause.field } : { message: "Something went wrong. Please try again." });
+    } finally {
       setSubmitting(false);
     }
   }
 
-  const fieldError = (field: Field) => (error?.field === field ? error.message : undefined);
-  const generalError = error && !error.field ? error.message : undefined;
-
-  if (mode === "verify") {
-    return (
-      <Panel title="Check your email" subtitle={`We sent a ${CODE_LENGTH}-digit code to ${pendingEmail}.`}>
-        <form onSubmit={onVerify} noValidate className="space-y-4">
-          <FieldBox
-            id="code"
-            label="Verification code"
-            error={fieldError("code")}
-            hint="It can take a minute to arrive. Check your spam or junk folder too."
-          >
-            <Input
-              id="code"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              placeholder="123456"
-              maxLength={CODE_LENGTH}
-              aria-invalid={fieldError("code") ? true : undefined}
-              className={cn("h-12 text-center text-2xl tracking-[0.4em]", fieldError("code") && "border-danger")}
-            />
-          </FieldBox>
-
-          {info ? (
-            <p className="flex items-start gap-2 rounded-xl bg-info/10 px-3 py-2 text-sm text-info" role="status">
-              <MailCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              {info}
-            </p>
-          ) : null}
-          {generalError ? (
-            <p role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              {generalError}
-            </p>
-          ) : null}
-
-          <Button type="submit" disabled={submitting} className="h-11 w-full text-base">
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-            {submitting ? "Checking…" : "Verify and continue"}
-          </Button>
-        </form>
-
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <button
-            type="button"
-            onClick={onResend}
-            disabled={cooldown > 0}
-            className="font-medium text-accent hover:text-accent disabled:cursor-not-allowed disabled:text-faint"
-          >
-            {cooldown > 0 ? `Send a new code in ${cooldown}s` : "Send a new code"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode(setupRequired ? "signin" : "signup");
-              setError(null);
-              setInfo(null);
-            }}
-            className="text-ink-2 hover:text-ink"
-          >
-            Use a different email
-          </button>
-        </div>
-      </Panel>
-    );
-  }
-
   return (
-    <Panel
-      title={creating ? "Create your account" : "Welcome back"}
-      subtitle={
-        setupRequired
-          ? "You're the first one here. Set up the account that will own this workspace."
-          : creating
-            ? "Use a real email address. We'll send you a code to confirm it."
-            : "Sign in to see your customer insights."
-      }
-    >
-      {notice && !creating ? (
+    <Panel title={creating ? "Create your account" : "Welcome back"} subtitle={creating ? "Use your email and a password. There is nothing to confirm." : "Sign in to see your customer data."}>
+      {notice && !error ? (
         <p className="mb-4 flex items-start gap-2 rounded-xl bg-info/10 px-3 py-2 text-sm text-info" role="status">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {notice}
@@ -352,44 +168,16 @@ export function LoginForm() {
 
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         {creating ? (
-          <FieldBox id="name" label="Your name" optional error={fieldError("name")}>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-              placeholder="Alishba"
-              maxLength={100}
-              className="h-11"
-            />
+          <FieldBox id="name" label="Your name" error={fieldError("name")}>
+            <Input id="name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} aria-invalid={fieldError("name") ? true : undefined} className={cn("h-11", fieldError("name") && "border-danger")} />
           </FieldBox>
         ) : null}
 
         <FieldBox id="email" label="Email" error={fieldError("email")}>
-          <Input
-            id="email"
-            type="email"
-            inputMode="email"
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-            autoFocus
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@company.com"
-            aria-invalid={fieldError("email") ? true : undefined}
-            aria-describedby={fieldError("email") ? "email-error" : undefined}
-            className={cn("h-11", fieldError("email") && "border-danger")}
-          />
+          <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={fieldError("email") ? true : undefined} className={cn("h-11", fieldError("email") && "border-danger")} />
         </FieldBox>
 
-        <FieldBox
-          id="password"
-          label="Password"
-          error={fieldError("password")}
-          hint={creating ? <PasswordHint password={password} /> : undefined}
-        >
+        <FieldBox id="password" label="Password" error={fieldError("password")} hint={creating ? <PasswordHint password={password} /> : undefined}>
           <div className="relative">
             <Input
               id="password"
@@ -416,53 +204,12 @@ export function LoginForm() {
 
         {creating ? (
           <FieldBox id="confirm" label="Confirm password" error={fieldError("confirm")}>
-            <Input
-              id="confirm"
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              required
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              aria-invalid={fieldError("confirm") ? true : undefined}
-              aria-describedby={fieldError("confirm") ? "confirm-error" : undefined}
-              className={cn("h-11", fieldError("confirm") && "border-danger")}
-            />
+            <Input id="confirm" type={showPassword ? "text" : "password"} autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} aria-invalid={fieldError("confirm") ? true : undefined} className={cn("h-11", fieldError("confirm") && "border-danger")} />
           </FieldBox>
         ) : null}
-
-        {setupRequired && setupCodeRequired ? (
-          <FieldBox
-            id="setupCode"
-            label="Setup code"
-            error={fieldError("setupCode")}
-            hint="This public site only lets someone with the setup code create the first account."
-          >
-            <Input
-              id="setupCode"
-              value={setupCode}
-              onChange={(e) => setSetupCode(e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              className="h-11"
-            />
-          </FieldBox>
-        ) : null}
-
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-2">
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-            className="h-4 w-4 rounded border-line-strong accent-accent"
-          />
-          Keep me signed in on this device
-        </label>
 
         {generalError ? (
-          <p
-            role="alert"
-            className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
-          >
+          <p role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             {generalError}
           </p>
@@ -470,37 +217,24 @@ export function LoginForm() {
 
         <Button type="submit" disabled={submitting} className="h-11 w-full text-base">
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-          {submitting ? (creating ? "Creating your account…" : "Signing in…") : creating ? (verificationEnabled ? "Create account and send code" : "Create account") : "Sign in"}
+          {submitting ? (creating ? "Creating your account…" : "Signing in…") : creating ? "Create account" : "Sign in"}
         </Button>
       </form>
 
-      {!setupRequired && signupOpen ? (
-        <p className="mt-5 text-center text-sm text-ink-2">
-          {creating ? "Already have an account?" : "New here?"}{" "}
-          <button
-            type="button"
-            onClick={() => {
-              setMode(creating ? "signin" : "signup");
-              setError(null);
-            }}
-            className="font-medium text-accent hover:text-accent"
-          >
-            {creating ? "Sign in" : "Create an account"}
-          </button>
-        </p>
-      ) : null}
-
-      {!creating ? (
-        <details className="mt-5 text-sm text-ink-2">
-          <summary className="cursor-pointer font-medium text-accent hover:text-accent">
-            Forgot your password?
-          </summary>
-          <p className="mt-2">
-            Ask the person who set up this site to reset it for you. They can do it in a minute with the
-            reset command described in the project README (<code>manage_users.py reset-password</code>).
-          </p>
-        </details>
-      ) : null}
+      <p className="mt-5 text-center text-sm text-ink-2">
+        {creating ? "Already have an account?" : "New here?"}{" "}
+        <button
+          type="button"
+          onClick={() => {
+            setMode(creating ? "signin" : "signup");
+            setError(null);
+          }}
+          className="font-medium text-accent hover:text-accent"
+        >
+          {creating ? "Sign in" : "Create an account"}
+        </button>
+      </p>
+      {creating ? <p className="mt-2 text-center text-xs text-faint">The first account on a new site becomes the owner. Later accounts wait for the owner&apos;s approval.</p> : null}
     </Panel>
   );
 }
@@ -560,14 +294,9 @@ function FieldBox({
 function PasswordHint({ password }: { password: string }) {
   const long = password.length >= MIN_PASSWORD_LENGTH;
   return (
-    <>
-      <span className={cn("inline-flex items-center gap-1 font-medium", long ? "text-success" : "text-muted")}>
-        {long ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> : <Circle className="h-3.5 w-3.5" aria-hidden="true" />}
-        At least {MIN_PASSWORD_LENGTH} characters
-      </span>
-      <span className="block">
-        A few unrelated words work well and are easy to remember, like &ldquo;blue tractor sings loudly&rdquo;.
-      </span>
-    </>
+    <span className={cn("inline-flex items-center gap-1 font-medium", long ? "text-success" : "text-muted")}>
+      {long ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> : <Circle className="h-3.5 w-3.5" aria-hidden="true" />}
+      At least {MIN_PASSWORD_LENGTH} characters
+    </span>
   );
 }

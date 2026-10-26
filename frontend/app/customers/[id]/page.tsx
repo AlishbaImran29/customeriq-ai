@@ -5,10 +5,8 @@ import { DataErrorState, DataSourceBanner, NoDataState, PageSkeleton, load } fro
 import { ChurnReasons } from "@/components/churn-reasons";
 import { CustomerTools } from "@/components/customer-tools";
 import { Money } from "@/components/money";
-import { NotAvailableCell } from "@/components/not-available";
 import { Badge, riskVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress, scoreTone } from "@/components/ui/progress";
 import { EmptyState } from "@/components/states";
 import { getCustomerDetail } from "@/lib/api/customer-intelligence";
 import { formatDate, formatNumber, formatPercent } from "@/lib/utils";
@@ -59,13 +57,6 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
   const { meta, customer, orders, ordersTotal } = detail;
   if (meta.source === "live" && !meta.asOf) return <NoDataState />;
   const live = meta.source === "live";
-  const factors = [
-    { label: "Purchase frequency", value: customer.healthFactors.purchaseFrequency },
-    { label: "Spending behavior", value: customer.healthFactors.spendingBehavior },
-    { label: "Engagement", value: customer.healthFactors.engagement },
-    { label: "Activity trend", value: customer.healthFactors.activityTrend },
-  ];
-
   return (
     <>
       <DataSourceBanner meta={meta} />
@@ -89,9 +80,6 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
 
       <section aria-label="Customer figures" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Spent so far"><Money value={customer.currentClv} /></Stat>
-        <Stat label="Predicted CLV">
-          {customer.predictedClv === null ? <NotAvailableCell /> : <Money value={customer.predictedClv} />}
-        </Stat>
         <Stat label="Orders">{formatNumber(ordersTotal)}</Stat>
         <Stat label="Average order">
           {detail.averageOrderValue === null ? "—" : <Money value={detail.averageOrderValue} />}
@@ -103,34 +91,13 @@ async function CustomerContent({ params }: { params: Promise<{ id: string }> }) 
         <Stat label="Usual gap between orders">
           {detail.averageDaysBetweenOrders === null ? "—" : `${formatNumber(Math.round(detail.averageDaysBetweenOrders))} days`}
         </Stat>
-        <Stat label="Health score" note="0–100, from the four factors below">{customer.healthScore}</Stat>
       </section>
 
       <ChurnReasons reasons={detail.churnReasons ?? []} />
 
       <CustomerTools customerId={customer.id} />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Why this health score</CardTitle>
-            <CardDescription>Each factor is scored 0–100 against the other customers.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {factors.map((factor) => (
-              <div key={factor.label}>
-                <div className="mb-1.5 flex justify-between gap-2 text-sm">
-                  <span className="text-ink-2">{factor.label}</span>
-                  <span className="font-medium tabular-nums">{factor.value === null ? "No engagement data" : factor.value}</span>
-                </div>
-                {factor.value === null ? null : (
-                  <Progress value={factor.value} label={factor.label} tone={scoreTone(factor.value)} />
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Recommended action</CardTitle>

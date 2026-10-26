@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { KeyRound, Loader2, LogOut, UserRound } from "lucide-react";
 import { getMe, initialsOf, signOut, type AuthUser } from "@/lib/api/auth";
 import { API_MODE } from "@/lib/api/config";
-import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Header avatar: the signed-in person (live mode) or a demo placeholder (demo mode). */
@@ -33,7 +32,6 @@ function DemoAvatar() {
 
 function SignedInMenu() {
   const router = useRouter();
-  const { t } = useLanguage();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -106,7 +104,7 @@ function SignedInMenu() {
       >
         <div className="px-3 py-2">
           <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
-          <p className="truncate text-xs text-muted">{user.email}{user.role ? ` · ${t(user.role === "owner" ? "Owner" : user.role === "staff" ? "Staff" : "Viewer")}` : ""}</p>
+          <p className="truncate text-xs text-muted">{user.email}{user.role ? ` · ${(user.role === "owner" ? "Owner" : user.role === "staff" ? "Staff" : "Viewer")}` : ""}</p>
         </div>
         <div className="my-1 border-t border-line/60" />
         <Link
@@ -125,7 +123,7 @@ function SignedInMenu() {
           className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-ink-2 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60"
         >
           {signingOut ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <LogOut className="h-4 w-4" aria-hidden="true" />}
-          {signingOut ? "Signing out…" : t("Sign out")}
+          {signingOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
     </div>

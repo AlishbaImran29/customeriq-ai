@@ -9,7 +9,6 @@ import { OPTIONAL_COLUMNS, REQUIRED_COLUMNS } from "@/lib/api/data-import";
 import { PaymentUpload } from "@/components/payment-upload";
 import { SalesUpload } from "@/components/sales-upload";
 import { ShipmentUpload } from "@/components/shipment-upload";
-import { T } from "@/components/t";
 
 const live = API_MODE === "live";
 
@@ -29,7 +28,7 @@ const pipeline = [
   { step: "Clean values; reject rows with missing required data", done: live },
   { step: "Skip duplicate order IDs in a file; update existing orders", done: live },
   { step: "Engineer features (recency, frequency, monetary)", done: false },
-  { step: "Segmentation and health scores calculated from your data", done: live },
+  { step: "Segments and churn risk calculated from your data", done: live },
   { step: "Churn, CLV, and forecast models retrain automatically (only shown if accurate enough)", done: live },
 ];
 
@@ -56,9 +55,9 @@ export default function ImportPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle><T>Courier shipments</T></CardTitle>
+              <CardTitle>Courier shipments</CardTitle>
               <CardDescription>
-                <T>Which courier carried each parcel, where, and what happened. This feeds the courier figures and the real delivered or returned result of each order.</T>
+                Which courier carried each parcel, where, and what happened. This feeds the courier figures and the real delivered or returned result of each order.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -67,9 +66,9 @@ export default function ImportPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle><T>Courier payments</T></CardTitle>
+              <CardTitle>Courier payments</CardTitle>
               <CardDescription>
-                <T>The money couriers paid you for cash on delivery parcels. The Cash Tracker uses it to show what is still owed.</T>
+                The money couriers paid you for cash on delivery parcels. The Cash Tracker uses it to show what is still owed.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -78,9 +77,9 @@ export default function ImportPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle><T>Product sales</T></CardTitle>
+              <CardTitle>Product sales</CardTitle>
               <CardDescription>
-                <T>Units sold per product over time. The Season Forecast uses it to say how much to stock for Eid or Christmas.</T>
+                Units sold per product over time. The Season Forecast uses it to say how much to stock for Eid or Christmas.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -89,9 +88,9 @@ export default function ImportPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle><T>Keep your orders in a sheet?</T></CardTitle>
+              <CardTitle>Keep your orders in a sheet?</CardTitle>
               <CardDescription>
-                <T>Download the template, fill in one order per row, and upload it here. Upload it again as it grows: orders already imported are not added twice.</T>
+                Download the template, fill in one order per row, and upload it here. Upload it again as it grows: orders already imported are not added twice.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
@@ -101,7 +100,7 @@ export default function ImportPage() {
                 className="inline-flex items-center gap-2 rounded-xl bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
-                <T>Excel template</T>
+                Excel template
               </a>
               <a
                 href="/seller_orders_template.csv"
@@ -109,10 +108,10 @@ export default function ImportPage() {
                 className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm font-medium text-ink-2 hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
-                <T>CSV template</T>
+                CSV template
               </a>
               <p className="w-full text-xs text-muted">
-                <T>In Google Sheets: File, Import, Upload the CSV template. When you are done, File, Download, CSV.</T>
+                In Google Sheets: File, Import, Upload the CSV template. When you are done, File, Download, CSV.
               </p>
             </CardContent>
           </Card>

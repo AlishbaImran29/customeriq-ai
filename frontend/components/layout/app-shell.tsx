@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Activity,
-  Bot,
-  HeartPulse,
   LayoutDashboard,
   Lightbulb,
   CirclePlus,
@@ -55,9 +53,6 @@ import {
   Settings,
 } from "lucide-react";
 import { AccountMenu } from "@/components/layout/account-menu";
-import { CurrencyMenu } from "@/components/layout/currency-menu";
-import { LanguageToggle } from "@/components/layout/language-toggle";
-import { useLanguage } from "@/lib/i18n";
 import { API_MODE } from "@/lib/api/config";
 import { cn } from "@/lib/utils";
 
@@ -72,7 +67,6 @@ const navGroups = [
       { href: "/churn", label: "Churn Prediction", icon: Activity },
       { href: "/cohorts", label: "Cohort Retention", icon: Grid3x3 },
       { href: "/clv", label: "Lifetime Value", icon: Wallet },
-      { href: "/health", label: "Health Scores", icon: HeartPulse },
       { href: "/revenue", label: "Revenue Intelligence", icon: TrendingUp },
       { href: "/order-risk", label: "Order Risk", icon: PackageX },
       { href: "/models", label: "Model Report Card", icon: ClipboardCheck },
@@ -123,7 +117,6 @@ const navGroups = [
     label: "Actions",
     items: [
       { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
-      { href: "/assistant", label: "AI Business Assistant", icon: Bot },
     ],
   },
   {
@@ -167,7 +160,6 @@ function useIsDesktop() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -211,7 +203,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         href="#main-content"
         className="sr-only z-50 rounded-lg bg-surface px-3 py-2 text-sm font-medium text-accent shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
-        {t("Skip to content")}
+        Skip to content
       </a>
       <div className="flex min-h-screen">
         {open ? (
@@ -251,7 +243,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 pb-3">
             {navGroups.map((group) => (
-              <div key={t(group.label)}>
+              <div key={group.label}>
                 <p className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted">
                   {group.label}
                 </p>
@@ -272,7 +264,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           )}
                         >
                           <item.icon className="h-4 w-4" aria-hidden="true" />
-                          {t(item.label)}
+                          {item.label}
                         </Link>
                       </li>
                     );
@@ -284,10 +276,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="m-3 rounded-xl border border-line bg-surface p-3 text-xs text-muted">
             <p className="flex items-center gap-1 font-medium text-ink-2">
               <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
-              {t(LIVE ? "Live workspace" : "Demo workspace")}
+              {(LIVE ? "Live workspace" : "Demo workspace")}
             </p>
             <p className="mt-1">
-              {t(LIVE ? "Dashboards use your imported data. Predictions appear only when a model passed its accuracy test." : "No backend configured. Dashboards show sample data.")}
+              {(LIVE ? "Dashboards use your imported data. Predictions appear only when a model passed its accuracy test." : "No backend configured. Dashboards show sample data.")}
             </p>
           </div>
         </aside>
@@ -304,9 +296,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <p className="min-w-0 truncate text-sm font-medium text-ink lg:hidden">{t(currentLabel)}</p>
+            <p className="min-w-0 truncate text-sm font-medium text-ink lg:hidden">{currentLabel}</p>
             <p className="hidden text-sm text-muted lg:block">
-              {t("E-commerce growth copilot for Shopify, WooCommerce, and Magento")}
+              E-commerce growth copilot for Shopify, WooCommerce, and Magento
             </p>
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <span
@@ -315,10 +307,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   LIVE ? "bg-success/10 text-success" : "bg-warning/10 text-warning",
                 )}
               >
-                {t(LIVE ? "Live data" : "Demo data")}
+                {(LIVE ? "Live data" : "Demo data")}
               </span>
-              <LanguageToggle />
-              <CurrencyMenu />
               <AccountMenu />
             </div>
           </header>

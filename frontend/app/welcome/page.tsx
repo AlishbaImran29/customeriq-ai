@@ -3,11 +3,9 @@ import Link from "next/link";
 import {
   Activity,
   ArrowRight,
-  Bot,
   Check,
   FlaskConical,
   Grid3x3,
-  HeartPulse,
   Lock,
   Sparkles,
   TrendingUp,
@@ -37,17 +35,12 @@ const features = [
   {
     icon: Wallet,
     title: "Lifetime value",
-    text: "What each customer and segment has spent so far, and what they are expected to spend next.",
-  },
-  {
-    icon: HeartPulse,
-    title: "Health scores",
-    text: "One 0–100 score per customer from purchase frequency, spending, engagement, and activity trends.",
+    text: "What each customer and segment has spent with you so far.",
   },
   {
     icon: TrendingUp,
     title: "Revenue intelligence",
-    text: "Trends, a forecast, what drives revenue by channel and country, and how much is at risk.",
+    text: "Revenue trends, revenue by country, and how much revenue is at risk.",
   },
   {
     icon: Grid3x3,
@@ -57,12 +50,7 @@ const features = [
   {
     icon: UserRound,
     title: "Customer pages",
-    text: "Open any customer to see their orders, their health, and the action we recommend.",
-  },
-  {
-    icon: Bot,
-    title: "Ask in plain language",
-    text: "An optional assistant answers questions about your own data, such as who is going quiet.",
+    text: "Open any customer to see their orders, their churn risk, and the action we recommend.",
   },
 ];
 
@@ -75,7 +63,7 @@ const steps = [
   {
     icon: Sparkles,
     title: "See your customers clearly",
-    text: "Dashboards fill in at once. Pick any date range, switch currency, or read it in your own language.",
+    text: "Dashboards fill in at once. Pick any date range and see every customer's segment and churn risk.",
   },
   {
     icon: ArrowRight,
@@ -136,7 +124,7 @@ function DashboardPreview() {
         <div className="space-y-4 p-4">
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Revenue", value: "$48.2k", delta: "+8.4%" },
+              { label: "Revenue", value: "£48.2k", delta: "+8.4%" },
               { label: "Retention", value: "62%", delta: "+3 pts" },
               { label: "Growth score", value: "71/100", delta: "" },
             ].map((kpi) => (
@@ -154,7 +142,7 @@ function DashboardPreview() {
                 <span
                   key={index}
                   style={{ height: `${height}%` }}
-                  className={index > 8 ? "flex-1 rounded-t bg-accent/60" : "flex-1 rounded-t bg-accent"}
+                  className="flex-1 rounded-t bg-accent"
                 />
               ))}
             </div>
@@ -236,7 +224,7 @@ export default function WelcomePage() {
                 </a>
               </div>
               <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-faint">
-                {["CSV, Excel, and Shopify exports", "12 languages", "Multiple currencies"].map((item) => (
+                {["CSV, Excel, and Shopify exports", "Predictions only when they beat a baseline"].map((item) => (
                   <li key={item} className="flex items-center gap-1.5">
                     <Check className="h-4 w-4 text-accent" aria-hidden="true" />
                     {item}

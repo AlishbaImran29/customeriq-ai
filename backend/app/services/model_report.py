@@ -87,14 +87,12 @@ def current_rows(db: Session) -> list[Row]:
     snapshot = load_snapshot(db)
     if snapshot.empty:
         none = pr.ModelResult.unavailable("No customer data has been imported yet.")
-        churn = clv = forecast = none
+        churn = none
     else:
         p = pr.get_predictions(snapshot)
-        churn, clv, forecast = p.churn, p.clv, p.forecast
+        churn = p.churn
     return [
         _from_result("churn", "Churn prediction", churn),
-        _from_result("clv", "Customer lifetime value", clv),
-        _from_result("revenue_forecast", "Revenue forecast", forecast),
         _order_risk_row(db),
         *_season_rows(db),
     ]

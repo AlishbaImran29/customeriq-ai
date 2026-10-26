@@ -67,12 +67,14 @@ email-verification update added columns to `users`, so run it before deploying t
    | `DB_POOL_SIZE` | `1` |
    | `DB_MAX_OVERFLOW` | `1` |
    | `APP_ENV` | `production` |
-   | `SETUP_CODE` | your invented setup code |
+   | `SUPABASE_URL` | your Supabase project address (Project Settings, API) |
+   | `SUPABASE_ANON_KEY` | the public **anon** key from the same page |
+   | `OWNER_EMAIL` | (recommended) the email that is allowed to become the owner |
    | `MAIL_WEBHOOK_URL` | the address of your mail relay (see "Email codes" below; leave the email variables out to skip email) |
    | `MAIL_WEBHOOK_SECRET` | the secret you chose inside the mail relay script |
    | `FRONTEND_ORIGINS` | `https://placeholder.example` (you set the real value in step 5) |
 
-   Optional: `ANTHROPIC_API_KEY` (needs paid API credits; without it the assistant says "AI not configured").
+   Optional: `ANTHROPIC_API_KEY` (needs paid API credits; without it the Launch Studio AI says "AI not configured").
 4. Click **Deploy**. When it finishes, copy the project's address, for example
    `https://customeriq-api.vercel.app` (use the **production domain**, not a long preview link).
 5. Open `<that address>/api/v1/health`. You should see `{"status":"ok","database":"ok"}`.
@@ -80,17 +82,15 @@ email-verification update added columns to `users`, so run it before deploying t
 If Vercel shows its own sign-in page instead: open the API project → **Settings → Deployment
 Protection** and turn **Vercel Authentication** off for production, then try again.
 
-### Email codes (so people must use a real email address)
+### Sending email (customer emails from the Auto Messenger)
 
-When the `SMTP_*` variables are set, every new account must **confirm its email address** with a
-6-digit code before it can sign in, and **anyone with a real email address can create an account**
-(set `ALLOW_SIGNUP=false` on the API project to turn public sign-up off again). Without them, accounts
-are created without a code and only the owner account can be created on the site.
+The Auto Messenger sends order updates and campaigns to customers by email. Sign-in does NOT use email any more
+(it is Supabase Auth with email and password). Without these settings, only WhatsApp is used.
 
 **On Vercel, send through your own Gmail with a small Google script (free, no card, no other company).**
 Vercel's servers cannot reach mail servers (SMTP, for example Gmail's) and fail with
 `OSError, error 99`. A Google Apps Script "web app" sends the email from your Gmail over HTTPS, which
-always works. Gmail lets a normal account send about 100 emails a day this way, plenty for sign-up codes.
+always works. Gmail lets a normal account send about 100 emails a day this way, plenty for customer emails.
 
 1. Open <https://script.google.com> signed in as the Gmail that should send the codes, and click **New project**.
 2. Delete the sample code and paste the whole of [`docs/mail-relay.gs`](mail-relay.gs).
@@ -120,8 +120,17 @@ allow 5 wrong tries, and one address can be sent at most one code a minute and 5
 
 > **Important:** the app shows **one shared set of customer data to every signed-in user**; accounts do
 > not get separate data. With public sign-up on, anyone who confirms an email can see everything you
-> imported. Use **public test data only** (or set `ALLOW_SIGNUP=false` and create teammates yourself with
-> `manage_users.py`) before importing real customers.
+> imported. Use **public test data only** (or keep accounts waiting for approval, which is the default) before importing real customers.
+
+### Sign-in (Supabase Auth)
+
+Accounts and passwords live in **Supabase Auth** (email + password). In Supabase open **Authentication, Providers, Email** and switch
+**Confirm email OFF**, so sign-up works at once. The API checks every sign-in token with Supabase.
+
+- The first account created on a fresh site becomes the **owner**. With `OWNER_EMAIL` set, only that address can claim it.
+- Every later account **waits for the owner's approval** (Team page) and sees no customer data until approved. This matters because,
+  with no email confirmation, anyone could create an account.
+- Run `scripts/migrate_remote.py` (migration 0034 removes the old password and session tables and the old accounts: sign up again).
 
 ## 4. Deploy the website (Vercel project 2)
 
@@ -132,6 +141,8 @@ allow 5 wrong tries, and one address can be sent at most one code a minute and 5
    | Name | Value |
    | --- | --- |
    | `NEXT_PUBLIC_API_BASE_URL` | the API address from step 3.4, **no trailing slash** |
+   | `NEXT_PUBLIC_SUPABASE_URL` | your Supabase project address |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the public **anon** key (it is meant to be public) |
 
    This is baked in when the site is built: if you change it later, **redeploy** the website.
 4. Click **Deploy**, and copy the website's address, for example `https://customeriq.vercel.app`.
@@ -166,8 +177,8 @@ Variables**, change `FRONTEND_ORIGINS` to the website address exactly (for examp
   a few seconds.
 - **Updating:** push to GitHub and Vercel rebuilds both projects by itself. If an update changes
   the database, run `migrate_remote.py` again.
-- **Passwords and accounts:** teammates and password resets use `manage_users.py`; point it at the
-  hosted database the same way as `migrate_remote.py` (ask for help before doing this).
+- **Passwords and accounts:** teammates sign up themselves and the owner approves them on the Team page; a forgotten
+  password is reset in the Supabase dashboard (Authentication, Users).
 
 ## Optional: screenshots in Launch Studio
 
@@ -278,8 +289,9 @@ Run `scripts/migrate_remote.py` before the new backend goes live. New optional s
 | Sign-in works, then you are sent back to sign in | The API is not in production mode, or the website address is not exactly `FRONTEND_ORIGINS`. |
 | *"This request came from a website that is not allowed"* | `FRONTEND_ORIGINS` does not match the address in the browser bar. Fix it and redeploy the API. |
 | No email arrives, or the page says "We couldn't send the email" | Check the spam folder first. The message now ends with the reason: `[OSError, error 99]` means this host cannot reach SMTP servers (use the mail relay); "unexpected way" means the script is not deployed with access **Anyone** or the address does not end in `/exec`; "refused the login" means `MAIL_WEBHOOK_SECRET` differs from the one in the script. Fix it and redeploy the API. |
-| "Create an account" does not appear | Sign-up needs the email variables (`MAIL_WEBHOOK_URL` + `MAIL_WEBHOOK_SECRET`, or `BREVO_API_KEY` + `MAIL_FROM`, or `SMTP_*`), and `ALLOW_SIGNUP` must not be `false`. The owner account must already exist and be confirmed. |
-| **"That setup code is not correct"** | Use the value of `SETUP_CODE` from the API project's settings. |
+| Sign-in page says **"Sign-in is not set up"** | Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to the website project and redeploy. |
+| After signing up the page says the email must be confirmed | In Supabase, Authentication, Providers, Email: switch **Confirm email** off. |
+| Signed in but **"waiting for approval"** | The owner approves new accounts on the Team page. |
 | A screenshot cannot be saved ("Screenshot storage is not set up") | `SUPABASE_URL` or `SUPABASE_SERVICE_KEY` is missing in the API project, or the bucket `competitor-ads` does not exist. |
 | Meta says *The callback URL or verify token couldn't be validated* | `WHATSAPP_VERIFY_TOKEN` on Vercel differs from the one typed in Meta, or the API was not redeployed after you added it. |
 | Messages stay *skipped: no_consent* | The customer has no recorded consent. Record it in *Auto Messenger > Consent* (only if they really agreed). |
@@ -287,12 +299,12 @@ Run `scripts/migrate_remote.py` before the new backend goes live. New optional s
 | Nothing happens overnight | Quiet hours (default 21:00 to 10:00 Pakistan time): messages wait in the queue. The scheduler sends them in the morning. |
 | The GitHub *Auto Messenger scheduler* run fails with HTTP 403 | `SCHEDULER_SECRET` in GitHub differs from the one on Vercel. HTTP 503 means it is not set on Vercel. |
 | CSV upload fails on the live site only | The file is over 4.5 MB (see "Free limits"). |
-| The assistant says **no remaining credits** | Add API credits in the Claude Console (a Claude Pro subscription does not include them). |
+| Launch Studio AI says **no remaining credits** | Add API credits in the Claude Console (a Claude Pro subscription does not include them). |
 
 ## Security checklist before real customer data
 
 - [ ] The GitHub repository is **private**.
-- [ ] `APP_ENV=production` and a `SETUP_CODE` are set on the API project.
+- [ ] `APP_ENV=production` and `OWNER_EMAIL` are set on the API project.
 - [ ] You know that every confirmed account sees all imported data (see the note under "Email codes").
 - [ ] You created the first account yourself and confirmed "Create your account" no longer appears.
 - [ ] No keys or passwords are in the repository.

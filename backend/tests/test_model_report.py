@@ -13,7 +13,7 @@ def _row(**kw) -> mr.Row:
 
 def test_result_to_row_keeps_both_scores_and_the_reason():
     hidden = pr.ModelResult.unavailable("no better", metric="MAE ($)", model_score=10.0, baseline_score=9.0, higher_is_better=False, test_size=50)
-    row = mr._from_result("clv", "Customer lifetime value", hidden)
+    row = mr._from_result("churn2", "Second test model", hidden)
     assert (row.decision, row.reason, row.model_score, row.baseline_score, row.higher_is_better, row.test_size) == ("hidden", "no better", 10.0, 9.0, False, 50)
     shown = mr._from_result("churn", "Churn", pr.ModelResult("available", None, [], metric="ROC-AUC", model_score=0.8, baseline_score=0.7))
     assert shown.decision == "shown" and shown.reason is None
@@ -30,9 +30,9 @@ def test_history_line_saved_only_when_something_changed(db_session):
 
 
 def test_each_model_has_its_own_history(db_session):
-    mr.record_changes(db_session, [_row(), _row(model="clv", label="Customer lifetime value")])
+    mr.record_changes(db_session, [_row(), _row(model="churn2", label="Second test model")])
     assert db_session.query(ModelReport).count() == 2
-    assert mr.record_changes(db_session, [_row(), _row(model="clv", label="Customer lifetime value", decision="hidden")]) == 1
+    assert mr.record_changes(db_session, [_row(), _row(model="churn2", label="Second test model", decision="hidden")]) == 1
 
 
 def test_report_endpoint_lists_every_model_even_without_data(db_client):
@@ -40,11 +40,11 @@ def test_report_endpoint_lists_every_model_even_without_data(db_client):
     assert r.status_code == 200
     body = r.json()
     names = {row["model"] for row in body["rows"]}
-    assert {"churn", "clv", "revenue_forecast", "order_risk"} <= names
+    assert {"churn", "order_risk"} <= names and not ({"clv", "revenue_forecast"} & names)
     for row in body["rows"]:
         assert row["decision"] in ("shown", "hidden")
         if row["decision"] == "hidden":
             assert row["reason"]                       # a hidden model always says why
-    assert len(body["history"]) >= 4                   # the first call saves the first lines
+    assert len(body["history"]) >= 2                   # the first call saves the first lines
     again = db_client.get("/api/v1/models/report").json()
     assert len(again["history"]) == len(body["history"])   # nothing changed: no new lines

@@ -12,7 +12,6 @@ ENDPOINTS = [
     "/api/v1/segments",
     "/api/v1/predictions/churn",
     "/api/v1/predictions/clv",
-    "/api/v1/customers/health",
     "/api/v1/revenue/intelligence",
     "/api/v1/recommendations",
     "/api/v1/cohorts",
@@ -50,25 +49,25 @@ def test_overview_with_data(db_client):
     assert body["kpis"]["totalCustomers"] == 30
     assert body["kpis"]["churnRisk"] is None  # churn needs a trained model; this data is too small
     details = body["growthScoreDetails"]
-    assert details is not None and body["kpis"]["growthScore"] == details["score"]  # 4 inputs measurable here
-    assert 0 <= details["score"] <= 100 and {c["key"] for c in details["components"]} >= {"health", "retention"}
+    assert details is not None and body["kpis"]["growthScore"] == details["score"]  # 3 inputs measurable here
+    assert 0 <= details["score"] <= 100 and {c["key"] for c in details["components"]} >= {"retention"} and "health" not in {c["key"] for c in details["components"]}
     unavailable = {u["field"] for u in body["meta"]["unavailable"]}
-    assert {"churnRisk", "revenueForecast"} <= unavailable and "growthScore" not in unavailable
+    assert "churnRisk" in unavailable and "growthScore" not in unavailable and "revenueForecast" not in unavailable
     assert body["executiveSummary"]["method"] == "rules"
     assert sum(s["customers"] for s in body["segments"]) == 30
-    assert all(s["avgPredictedClv"] is None for s in body["segments"])
+    assert all("avgPredictedClv" not in s for s in body["segments"])
+    assert "revenueByChannel" not in body and "forecast" not in body["meta"]["models"] and "clv" not in body["meta"]["models"]
 
 
 @requires_database
-def test_customers_have_no_predictions_and_flag_missing_engagement(db_client):
+def test_customers_have_no_predictions_and_no_health_score(db_client):
     import_customers(db_client, 25)
     body = db_client.get("/api/v1/customers?limit=10").json()
     assert body["total"] == 25 and len(body["customers"]) == 10
     for c in body["customers"]:
-        assert c["predictedClv"] is None and c["churnProbability"] is None
+        assert c["churnProbability"] is None
         assert c["riskLevel"] in {"Low", "Medium", "High", "Critical"}
-        assert (c["healthFactors"]["engagement"] is None) == c["engagementMissing"]
-    assert any(c["engagementMissing"] for c in db_client.get("/api/v1/customers").json()["customers"])
+        assert not ({"predictedClv", "healthScore", "healthFactors", "engagementMissing"} & set(c))
 
 
 @requires_database

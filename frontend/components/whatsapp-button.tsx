@@ -2,8 +2,7 @@
 
 import { ChannelIcon } from "@/components/channel-icon";
 import { FilterPills } from "@/components/ui/filter-pills";
-import { useCurrency } from "@/lib/currency";
-import { useLanguage } from "@/lib/i18n";
+import { formatMoney } from "@/lib/currency";
 import { whatsappLink, type MessageLanguage } from "@/lib/whatsapp";
 
 const buttonClass =
@@ -17,10 +16,9 @@ export function MessageLanguagePicker({
   value: MessageLanguage;
   onChange: (value: MessageLanguage) => void;
 }) {
-  const { t } = useLanguage();
   return (
     <FilterPills
-      label={t("Message language")}
+      label="Message language"
       options={[
         { value: "en" as const, label: "English" },
         { value: "ur" as const, label: "اردو" },
@@ -55,20 +53,14 @@ export function WhatsAppButton({
   /** False in a long list: the reason is then given once for the whole list, and only as a hint here. */
   showReason?: boolean;
 }) {
-  const { t } = useLanguage();
-  const { state } = useCurrency();
   if (level === "Low") return null;
 
-  const amountText = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: state.source,
-    maximumFractionDigits: Math.abs(amount) >= 1000 ? 0 : 2,
-  }).format(amount);
+  const amountText = formatMoney(amount);
   const link = whatsappLink(phone, messageLanguage, orderId, amountText);
   const reasonId = `whatsapp-reason-${orderId}`;
 
   if (!link) {
-    const reason = t("No usable phone number in the data for this customer, so WhatsApp cannot be opened.");
+    const reason = "No usable phone number in the data for this customer, so WhatsApp cannot be opened.";
     return (
       <div className="flex flex-col gap-1">
         <button
@@ -79,7 +71,7 @@ export function WhatsAppButton({
           className={`${buttonClass} cursor-not-allowed opacity-50`}
         >
           <ChannelIcon channel="whatsapp" />
-          {t("Confirm on WhatsApp")}
+          Confirm on WhatsApp
         </button>
         <p id={reasonId} className={showReason ? "text-xs text-muted" : "sr-only"}>
           {reason}
@@ -93,10 +85,10 @@ export function WhatsAppButton({
       target="_blank"
       rel="noopener noreferrer"
       className={buttonClass}
-      title={t("Opens WhatsApp with the message ready. Nothing is sent until you press send.")}
+      title="Opens WhatsApp with the message ready. Nothing is sent until you press send."
     >
       <ChannelIcon channel="whatsapp" />
-      {t("Confirm on WhatsApp")}
+      Confirm on WhatsApp
     </a>
   );
 }

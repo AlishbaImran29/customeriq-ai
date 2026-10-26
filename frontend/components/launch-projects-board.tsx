@@ -14,8 +14,8 @@ import {
   LAUNCH_AVAILABLE, STATUSES, createProject, deleteProject, listProjects, updateProject,
   type Project, type Status,
 } from "@/lib/api/launch";
-import { useLanguage } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 const STATUS_LOOK: Record<Status, { label: string; icon: typeof Lightbulb }> = {
   idea: { label: "Idea", icon: Lightbulb },
@@ -27,7 +27,6 @@ const STATUS_LOOK: Record<Status, { label: string; icon: typeof Lightbulb }> = {
 
 /** The seller's launch projects: start one, change its status, or delete it. Each one is saved, so they can come back to it. */
 export function LaunchProjectsBoard() {
-  const { t, tf } = useLanguage();
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [name, setName] = useState("");
@@ -49,7 +48,7 @@ export function LaunchProjectsBoard() {
   async function add(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    if (name.trim().length < 2) return setError(t("Give the product a name of at least 2 characters."));
+    if (name.trim().length < 2) return setError("Give the product a name of at least 2 characters.");
     setBusy(true);
     try {
       await createProject({ productName: name.trim(), category: category.trim() || undefined });
@@ -57,7 +56,7 @@ export function LaunchProjectsBoard() {
       setCategory("");
       load();
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -68,7 +67,7 @@ export function LaunchProjectsBoard() {
       await updateProject(id, { status });
       load();
     } catch {
-      setError(t("Something went wrong. Please try again."));
+      setError("Something went wrong. Please try again.");
     }
   }
 
@@ -78,7 +77,7 @@ export function LaunchProjectsBoard() {
       setConfirming(null);
       load();
     } catch {
-      setError(t("Something went wrong. Please try again."));
+      setError("Something went wrong. Please try again.");
     }
   }
 
@@ -86,42 +85,42 @@ export function LaunchProjectsBoard() {
     return (
       <EmptyState
         icon={Rocket}
-        title={t("Launch Studio needs the backend")}
-        description={t("Launch projects are saved in your database. Connect the backend to use Launch Studio.")}
+        title="Launch Studio needs the backend"
+        description="Launch projects are saved in your database. Connect the backend to use Launch Studio."
       />
     );
   }
-  if (failed) return <ErrorState title={t("Could not load your launch projects")} description={t("Please check your connection and reload the page.")} />;
+  if (failed) return <ErrorState title="Could not load your launch projects" description="Please check your connection and reload the page." />;
 
   return (
     <div className="space-y-5">
       <LaunchSteps current={1} />
       <Card>
         <CardHeader>
-          <CardTitle>{t("Start a launch project")}</CardTitle>
-          <CardDescription>{t("One project for each product you are thinking of selling. You can come back to it later.")}</CardDescription>
+          <CardTitle>Start a launch project</CardTitle>
+          <CardDescription>One project for each product you are thinking of selling. You can come back to it later.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={add} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]" noValidate>
             <label className="space-y-1 text-xs font-medium text-muted">
-              {t("Product name")}
+              Product name
               <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
             </label>
             <label className="space-y-1 text-xs font-medium text-muted">
-              {t("Category (optional)")}
+              Category (optional)
               <Input value={category} onChange={(e) => setCategory(e.target.value)} maxLength={100} />
             </label>
             <div className="flex items-end">
               <Button type="submit" disabled={busy} className="w-full sm:w-auto">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
-                {t("Add project")}
+                Add project
               </Button>
             </div>
           </form>
           <div aria-live="polite">{error ? <p role="alert" className="mt-2 text-sm text-danger">{error}</p> : null}</div>
           <p className="mt-3 text-sm text-ink-2">
-            {t("No idea yet?")}{" "}
-            <Link href="/launch/trends" className="font-medium text-accent underline underline-offset-2">{t("Open the Trend Finder")}</Link>
+            No idea yet?{" "}
+            <Link href="/launch/trends" className="font-medium text-accent underline underline-offset-2">Open the Trend Finder</Link>
           </p>
         </CardContent>
       </Card>
@@ -129,7 +128,7 @@ export function LaunchProjectsBoard() {
       {!projects ? (
         <Skeleton className="h-40 w-full" />
       ) : projects.length === 0 ? (
-        <EmptyState icon={Rocket} title={t("No launch projects yet")} description={t("Add your first product idea above, or find one in the Trend Finder.")} />
+        <EmptyState icon={Rocket} title="No launch projects yet" description="Add your first product idea above, or find one in the Trend Finder." />
       ) : (
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {projects.map((p) => {
@@ -143,19 +142,19 @@ export function LaunchProjectsBoard() {
                       <p className="text-base font-semibold text-ink">{p.productName}</p>
                       <p className="text-xs text-muted">
                         {p.category ? `${p.category} · ` : ""}
-                        {tf("Started {date}", { date: formatDate(p.createdAt.slice(0, 10)) })}
-                        {p.launchedOn ? ` · ${tf("Launched {date}", { date: formatDate(p.launchedOn) })}` : ""}
+                        {fmt("Started {date}", { date: formatDate(p.createdAt.slice(0, 10)) })}
+                        {p.launchedOn ? ` · ${fmt("Launched {date}", { date: formatDate(p.launchedOn) })}` : ""}
                       </p>
                     </div>
                     <p className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-xs font-medium text-ink-2">
                       <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t(look.label)}
+                      {look.label}
                     </p>
                     <label className="block space-y-1 text-xs font-medium text-muted">
-                      {t("Status")}
+                      Status
                       <Select value={p.status} onChange={(e) => change(p.id, e.target.value as Status)} className="w-full">
                         {STATUSES.map((s) => (
-                          <option key={s} value={s}>{t(STATUS_LOOK[s].label)}</option>
+                          <option key={s} value={s}>{STATUS_LOOK[s].label}</option>
                         ))}
                       </Select>
                     </label>
@@ -163,14 +162,14 @@ export function LaunchProjectsBoard() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Button onClick={() => remove(p.id)} className="bg-danger text-white hover:bg-danger/90">
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          {t("Yes, delete")}
+                          Yes, delete
                         </Button>
-                        <Button variant="secondary" onClick={() => setConfirming(null)}>{t("Cancel")}</Button>
+                        <Button variant="secondary" onClick={() => setConfirming(null)}>Cancel</Button>
                       </div>
                     ) : (
-                      <Button variant="ghost" onClick={() => setConfirming(p.id)} aria-label={tf("Delete {product}", { product: p.productName })}>
+                      <Button variant="ghost" onClick={() => setConfirming(p.id)} aria-label={fmt("Delete {product}", { product: p.productName })}>
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        {t("Delete")}
+                        Delete
                       </Button>
                     )}
                   </CardContent>
@@ -182,7 +181,7 @@ export function LaunchProjectsBoard() {
       )}
       <p className="flex items-center gap-1.5 text-xs text-muted">
         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-        {t("Next steps (vendors, competitors, creatives, profit check and launch) are coming.")}
+        Next steps (vendors, competitors, creatives, profit check and launch) are coming.
       </p>
     </div>
   );

@@ -30,7 +30,6 @@ import {
   type CsvAnalysis,
   type ImportResult,
 } from "@/lib/api/data-import";
-import { useLanguage } from "@/lib/i18n";
 import { cn, formatNumber } from "@/lib/utils";
 
 type ImportState =
@@ -81,7 +80,6 @@ function describeUploadError(error: unknown): { message: string; hint?: string }
 }
 
 export function DataImporter() {
-  const { t } = useLanguage();
   const [state, setState] = useState<ImportState>({ status: "idle" });
   const [upload, setUpload] = useState<UploadState>({ status: "idle" });
   const [dragging, setDragging] = useState(false);
@@ -157,14 +155,14 @@ export function DataImporter() {
       <Card>
         <CardHeader className="sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle>{t("Upload customer and order data")}</CardTitle>
+            <CardTitle>Upload customer and order data</CardTitle>
             <CardDescription>
               CSV or XLSX up to {formatBytes(MAX_IMPORT_BYTES)}. One row per order.
             </CardDescription>
           </div>
           <Button variant="secondary" onClick={downloadTemplate} className="mt-3 sm:mt-0">
             <Download className="h-4 w-4" aria-hidden="true" />
-            {t("CSV template")}
+            CSV template
           </Button>
         </CardHeader>
         <CardContent>
@@ -212,8 +210,8 @@ export function DataImporter() {
         {state.status === "idle" ? (
           <EmptyState
             icon={FileSpreadsheet}
-            title={t("No file selected")}
-            description={t("Choose a file to check its columns and preview the rows before importing.")}
+            title="No file selected"
+            description="Choose a file to check its columns and preview the rows before importing."
           />
         ) : null}
 
@@ -228,7 +226,7 @@ export function DataImporter() {
           <ErrorState
             title="This file can't be imported"
             description={state.message}
-            action={<Button variant="secondary" onClick={reset}>{t("Choose another file")}</Button>}
+            action={<Button variant="secondary" onClick={reset}>Choose another file</Button>}
           />
         ) : null}
 
@@ -236,7 +234,7 @@ export function DataImporter() {
 
         {upload.status === "failed" ? (
           <ErrorState
-            title={t("Import failed")}
+            title="Import failed"
             description={upload.hint ? `${upload.message} ${upload.hint}` : upload.message}
             action={
               selectedFile ? (
@@ -309,7 +307,6 @@ function ImportActions({
   onImport: () => void;
   disabled?: boolean;
 }) {
-  const { t } = useLanguage();
   if (upload.status === "done") return null;
   const uploading = upload.status === "uploading";
   return (
@@ -324,7 +321,7 @@ function ImportActions({
         ) : (
           <UploadCloud className="h-4 w-4" aria-hidden="true" />
         )}
-        {t(uploading ? "Importing…" : "Import customers")}
+        {(uploading ? "Importing…" : "Import customers")}
       </Button>
       <p id="import-status" className="text-xs text-muted">
         {!IMPORT_ENDPOINT_AVAILABLE
@@ -338,16 +335,15 @@ function ImportActions({
 }
 
 function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: () => void }) {
-  const { t } = useLanguage();
   const failed = result.status === "failed";
   const saved = result.rowsImported + result.rowsUpdated;
   const listed = result.errors.slice(0, MAX_LISTED_ERRORS);
   const hiddenErrors = result.errorCount - listed.length;
   const stats = [
     { label: result.fileFormat === "shopify" ? "Orders received" : "Rows received", value: result.rowsReceived },
-    { label: t("New orders"), value: result.rowsImported },
-    { label: t("Updated orders"), value: result.rowsUpdated },
-    { label: t("Rejected rows"), value: result.rowsRejected },
+    { label: "New orders", value: result.rowsImported },
+    { label: "Updated orders", value: result.rowsUpdated },
+    { label: "Rejected rows", value: result.rowsRejected },
   ];
 
   return (
@@ -360,7 +356,7 @@ function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: 
             ) : (
               <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
             )}
-            {t(failed ? "Import failed" : saved > 0 ? "Import complete" : "Import finished — no rows saved")}
+            {(failed ? "Import failed" : saved > 0 ? "Import complete" : "Import finished — no rows saved")}
           </CardTitle>
           <CardDescription>
             {result.filename} · processed on the server.
@@ -373,7 +369,7 @@ function ImportResultCard({ result, onReset }: { result: ImportResult; onReset: 
           </CardDescription>
         </div>
         <Button variant="secondary" onClick={onReset} className="mt-3 sm:mt-0">
-          {t("Import another file")}
+          Import another file
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -15,8 +15,8 @@ import {
   LAUNCH_AVAILABLE, MAX_TREND_BYTES, askForIdeas, createProject, deleteTrend, getGrowth, listTrends, uploadTrend,
   type Growth, type Ideas, type Trend, type TrendLabel,
 } from "@/lib/api/launch";
-import { useLanguage } from "@/lib/i18n";
 import { formatDate, formatNumber, formatPercent } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 const LINE = "#22d3ee";
 const GRID = "#263449";
@@ -34,7 +34,6 @@ const LABEL_LOOK: Record<TrendLabel, { text: string; icon: typeof Minus; classNa
  * products, and an AI suggestion built from those two. The AI text is editable and nothing is used until the seller accepts it.
  */
 export function TrendFinderBoard() {
-  const { t } = useLanguage();
   const [trends, setTrends] = useState<Trend[] | null>(null);
 
   const load = useCallback(() => {
@@ -49,8 +48,8 @@ export function TrendFinderBoard() {
     return (
       <EmptyState
         icon={Rocket}
-        title={t("Launch Studio needs the backend")}
-        description={t("Launch projects are saved in your database. Connect the backend to use Launch Studio.")}
+        title="Launch Studio needs the backend"
+        description="Launch projects are saved in your database. Connect the backend to use Launch Studio."
       />
     );
   }
@@ -61,7 +60,7 @@ export function TrendFinderBoard() {
       <HelpCard />
       <UploadCard onUploaded={load} />
       {trends && trends.length > 0 ? (
-        <section aria-label={t("Your trends")} className="space-y-4">
+        <section aria-label="Your trends" className="space-y-4">
           {trends.map((tr) => <TrendCard key={tr.id} trend={tr} onDeleted={load} />)}
         </section>
       ) : null}
@@ -72,26 +71,24 @@ export function TrendFinderBoard() {
 }
 
 function HelpCard() {
-  const { t } = useLanguage();
   return (
     <details className="rounded-2xl border border-line bg-surface p-4 text-sm text-ink-2">
       <summary className="cursor-pointer rounded font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
-        {t("How to download a file from Google Trends")}
+        How to download a file from Google Trends
       </summary>
       <ol className="mt-3 list-decimal space-y-1.5 pl-5">
-        <li>{t("Open trends.google.com and type the product you are curious about, for example \"neck fan\".")}</li>
-        <li>{t("Set the region to Pakistan and the time to \"Past 12 months\" (or longer).")}</li>
-        <li>{t("On the \"Interest over time\" chart click the small download arrow at the top right. A .csv file is saved.")}</li>
-        <li>{t("Do the same with the download arrow in the \"Related queries\" box to get the words people also search.")}</li>
-        <li>{t("Upload the file below. The app never contacts Google: it only reads the file you give it.")}</li>
+        <li>{"Open trends.google.com and type the product you are curious about, for example \"neck fan\"."}</li>
+        <li>{"Set the region to Pakistan and the time to \"Past 12 months\" (or longer)."}</li>
+        <li>{"On the \"Interest over time\" chart click the small download arrow at the top right. A .csv file is saved."}</li>
+        <li>{"Do the same with the download arrow in the \"Related queries\" box to get the words people also search."}</li>
+        <li>Upload the file below. The app never contacts Google: it only reads the file you give it.</li>
       </ol>
-      <p className="mt-3 text-xs text-muted">{t("Google Trends numbers run from 0 to 100 (100 is the most popular moment in your file). They show interest in searching, not how many people buy.")}</p>
+      <p className="mt-3 text-xs text-muted">Google Trends numbers run from 0 to 100 (100 is the most popular moment in your file). They show interest in searching, not how many people buy.</p>
     </details>
   );
 }
 
 function UploadCard({ onUploaded }: { onUploaded: () => void }) {
-  const { t, tf } = useLanguage();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,14 +98,14 @@ function UploadCard({ onUploaded }: { onUploaded: () => void }) {
     if (!file) return;
     setError(null);
     setDone(null);
-    if (file.size > MAX_TREND_BYTES) return setError(t("The file is larger than 2 MB. A Google Trends export is much smaller than that."));
+    if (file.size > MAX_TREND_BYTES) return setError("The file is larger than 2 MB. A Google Trends export is much smaller than that.");
     setBusy(true);
     try {
       const saved = await uploadTrend(file);
-      setDone(tf("{count} trend saved.", { count: saved.length }));
+      setDone(fmt("{count} trend saved.", { count: saved.length }));
       onUploaded();
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -118,22 +115,22 @@ function UploadCard({ onUploaded }: { onUploaded: () => void }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("Upload a Google Trends file")}</CardTitle>
-        <CardDescription>{t("Interest over time or related queries, as downloaded from Google Trends.")}</CardDescription>
+        <CardTitle>Upload a Google Trends file</CardTitle>
+        <CardDescription>Interest over time or related queries, as downloaded from Google Trends.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         <input ref={input} type="file" accept=".csv,text/csv" className="sr-only" id="trend-file" onChange={(e) => send(e.target.files?.[0])} />
         <div className="flex flex-wrap items-center gap-3">
           <Button disabled={busy} onClick={() => input.current?.click()}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
-            {t("Upload CSV")}
+            Upload CSV
           </Button>
           <a href="/google_trends_sample_template.csv" download className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm font-medium text-ink-2 hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
             <Download className="h-4 w-4" aria-hidden="true" />
-            {t("Download a sample file")}
+            Download a sample file
           </a>
         </div>
-        <p className="text-xs text-muted">{t("The sample file is made-up data in the same format Google uses. Use it to try the page; it is not real search data.")}</p>
+        <p className="text-xs text-muted">The sample file is made-up data in the same format Google uses. Use it to try the page; it is not real search data.</p>
         <div aria-live="polite">
           {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
           {done ? <p className="text-sm text-success">{done}</p> : null}
@@ -144,7 +141,6 @@ function UploadCard({ onUploaded }: { onUploaded: () => void }) {
 }
 
 function TrendCard({ trend, onDeleted }: { trend: Trend; onDeleted: () => void }) {
-  const { t, tf } = useLanguage();
   const look = trend.label ? LABEL_LOOK[trend.label] : null;
   const Icon = look?.icon ?? Clock;
   async function remove() {
@@ -160,10 +156,10 @@ function TrendCard({ trend, onDeleted }: { trend: Trend; onDeleted: () => void }
           <CardTitle>{trend.keyword}</CardTitle>
           <CardDescription>
             {trend.region ? `${trend.region} · ` : ""}
-            {tf("Uploaded {date}", { date: formatDate(trend.createdAt.slice(0, 10)) })}
+            {fmt("Uploaded {date}", { date: formatDate(trend.createdAt.slice(0, 10)) })}
           </CardDescription>
         </div>
-        <Button variant="ghost" onClick={remove} aria-label={tf("Remove {product}", { product: trend.keyword })}>
+        <Button variant="ghost" onClick={remove} aria-label={fmt("Remove {product}", { product: trend.keyword })}>
           <Trash2 className="h-4 w-4" aria-hidden="true" />
         </Button>
       </CardHeader>
@@ -172,21 +168,21 @@ function TrendCard({ trend, onDeleted }: { trend: Trend; onDeleted: () => void }
           <>
             <p className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${look?.className ?? "bg-surface-3 text-muted"}`}>
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-              {look ? t(look.text) : t("Not enough data yet")}
+              {look ? look.text : "Not enough data yet"}
             </p>
             <p className="text-xs text-muted">
               {trend.label && trend.ratio !== null
-                ? tf("The last 4 weeks averaged {ratio} of the 8 weeks before them (rising is 115% or more, falling is 85% or less). This describes the past, it is not a forecast.", { ratio: formatPercent(trend.ratio * 100, 0) })
-                : t("A label needs at least 12 weeks of weekly or daily data. Download a longer period from Google Trends.")}
+                ? fmt("The last 4 weeks averaged {ratio} of the 8 weeks before them (rising is 115% or more, falling is 85% or less). This describes the past, it is not a forecast.", { ratio: formatPercent(trend.ratio * 100, 0) })
+                : "A label needs at least 12 weeks of weekly or daily data. Download a longer period from Google Trends."}
             </p>
-            <div role="img" aria-label={tf("Line chart of search interest for {product}", { product: trend.keyword })} className="h-56 w-full">
+            <div role="img" aria-label={fmt("Line chart of search interest for {product}", { product: trend.keyword })} className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trend.points} margin={{ left: 0, right: 12 }}>
                   <CartesianGrid stroke={GRID} vertical={false} />
                   <XAxis dataKey="date" tick={AXIS_TICK} minTickGap={32} tickFormatter={(d: string) => d.slice(0, 7)} />
                   <YAxis domain={[0, 100]} tick={AXIS_TICK} width={32} />
                   <Tooltip labelFormatter={(d) => formatDate(String(d))} />
-                  <Line type="monotone" dataKey="value" name={t("Interest (0-100)")} stroke={LINE} dot={false} strokeWidth={2} />
+                  <Line type="monotone" dataKey="value" name="Interest (0-100)" stroke={LINE} dot={false} strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -194,8 +190,8 @@ function TrendCard({ trend, onDeleted }: { trend: Trend; onDeleted: () => void }
         ) : null}
         {trend.related.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            <RelatedList title={t("Top related searches")} items={top} />
-            <RelatedList title={t("Rising related searches")} items={rising} />
+            <RelatedList title="Top related searches" items={top} />
+            <RelatedList title="Rising related searches" items={rising} />
           </div>
         ) : null}
       </CardContent>
@@ -221,7 +217,6 @@ function RelatedList({ title, items }: { title: string; items: Trend["related"] 
 }
 
 function GrowthCard() {
-  const { t, tf } = useLanguage();
   const [days, setDays] = useState<30 | 90>(30);
   const [data, setData] = useState<Growth | null>(null);
   const [failed, setFailed] = useState(false);
@@ -236,44 +231,44 @@ function GrowthCard() {
     };
   }, [days]);
 
-  const unit = data?.metric === "orders" ? t("orders") : t("units");
+  const unit = data?.metric === "orders" ? "orders" : "units";
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("Your fastest-growing products")}</CardTitle>
-        <CardDescription>{tf("Sales in the last {days} days compared with the {days} days before.", { days })}</CardDescription>
+        <CardTitle>Your fastest-growing products</CardTitle>
+        <CardDescription>{fmt("Sales in the last {days} days compared with the {days} days before.", { days })}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <FilterPills
-          label={t("Filter by period")}
+          label="Filter by period"
           value={String(days)}
           onChange={(v) => setDays(Number(v) as 30 | 90)}
-          options={[{ value: "30", label: t("Last 30 days") }, { value: "90", label: t("Last 90 days") }]}
+          options={[{ value: "30", label: "Last 30 days" }, { value: "90", label: "Last 90 days" }]}
         />
-        {failed ? <p role="alert" className="text-sm text-danger">{t("Could not load your product growth.")}</p> : null}
-        {data?.source === "demo" ? <p className="text-xs text-warning">{t("Demo data (synthetic).")}</p> : null}
+        {failed ? <p role="alert" className="text-sm text-danger">Could not load your product growth.</p> : null}
+        {data?.source === "demo" ? <p className="text-xs text-warning">Demo data (synthetic).</p> : null}
         {data && data.reason ? (
           <p className="text-sm text-muted">
             {data.reason === "no_data"
-              ? t("No product names found yet. Add orders with products (Add Order, WhatsApp chat or your own sheet) or import product sales.")
-              : t("Not enough history yet to compare two periods.")}
+              ? "No product names found yet. Add orders with products (Add Order, WhatsApp chat or your own sheet) or import product sales."
+              : "Not enough history yet to compare two periods."}
           </p>
         ) : null}
         {data && !data.reason ? (
           data.rows.length === 0 ? (
             <p className="text-sm text-muted">
-              {tf("No product has at least {minimum} sales in these two periods and grew. A product needs that many before it is compared.", { minimum: data.minGroupCount })}
+              {fmt("No product has at least {minimum} sales in these two periods and grew. A product needs that many before it is compared.", { minimum: data.minGroupCount })}
             </p>
           ) : (
             <div>
               <table className="w-full text-left text-sm">
-                <caption className="sr-only">{t("Your fastest-growing products")}</caption>
+                <caption className="sr-only">Your fastest-growing products</caption>
                 <thead className="text-xs text-muted">
                   <tr className="border-b border-line">
-                    <th scope="col" className="py-2 pr-3 font-medium">{t("Product")}</th>
-                    <th scope="col" className="py-2 pr-3 text-right font-medium">{tf("Last {days} days ({unit})", { days, unit })}</th>
-                    <th scope="col" className="py-2 pr-3 text-right font-medium">{t("Before")}</th>
-                    <th scope="col" className="py-2 font-medium">{t("Growth")}</th>
+                    <th scope="col" className="py-2 pr-3 font-medium">Product</th>
+                    <th scope="col" className="py-2 pr-3 text-right font-medium">{fmt("Last {days} days ({unit})", { days, unit })}</th>
+                    <th scope="col" className="py-2 pr-3 text-right font-medium">Before</th>
+                    <th scope="col" className="py-2 font-medium">Growth</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,7 +280,7 @@ function GrowthCard() {
                       <td className="py-2.5">
                         <span className="inline-flex items-center gap-1.5 text-success">
                           <TrendingUp className="h-4 w-4" aria-hidden="true" />
-                          {r.growth === null ? t("New") : `+${formatPercent(r.growth * 100, 0)}`}
+                          {r.growth === null ? "New" : `+${formatPercent(r.growth * 100, 0)}`}
                         </span>
                       </td>
                     </tr>
@@ -296,7 +291,7 @@ function GrowthCard() {
           )
         ) : null}
         {data && data.tooSmall > 0 ? (
-          <p className="text-xs text-muted">{tf("{count} products have too few sales to compare (Not enough data yet).", { count: data.tooSmall })}</p>
+          <p className="text-xs text-muted">{fmt("{count} products have too few sales to compare (Not enough data yet).", { count: data.tooSmall })}</p>
         ) : null}
       </CardContent>
     </Card>
@@ -304,7 +299,6 @@ function GrowthCard() {
 }
 
 function IdeasCard({ hasTrends }: { hasTrends: boolean }) {
-  const { t, tf } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ideas, setIdeas] = useState<Ideas | null>(null);
@@ -320,7 +314,7 @@ function IdeasCard({ hasTrends }: { hasTrends: boolean }) {
       setIdeas(result);
       setNames(result.ideas.map((i) => i.name));
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -328,35 +322,35 @@ function IdeasCard({ hasTrends }: { hasTrends: boolean }) {
 
   async function accept(index: number) {
     const name = names[index]?.trim();
-    if (!name || name.length < 2) return setError(t("Give the product a name of at least 2 characters."));
+    if (!name || name.length < 2) return setError("Give the product a name of at least 2 characters.");
     try {
       await createProject({ productName: name, notes: ideas?.ideas[index]?.reason });
       setCreated((c) => ({ ...c, [index]: true }));
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />{t("Ask AI for ideas")}</CardTitle>
+        <CardTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />Ask AI for ideas</CardTitle>
         <CardDescription>
           {hasTrends
-            ? t("The AI reads your trend results and your shop's categories and suggests 5 products. It can be wrong: you decide.")
-            : t("Upload a Google Trends file first (or import some orders), so the AI has facts to work from.")}
+            ? "The AI reads your trend results and your shop's categories and suggests 5 products. It can be wrong: you decide."
+            : "Upload a Google Trends file first (or import some orders), so the AI has facts to work from."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => ask(false)} disabled={busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-            {t("Ask AI for ideas")}
+            Ask AI for ideas
           </Button>
           {ideas ? (
             <Button variant="secondary" onClick={() => ask(true)} disabled={busy}>
               <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              {t("Ask again")}
+              Ask again
             </Button>
           ) : null}
         </div>
@@ -364,24 +358,24 @@ function IdeasCard({ hasTrends }: { hasTrends: boolean }) {
         {ideas ? (
           <div className="space-y-3">
             <p className="text-xs text-muted">
-              <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">{t("AI suggestion")}</span>{" "}
-              {ideas.cached ? t("Saved answer: no new AI call was made.") : ideas.model ? tf("Written by {model}.", { model: ideas.model }) : ""}
+              <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">AI suggestion</span>{" "}
+              {ideas.cached ? "Saved answer: no new AI call was made." : ideas.model ? fmt("Written by {model}.", { model: ideas.model }) : ""}
             </p>
             <ul className="space-y-3">
               {ideas.ideas.map((idea, i) => (
                 <li key={i} className="rounded-xl border border-line bg-surface-2 p-3">
                   <label className="block space-y-1 text-xs font-medium text-muted">
-                    {t("Product idea (you can change it)")}
+                    Product idea (you can change it)
                     <Input value={names[i] ?? ""} onChange={(e) => setNames((all) => all.map((n, j) => (j === i ? e.target.value : n)))} maxLength={120} />
                   </label>
                   <p className="mt-2 text-sm text-ink-2">{idea.reason}</p>
                   <div className="mt-2">
                     {created[i] ? (
-                      <Link href="/launch" className="text-sm font-medium text-accent underline underline-offset-2">{t("Project created. See your launch projects")}</Link>
+                      <Link href="/launch" className="text-sm font-medium text-accent underline underline-offset-2">Project created. See your launch projects</Link>
                     ) : (
                       <Button variant="secondary" onClick={() => accept(i)}>
                         <Plus className="h-4 w-4" aria-hidden="true" />
-                        {t("Create launch project")}
+                        Create launch project
                       </Button>
                     )}
                   </div>

@@ -104,19 +104,3 @@ def test_contributions_explain_the_models_own_score(trained):
 
     expected = result.pipeline.decision_function(_matrix(features, result.countries))
     assert np.allclose(pushes.sum(axis=1) + model.intercept_[0], expected)
-
-
-def test_every_template_has_an_urdu_translation():
-    """A reason is translated by looking up its English template, so a missing entry would
-    leave that reason in English. The frontend table must hold every template."""
-    table = Path(__file__).resolve().parents[2] / "frontend" / "lib" / "i18n.ts"
-    if not table.exists():
-        pytest.skip("frontend folder not available")
-    text = table.read_text(encoding="utf-8")
-    missing = [t for t in TEMPLATES if f'"{t}":' not in text]
-    assert missing == []
-    # ... and the translation keeps the same {placeholders}.
-    for template in TEMPLATES:
-        line = next(l for l in text.splitlines() if l.strip().startswith(f'"{template}":'))
-        translated = line.split(f'"{template}":', 1)[1]
-        assert sorted(re.findall(r"\{(\w+)\}", template)) == sorted(re.findall(r"\{(\w+)\}", translated)), template

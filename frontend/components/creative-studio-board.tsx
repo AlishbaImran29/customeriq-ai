@@ -14,8 +14,8 @@ import {
 } from "@/lib/api/launch-steps";
 import { ApiError } from "@/lib/api/config";
 import type { Project } from "@/lib/api/launch";
-import { useLanguage } from "@/lib/i18n";
 import { adAsText, instagramAsText, parseHashtags } from "@/lib/launch-links";
+import { fmt } from "@/lib/format";
 
 const field = "space-y-1 text-xs font-medium text-muted";
 const areaClass =
@@ -71,7 +71,6 @@ export function CreativeStudioBoard() {
 }
 
 function CreativeStep({ project }: { project: Project }) {
-  const { t, tf } = useLanguage();
   const [name, setName] = useState(project.productName);
   const [features, setFeatures] = useState("");
   const [price, setPrice] = useState("");
@@ -94,7 +93,7 @@ function CreativeStep({ project }: { project: Project }) {
 
   function brief(): Brief | null {
     if (name.trim().length < 2) {
-      setError(t("Give the product a name of at least 2 characters."));
+      setError("Give the product a name of at least 2 characters.");
       return null;
     }
     const money = Number(price.replace(/,/g, ""));
@@ -115,7 +114,7 @@ function CreativeStep({ project }: { project: Project }) {
       setMeta(result);
       setDrafts((old) => [...toDrafts(result), ...old.filter((d) => d.savedId)]);
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -131,7 +130,7 @@ function CreativeStep({ project }: { project: Project }) {
       const next = fromContent(d.kind, result.content);
       update(d.key, { ...next, aiGenerated: true, savedId: undefined });
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     }
   }
 
@@ -141,7 +140,7 @@ function CreativeStep({ project }: { project: Project }) {
       update(d.key, { savedId: row.id, aiGenerated: row.aiGenerated });
       loadSaved();
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     }
   }
 
@@ -160,30 +159,30 @@ function CreativeStep({ project }: { project: Project }) {
     <div className="space-y-5">
       <Card>
         <CardHeader>
-          <CardTitle>{t("Tell the AI about your product")}</CardTitle>
-          <CardDescription>{t("The more real details you give, the better the copy. The AI is told not to invent anything, so it only uses what you write here.")}</CardDescription>
+          <CardTitle>Tell the AI about your product</CardTitle>
+          <CardDescription>The more real details you give, the better the copy. The AI is told not to invent anything, so it only uses what you write here.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
-          <label className={field}>{t("Product name")}<Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></label>
-          <label className={field}>{t("Price (PKR)")}<Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} /></label>
-          <label className={`${field} sm:col-span-2`}>{t("Key features (one per line)")}<textarea className={areaClass} value={features} onChange={(e) => setFeatures(e.target.value)} dir="auto" /></label>
-          <label className={field}>{t("Offer (optional)")}<Input value={offer} onChange={(e) => setOffer(e.target.value)} maxLength={300} placeholder={t("for example: free delivery")} /></label>
-          <label className={field}>{t("Who is it for? (optional)")}<Input value={target} onChange={(e) => setTarget(e.target.value)} maxLength={300} /></label>
+          <label className={field}>Product name<Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></label>
+          <label className={field}>Price (PKR)<Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} /></label>
+          <label className={`${field} sm:col-span-2`}>Key features (one per line)<textarea className={areaClass} value={features} onChange={(e) => setFeatures(e.target.value)} dir="auto" /></label>
+          <label className={field}>Offer (optional)<Input value={offer} onChange={(e) => setOffer(e.target.value)} maxLength={300} placeholder="for example: free delivery" /></label>
+          <label className={field}>Who is it for? (optional)<Input value={target} onChange={(e) => setTarget(e.target.value)} maxLength={300} /></label>
           <div className={field}>
-            <span>{t("Language")}</span>
-            <FilterPills label={t("Language")} value={language} onChange={setLanguage}
+            <span>Language</span>
+            <FilterPills label="Language" value={language} onChange={setLanguage}
               options={[{ value: "ur" as Language, label: "اردو" }, { value: "roman_ur" as Language, label: "Roman Urdu" }, { value: "en" as Language, label: "English" }]} />
           </div>
           <div className={field}>
-            <span>{t("Tone")}</span>
-            <FilterPills label={t("Tone")} value={tone} onChange={setTone} options={TONES.map((x) => ({ value: x as string, label: t(x) }))} />
+            <span>Tone</span>
+            <FilterPills label="Tone" value={tone} onChange={setTone} options={TONES.map((x) => ({ value: x as string, label: x }))} />
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
             <Button onClick={() => generate(false)} disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-              {t("Write ad copy with AI")}
+              Write ad copy with AI
             </Button>
-            {meta ? <Button variant="secondary" onClick={() => generate(true)} disabled={busy}><RefreshCw className="h-4 w-4" aria-hidden="true" />{t("Write all again")}</Button> : null}
+            {meta ? <Button variant="secondary" onClick={() => generate(true)} disabled={busy}><RefreshCw className="h-4 w-4" aria-hidden="true" />Write all again</Button> : null}
             {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
           </div>
         </CardContent>
@@ -192,36 +191,36 @@ function CreativeStep({ project }: { project: Project }) {
       {meta ? (
         <div className="space-y-1 text-xs text-muted">
           <p>
-            <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">{t("AI suggestion")}</span>{" "}
-            {meta.cached ? t("Saved answer: no new AI call was made.") : meta.model ? tf("Written by {model}.", { model: meta.model }) : ""}{" "}
-            {meta.usedCompetitorAnalysis ? t("The gaps found in your competitor ads were used.") : t("No competitor analysis was used (do step 3 first for sharper copy).")}
+            <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">AI suggestion</span>{" "}
+            {meta.cached ? "Saved answer: no new AI call was made." : meta.model ? fmt("Written by {model}.", { model: meta.model }) : ""}{" "}
+            {meta.usedCompetitorAnalysis ? "The gaps found in your competitor ads were used." : "No competitor analysis was used (do step 3 first for sharper copy)."}
           </p>
-          {meta.removed > 0 ? <p>{tf("{count} suggestions were removed because they made claims that cannot be proven (sold counts, reviews, fake scarcity).", { count: meta.removed })}</p> : null}
+          {meta.removed > 0 ? <p>{fmt("{count} suggestions were removed because they made claims that cannot be proven (sold counts, reviews, fake scarcity).", { count: meta.removed })}</p> : null}
         </div>
       ) : null}
 
       {drafts.length > 0 ? (
-        <section aria-label={t("Ad content")} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section aria-label="Ad content" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {drafts.map((d) => <DraftCard key={d.key} draft={d} onChange={(f) => update(d.key, { fields: { ...d.fields, ...f }, aiGenerated: false })} onRegenerate={() => regenerate(d)} onSave={() => save(d)} />)}
         </section>
       ) : null}
 
       {saved.length > 0 ? (
         <Card>
-          <CardHeader><CardTitle>{t("Saved to this project")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Saved to this project</CardTitle></CardHeader>
           <CardContent>
             <ul className="space-y-2">
               {saved.map((item) => (
                 <li key={item.id} className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-line bg-surface-2 p-3 text-sm">
                   <span className="min-w-0 flex-1 text-ink-2" dir="auto">
-                    <strong className="text-ink">{t(KIND_LABEL[item.kind])}</strong>
-                    {item.aiGenerated ? <span className="ml-2 text-xs text-muted">{t("AI suggestion")}</span> : null}
+                    <strong className="text-ink">{KIND_LABEL[item.kind]}</strong>
+                    {item.aiGenerated ? <span className="ml-2 text-xs text-muted">AI suggestion</span> : null}
                     <span className="mt-1 block whitespace-pre-wrap">{asText({ key: "", kind: item.kind, aiGenerated: item.aiGenerated, ...fromContent(item.kind, item.content) })}</span>
                   </span>
                   <span className="flex gap-1">
                     <CopyButton text={asText({ key: "", kind: item.kind, aiGenerated: item.aiGenerated, ...fromContent(item.kind, item.content) })} />
-                    <Button variant="ghost" onClick={() => editSaved(item)} aria-label={t("Edit")}><Pencil className="h-4 w-4" aria-hidden="true" /></Button>
-                    <Button variant="ghost" onClick={() => removeSaved(item)} aria-label={t("Delete")}><Trash2 className="h-4 w-4" aria-hidden="true" /></Button>
+                    <Button variant="ghost" onClick={() => editSaved(item)} aria-label="Edit"><Pencil className="h-4 w-4" aria-hidden="true" /></Button>
+                    <Button variant="ghost" onClick={() => removeSaved(item)} aria-label="Delete"><Trash2 className="h-4 w-4" aria-hidden="true" /></Button>
                   </span>
                 </li>
               ))}
@@ -232,8 +231,8 @@ function CreativeStep({ project }: { project: Project }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t("Post image maker")}</CardTitle>
-          <CardDescription>{t("Make a simple picture for a post or story in your browser. No paid tool and no upload.")}</CardDescription>
+          <CardTitle>Post image maker</CardTitle>
+          <CardDescription>Make a simple picture for a post or story in your browser. No paid tool and no upload.</CardDescription>
         </CardHeader>
         <CardContent><PostImageMaker productName={name} /></CardContent>
       </Card>
@@ -244,23 +243,21 @@ function CreativeStep({ project }: { project: Project }) {
 const KIND_LABEL: Record<CreativeKind, string> = { meta_ad: "Meta ad", instagram: "Instagram post", whatsapp_status: "WhatsApp status" };
 
 function CopyButton({ text }: { text: string }) {
-  const { t } = useLanguage();
   const [done, setDone] = useState(false);
   return (
-    <Button variant="ghost" aria-label={t("Copy")} onClick={async () => { await navigator.clipboard?.writeText(text).catch(() => undefined); setDone(true); setTimeout(() => setDone(false), 1500); }}>
+    <Button variant="ghost" aria-label="Copy" onClick={async () => { await navigator.clipboard?.writeText(text).catch(() => undefined); setDone(true); setTimeout(() => setDone(false), 1500); }}>
       {done ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
-      <span className="text-xs">{done ? t("Copied") : t("Copy")}</span>
+      <span className="text-xs">{done ? "Copied" : "Copy"}</span>
     </Button>
   );
 }
 
 function DraftCard({ draft, onChange, onRegenerate, onSave }: { draft: Draft; onChange: (f: Record<string, string>) => void; onRegenerate: () => void; onSave: () => void }) {
-  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const f = draft.fields;
   const input = (key: string, label: string, rows?: number) => (
     <label className={field}>
-      {t(label)}
+      {label}
       {rows ? <textarea className={areaClass} rows={rows} value={f[key]} onChange={(e) => onChange({ [key]: e.target.value })} dir="auto" /> : <Input value={f[key]} onChange={(e) => onChange({ [key]: e.target.value })} dir="auto" />}
     </label>
   );
@@ -268,8 +265,8 @@ function DraftCard({ draft, onChange, onRegenerate, onSave }: { draft: Draft; on
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2">
         <div>
-          <CardTitle>{t(KIND_LABEL[draft.kind])}{draft.angle ? ` · ${t(ANGLE_LABEL[draft.angle])}` : ""}</CardTitle>
-          <CardDescription>{draft.aiGenerated ? t("AI suggestion: edit it as you like.") : t("Edited by you.")}</CardDescription>
+          <CardTitle>{KIND_LABEL[draft.kind]}{draft.angle ? ` · ${ANGLE_LABEL[draft.angle]}` : ""}</CardTitle>
+          <CardDescription>{draft.aiGenerated ? "AI suggestion: edit it as you like." : "Edited by you."}</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -290,11 +287,11 @@ function DraftCard({ draft, onChange, onRegenerate, onSave }: { draft: Draft; on
           <CopyButton text={asText(draft)} />
           <Button variant="secondary" disabled={busy} onClick={async () => { setBusy(true); await onRegenerate(); setBusy(false); }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
-            {t("Write another version")}
+            Write another version
           </Button>
-          <Button onClick={onSave}><Save className="h-4 w-4" aria-hidden="true" />{draft.savedId ? t("Save changes") : t("Save to project")}</Button>
+          <Button onClick={onSave}><Save className="h-4 w-4" aria-hidden="true" />{draft.savedId ? "Save changes" : "Save to project"}</Button>
         </div>
-        {draft.savedId ? <p className="flex items-center gap-1.5 text-xs text-success"><Check className="h-3.5 w-3.5" aria-hidden="true" />{t("Saved to this project")}</p> : null}
+        {draft.savedId ? <p className="flex items-center gap-1.5 text-xs text-success"><Check className="h-3.5 w-3.5" aria-hidden="true" />Saved to this project</p> : null}
       </CardContent>
     </Card>
   );

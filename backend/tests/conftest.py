@@ -10,7 +10,7 @@ from app.api.deps import require_user
 from app.core.config import get_settings
 from app.db.session import get_db, get_engine
 from app.main import app
-from app.services.auth import reset_login_limits
+from app.services.auth import reset_token_cache
 
 requires_database = pytest.mark.skipif(
     not get_settings().database_configured,
@@ -34,7 +34,7 @@ def no_email_unless_a_test_sets_it_up():
 def signed_in_test_user(request):
     """Most tests are about data, not sign-in: they run as an always-signed-in test user.
     Tests marked `real_auth` use the real sign-in flow instead."""
-    reset_login_limits()
+    reset_token_cache()
     if request.node.get_closest_marker("real_auth"):
         yield
         return
@@ -56,7 +56,6 @@ def db_session():
     outer = connection.begin()
     # Start every test from empty tables. This is part of the outer transaction,
     # so the real data reappears when it is rolled back.
-    connection.execute(text("DELETE FROM sessions"))
     connection.execute(text("DELETE FROM users"))
     connection.execute(text("DELETE FROM shipments"))
     connection.execute(text("DELETE FROM courier_payments"))

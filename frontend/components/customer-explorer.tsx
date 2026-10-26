@@ -111,12 +111,12 @@ export function CustomerExplorer({
       `customeriq-customers-${new Date().toISOString().slice(0, 10)}.csv`,
       [
         "customer_id", "name", "email", "channel", "segment", riskLabel, "churn_probability_percent",
-        "orders", "revenue", "current_clv", "predicted_clv", "health_score", "last_purchase",
+        "orders", "revenue", "clv_to_date", "last_purchase",
         "days_since_last_order", "recommended_action",
       ],
       filtered.map((c) => [
         c.id, c.name, c.email ?? "", c.channel, c.segment, c.riskLevel, c.churnProbability?.toFixed(1),
-        c.orders, c.revenue, c.currentClv, c.predictedClv, c.healthScore, c.lastPurchase,
+        c.orders, c.revenue, c.currentClv, c.lastPurchase,
         c.daysSinceLastOrder, c.recommendedAction,
       ]),
     );

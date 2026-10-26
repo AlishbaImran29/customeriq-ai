@@ -5,7 +5,6 @@ import { Download, ImageUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FilterPills } from "@/components/ui/filter-pills";
 import { Input } from "@/components/ui/input";
-import { useLanguage } from "@/lib/i18n";
 import { wrapLines } from "@/lib/launch-links";
 
 type Template = "banner" | "split" | "frame";
@@ -24,7 +23,6 @@ const RTL = /[؀-ۿ]/;
  * and download a PNG. The picture is drawn from what the seller typed; nothing is invented.
  */
 export function PostImageMaker({ productName }: { productName: string }) {
-  const { t } = useLanguage();
   const canvas = useRef<HTMLCanvasElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<HTMLImageElement | null>(null);
@@ -48,7 +46,7 @@ export function PostImageMaker({ productName }: { productName: string }) {
   function choose(file: File | undefined) {
     setError(null);
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) return setError(t("Choose a PNG, JPEG or WebP picture."));
+    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) return setError("Choose a PNG, JPEG or WebP picture.");
     const url = URL.createObjectURL(file);
     const image = new Image();
     image.onload = () => {
@@ -56,7 +54,7 @@ export function PostImageMaker({ productName }: { productName: string }) {
       URL.revokeObjectURL(url);
     };
     image.onerror = () => {
-      setError(t("That picture could not be opened."));
+      setError("That picture could not be opened.");
       URL.revokeObjectURL(url);
     };
     image.src = url;
@@ -80,28 +78,28 @@ export function PostImageMaker({ productName }: { productName: string }) {
         <div>
           <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" id="post-photo" onChange={(e) => choose(e.target.files?.[0])} />
           <Button variant="secondary" onClick={() => fileInput.current?.click()}>
-            <ImageUp className="h-4 w-4" aria-hidden="true" />{photo ? t("Change the photo") : t("Choose a product photo")}
+            <ImageUp className="h-4 w-4" aria-hidden="true" />{photo ? "Change the photo" : "Choose a product photo"}
           </Button>
-          <p className="mt-1 text-xs text-muted">{t("The photo stays in your browser: it is not uploaded anywhere.")}</p>
+          <p className="mt-1 text-xs text-muted">The photo stays in your browser: it is not uploaded anywhere.</p>
         </div>
-        <FilterPills label={t("Template")} value={template} onChange={setTemplate}
-          options={[{ value: "banner" as Template, label: t("Photo with banner") }, { value: "split" as Template, label: t("Photo and text panel") }, { value: "frame" as Template, label: t("Framed photo") }]} />
-        <FilterPills label={t("Size")} value={format} onChange={setFormat}
-          options={[{ value: "square" as Format, label: t("Post 1080 x 1080") }, { value: "story" as Format, label: t("Story 1080 x 1920") }]} />
-        <label className="block space-y-1 text-xs font-medium text-muted">{t("Headline")}<Input value={headline} onChange={(e) => setTypedHeadline(e.target.value)} maxLength={80} /></label>
-        <label className="block space-y-1 text-xs font-medium text-muted">{t("Price shown on the badge")}<Input value={price} onChange={(e) => setPrice(e.target.value)} maxLength={20} placeholder="Rs 1,999" /></label>
+        <FilterPills label="Template" value={template} onChange={setTemplate}
+          options={[{ value: "banner" as Template, label: "Photo with banner" }, { value: "split" as Template, label: "Photo and text panel" }, { value: "frame" as Template, label: "Framed photo" }]} />
+        <FilterPills label="Size" value={format} onChange={setFormat}
+          options={[{ value: "square" as Format, label: "Post 1080 x 1080" }, { value: "story" as Format, label: "Story 1080 x 1920" }]} />
+        <label className="block space-y-1 text-xs font-medium text-muted">Headline<Input value={headline} onChange={(e) => setTypedHeadline(e.target.value)} maxLength={80} /></label>
+        <label className="block space-y-1 text-xs font-medium text-muted">Price shown on the badge<Input value={price} onChange={(e) => setPrice(e.target.value)} maxLength={20} placeholder="Rs 1,999" /></label>
         <fieldset className="space-y-1.5 text-sm text-ink-2">
-          <legend className="text-xs font-medium text-muted">{t("Labels")}</legend>
+          <legend className="text-xs font-medium text-muted">Labels</legend>
           <label className="flex items-center gap-2"><input type="checkbox" checked={cod} onChange={(e) => setCod(e.target.checked)} className="h-4 w-4 accent-[var(--color-accent)]" />Cash on Delivery</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={freeDelivery} onChange={(e) => setFreeDelivery(e.target.checked)} className="h-4 w-4 accent-[var(--color-accent)]" />Free Delivery</label>
-          <label className="block space-y-1 text-xs font-medium text-muted">{t("Your own label (optional)")}<Input value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={30} /></label>
+          <label className="block space-y-1 text-xs font-medium text-muted">Your own label (optional)<Input value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={30} /></label>
         </fieldset>
         <div aria-live="polite">{error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}</div>
-        <Button onClick={download} disabled={!photo}><Download className="h-4 w-4" aria-hidden="true" />{t("Download PNG")}</Button>
-        {!photo ? <p className="text-xs text-muted">{t("Choose a photo to enable the download.")}</p> : null}
+        <Button onClick={download} disabled={!photo}><Download className="h-4 w-4" aria-hidden="true" />Download PNG</Button>
+        {!photo ? <p className="text-xs text-muted">Choose a photo to enable the download.</p> : null}
       </div>
       <div>
-        <canvas ref={canvas} width={w} height={h} role="img" aria-label={t("Preview of the post image")} className="mx-auto w-full max-w-sm rounded-xl border border-line bg-surface-2" style={{ aspectRatio: `${w} / ${h}` }} />
+        <canvas ref={canvas} width={w} height={h} role="img" aria-label="Preview of the post image" className="mx-auto w-full max-w-sm rounded-xl border border-line bg-surface-2" style={{ aspectRatio: `${w} / ${h}` }} />
       </div>
     </div>
   );

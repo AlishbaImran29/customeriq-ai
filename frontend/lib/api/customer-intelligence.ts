@@ -6,19 +6,16 @@
 
 import type { DateRange } from "@/lib/dates";
 import "server-only";
-import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { API_MODE, ApiError, apiGet } from "@/lib/api/config";
 import * as mock from "@/lib/mock/customer-intelligence";
+import { serverAccessToken } from "@/lib/supabase/server";
 import { withSegmentMeta } from "@/lib/segments";
 import type {
-  ChannelRevenue,
   Customer,
   DataMeta,
   ExecutiveSummary,
   GrowthScoreDetails,
-  HealthBucket,
-  HealthFactors,
   Kpis,
   ModelInfo,
   OrderRiskOverview,
@@ -41,18 +38,18 @@ const DEMO_META: DataMeta = {
   asOf: null,
   customerCount: mock.kpis.totalCustomers ?? 0,
   segmented: true,
-  models: { churn: DEMO_MODEL, clv: DEMO_MODEL, forecast: DEMO_MODEL },
+  models: { churn: DEMO_MODEL },
   unavailable: [],
 };
 
 /**
  * Live requests run per request (never at build time) and carry the visitor's
- * sign-in cookie to the backend.
+ * sign-in token to the backend.
  */
 async function live<T>(path: string): Promise<T> {
   await connection();
-  const cookie = (await cookies()).toString();
-  return apiGet<T>(path, { cache: "no-store", headers: cookie ? { cookie } : undefined });
+  const token = await serverAccessToken();
+  return apiGet<T>(path, { cache: "no-store", headers: token ? { Authorization: `Bearer ${token}` } : undefined });
 }
 
 const byChurnDesc = (a: Customer, b: Customer) =>
@@ -73,10 +70,6 @@ export type Overview = {
   atRiskCustomers: Customer[];
   /** The sales channel the figures are limited to; null = all channels. */
   channel: string | null;
-  /** Every channel, over the same period, whatever the filter is. */
-  revenueByChannel: ChannelRevenue[];
-  channelPeriodStart: string | null;
-  channelPeriodEnd: string | null;
   /** More customers needed before customers can be segmented (0 when there are enough). */
   segmentsNeeded: number;
 };
@@ -97,9 +90,6 @@ export async function getOverview(range?: DateRange, channel?: string): Promise<
       atRiskCustomers: [...mock.customers].sort(byChurnDesc).slice(0, 4),
       growthScoreDetails: null,
       channel: null,
-      revenueByChannel: [],
-      channelPeriodStart: null,
-      channelPeriodEnd: null,
       segmentsNeeded: 0,
     };
   }
@@ -229,8 +219,6 @@ export async function getChurnOverview(): Promise<ChurnOverview> {
 export type ClvOverview = {
   meta: DataMeta;
   averageClv: number | null;
-  /** null until a CLV model exists. */
-  averagePredictedClv: number | null;
   segments: SegmentSummary[];
   customers: Customer[];
 };
@@ -239,12 +227,9 @@ export type ClvOverview = {
 export async function getClvOverview(): Promise<ClvOverview> {
   if (API_MODE === "demo") {
     const total = mock.segmentSummary.reduce((sum, s) => sum + s.customers, 0);
-    const weighted = (key: "avgClv" | "avgPredictedClv") =>
-      mock.segmentSummary.reduce((sum, s) => sum + (s[key] ?? 0) * s.customers, 0) / total;
     return {
       meta: DEMO_META,
-      averageClv: weighted("avgClv"),
-      averagePredictedClv: weighted("avgPredictedClv"),
+      averageClv: mock.segmentSummary.reduce((sum, s) => sum + s.avgClv * s.customers, 0) / total,
       segments: mock.segmentSummary,
       customers: mock.customers,
     };
@@ -253,33 +238,6 @@ export async function getClvOverview(): Promise<ClvOverview> {
     "/api/v1/predictions/clv",
   );
   return { ...data, segments: withSegmentMeta(data.segments) };
-}
-
-// --- Health ----------------------------------------------------------------------
-
-export type HealthWeights = Record<keyof HealthFactors, number>;
-
-export type HealthOverview = {
-  meta: DataMeta;
-  weights: HealthWeights;
-  /** Used for customers without engagement data (engagement left out, not zero). */
-  weightsWithoutEngagement: HealthWeights | null;
-  distribution: HealthBucket[];
-  customers: Customer[];
-};
-
-/** GET /api/v1/customers/health */
-export async function getHealthOverview(): Promise<HealthOverview> {
-  if (API_MODE === "demo") {
-    return {
-      meta: DEMO_META,
-      weights: mock.healthWeights,
-      weightsWithoutEngagement: null,
-      distribution: mock.healthBreakdown,
-      customers: [...mock.customers].sort((a, b) => a.healthScore - b.healthScore),
-    };
-  }
-  return live<HealthOverview>("/api/v1/customers/health");
 }
 
 // --- Revenue ---------------------------------------------------------------------
@@ -299,7 +257,6 @@ type RevenueResponse = {
   atRiskBySegment: RevenueOverview["atRiskBySegment"];
   drivers: {
     byCategory: ShareRow[];
-    byChannel: ShareRow[];
     byCountry: ShareRow[];
     newVsReturning: ShareRow[];
   };
@@ -324,7 +281,6 @@ export async function getRevenueOverview(): Promise<RevenueOverview> {
     atRiskBySegment: data.atRiskBySegment,
     drivers: [
       { title: "By product category (last 12 months)", rows: data.drivers.byCategory },
-      { title: "By channel (last 12 months)", rows: data.drivers.byChannel },
       { title: "By country (last 12 months)", rows: data.drivers.byCountry },
       { title: "New vs returning customers (last 90 days)", rows: data.drivers.newVsReturning },
     ],

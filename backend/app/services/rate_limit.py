@@ -1,6 +1,6 @@
 """A small "no more than N times in M seconds" limiter, kept in memory.
 
-Used to stop one account from running up the AI bill (every assistant question costs money).
+Used to stop one account from running up the AI bill (every AI call costs money).
 Honest limit: on a serverless host each running copy of the API has its own memory, so the limit
 is per copy, not global. It still stops a loop or a runaway script; a global limit would need a
 database table.

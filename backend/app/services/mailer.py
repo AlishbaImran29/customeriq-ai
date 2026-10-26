@@ -207,22 +207,3 @@ def send_email(settings: Settings, to: str, subject: str, text: str, html: str, 
             # owner, and enough to tell a blocked network from a TLS, login or sender problem.
             {"reason": reason, "kind": type(exc).__name__, "errno": number},
         ) from exc
-
-
-def send_verification_code(settings: Settings, to: str, name: str, code: str, minutes: int) -> None:
-    who = _single_line(name) or "there"
-    text = (
-        f"Hi {who},\n\n"
-        f"Your {APP_NAME} verification code is: {code}\n\n"
-        f"It expires in {minutes} minutes. If you did not try to create an account, you can ignore this email.\n"
-    )
-    html = (
-        f"<div style=\"font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0f172a\">"
-        f"<h2 style=\"margin:0 0 8px\">{APP_NAME}</h2>"
-        f"<p>Hi {who.replace('<', '&lt;').replace('>', '&gt;')},</p>"
-        f"<p>Your verification code is:</p>"
-        f"<p style=\"font-size:32px;letter-spacing:8px;font-weight:bold;margin:16px 0\">{code}</p>"
-        f"<p style=\"color:#475569\">It expires in {minutes} minutes. If you did not try to create an account, "
-        f"you can ignore this email.</p></div>"
-    )
-    send_email(settings, to, f"{code} is your {APP_NAME} verification code", text, html)

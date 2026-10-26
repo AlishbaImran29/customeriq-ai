@@ -1,7 +1,7 @@
 """AI helpers for Launch Studio steps 2-4: the vendor message, the competitor-ad analysis, and ad creatives.
 
 Shared rules (the same as the Trend Finder ideas):
-- It reuses the assistant's AI connection; there is no new key. Every call goes through `run_cached`, so the
+- It uses the shared AI connection (llm.py); there is no new key. Every call goes through `run_cached`, so the
   same inputs are never paid for twice, and a missing key or a failed call gives a clear error.
 - Every AI text is an "AI suggestion". The seller can edit it, and nothing is sent, published or saved as
   final until the seller chooses to. The app never sends a message by itself.

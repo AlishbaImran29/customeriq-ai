@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { calculateProfit, getProfitDefaults, saveProfit, type ProfitDefaults, type ProfitInput, type ProfitResult } from "@/lib/api/launch-steps";
 import { ApiError } from "@/lib/api/config";
 import type { Project } from "@/lib/api/launch";
-import { useLanguage } from "@/lib/i18n";
 import { formatNumber, formatPercent } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 const field = "space-y-1 text-xs font-medium text-muted";
 
@@ -35,7 +35,6 @@ export function ProfitCheckBoard() {
 }
 
 function ProfitStep({ project }: { project: Project }) {
-  const { t, tf } = useLanguage();
   const [defaults, setDefaults] = useState<ProfitDefaults | null>(null);
   const [cost, setCost] = useState("");
   const [price, setPrice] = useState("");
@@ -83,7 +82,7 @@ function ProfitStep({ project }: { project: Project }) {
     const timer = setTimeout(() => {
       calculateProfit(numbers as ProfitInput)
         .then((r) => !cancelled && (setComputed(r), setError(null), setSaved(false)))
-        .catch((e) => !cancelled && (setComputed(null), setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."))));
+        .catch((e) => !cancelled && (setComputed(null), setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.")));
     }, 350);
     return () => {
       cancelled = true;
@@ -98,13 +97,13 @@ function ProfitStep({ project }: { project: Project }) {
       await saveProfit(project.id, numbers as ProfitInput);
       setSaved(true);
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     }
   }
 
   const num = (label: string, value: string, set: (v: string) => void, hint?: string) => (
     <label className={field}>
-      {t(label)}
+      {label}
       <Input inputMode="decimal" value={value} onChange={(e) => set(e.target.value)} />
       {hint ? <span className="block text-[11px] font-normal text-faint">{hint}</span> : null}
     </label>
@@ -113,22 +112,22 @@ function ProfitStep({ project }: { project: Project }) {
   const rateHint = !defaults
     ? undefined
     : defaults.returnRate !== null
-      ? tf("Your shop's real return rate is {rate} ({orders} orders with a courier result).", { rate: formatPercent(defaults.returnRate * 100, 0), orders: defaults.returnRateOrders })
-      : `${t("Not enough data yet")}: ${tf("{n} more orders with a courier result are needed to use your real return rate. Enter your own estimate.", { n: defaults.returnRateNeeded })}`;
+      ? fmt("Your shop's real return rate is {rate} ({orders} orders with a courier result).", { rate: formatPercent(defaults.returnRate * 100, 0), orders: defaults.returnRateOrders })
+      : `${"Not enough data yet"}: ${fmt("{n} more orders with a courier result are needed to use your real return rate. Enter your own estimate.", { n: defaults.returnRateNeeded })}`;
 
   return (
     <div className="space-y-5">
       <Card>
         <CardHeader>
-          <CardTitle>{tf("Profit check for {product}", { product: project.productName })}</CardTitle>
-          <CardDescription>{t("Fill in your numbers. Everything is worked out before you spend anything on ads.")}</CardDescription>
+          <CardTitle>{fmt("Profit check for {product}", { product: project.productName })}</CardTitle>
+          <CardDescription>Fill in your numbers. Everything is worked out before you spend anything on ads.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {num("Product cost per piece (PKR)", cost, setCost, defaults?.costSource ? tf("From the quote of {vendor}.", { vendor: defaults.costSource }) : undefined)}
+          {num("Product cost per piece (PKR)", cost, setCost, defaults?.costSource ? fmt("From the quote of {vendor}.", { vendor: defaults.costSource }) : undefined)}
           {num("Selling price (PKR)", price, setPrice)}
           {num("Packing cost per order (PKR)", packing, setPacking)}
           {num("Courier fee per order (PKR)", courier, setCourier)}
-          {num("Extra cost when a parcel comes back (PKR)", returnShipping, setReturnShipping, t("What the courier charges for the return trip."))}
+          {num("Extra cost when a parcel comes back (PKR)", returnShipping, setReturnShipping, "What the courier charges for the return trip.")}
           {num("Expected return rate (%)", rate, setRate, rateHint)}
           {num("Planned ad budget (PKR)", budget, setBudget)}
         </CardContent>
@@ -138,39 +137,39 @@ function ProfitStep({ project }: { project: Project }) {
 
       {result ? (
         <>
-          <p className="text-xs font-medium text-muted">{t("Estimate from your numbers")}: {t("it is only as good as the numbers you typed.")}</p>
+          <p className="text-xs font-medium text-muted">Estimate from your numbers: it is only as good as the numbers you typed.</p>
           {result.warnings.filter((w) => w !== "no_budget").map((w) => <Warning key={w} code={w} />)}
-          <section aria-label={t("Profit results")} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section aria-label="Profit results" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Profit per delivered order" value={<Money value={result.profitDelivered} />} delta={null} icon={Wallet} />
             <KpiCard label="Profit per order placed, after returns" value={<Money value={result.profitPerOrderPlaced} />} delta={null}
-              note={result.margin === null ? undefined : tf("{margin} of the price", { margin: formatPercent(result.margin * 100, 1) })} icon={Banknote} />
-            <KpiCard label="Break-even ROAS" value={result.breakEvenRoas === null ? t("Not possible") : `${result.breakEvenRoas}x`} delta={null}
-              note={t("Sales per rupee of ads needed to break even")} icon={Target} />
-            <KpiCard label="Break-even cost per purchase" value={result.breakEvenCostPerPurchase === null ? t("Not possible") : <Money value={result.breakEvenCostPerPurchase} />} delta={null}
-              note={t("The most one ad purchase may cost")} icon={Calculator} />
+              note={result.margin === null ? undefined : fmt("{margin} of the price", { margin: formatPercent(result.margin * 100, 1) })} icon={Banknote} />
+            <KpiCard label="Break-even ROAS" value={result.breakEvenRoas === null ? "Not possible" : `${result.breakEvenRoas}x`} delta={null}
+              note="Sales per rupee of ads needed to break even" icon={Target} />
+            <KpiCard label="Break-even cost per purchase" value={result.breakEvenCostPerPurchase === null ? "Not possible" : <Money value={result.breakEvenCostPerPurchase} />} delta={null}
+              note="The most one ad purchase may cost" icon={Calculator} />
           </section>
           <Card>
             <CardContent className="space-y-1 pt-5 text-sm text-ink-2">
-              <p>{tf("A returned order costs you {amount}.", { amount: formatNumber(Math.round(result.lossReturned)) + " PKR" })}</p>
+              <p>{fmt("A returned order costs you {amount}.", { amount: formatNumber(Math.round(result.lossReturned)) + " PKR" })}</p>
               {result.ordersToRecoverBudget !== null
-                ? <p>{tf("You need {count} orders to earn back your ad budget.", { count: formatNumber(result.ordersToRecoverBudget) })}</p>
-                : result.warnings.includes("no_budget") ? <Warning code="no_budget" /> : <p>{t("The ad budget cannot be earned back at this profit.")}</p>}
+                ? <p>{fmt("You need {count} orders to earn back your ad budget.", { count: formatNumber(result.ordersToRecoverBudget) })}</p>
+                : result.warnings.includes("no_budget") ? <Warning code="no_budget" /> : <p>The ad budget cannot be earned back at this profit.</p>}
               <div className="pt-2">
-                <Button onClick={save}><Save className="h-4 w-4" aria-hidden="true" />{t("Save these numbers to the project")}</Button>
-                {saved ? <span className="ml-3 text-xs text-success">{t("Saved. After launch they are compared with your real orders.")}</span> : null}
+                <Button onClick={save}><Save className="h-4 w-4" aria-hidden="true" />Save these numbers to the project</Button>
+                {saved ? <span className="ml-3 text-xs text-success">Saved. After launch they are compared with your real orders.</span> : null}
               </div>
             </CardContent>
           </Card>
         </>
-      ) : !error ? <p className="text-sm text-muted">{t("Fill in every number above to see the result.")}</p> : null}
+      ) : !error ? <p className="text-sm text-muted">Fill in every number above to see the result.</p> : null}
 
       <details className="rounded-2xl border border-line bg-surface p-4 text-sm text-ink-2">
-        <summary className="cursor-pointer rounded font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">{t("How these numbers are worked out")}</summary>
+        <summary className="cursor-pointer rounded font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">How these numbers are worked out</summary>
         <ul className="mt-3 list-disc space-y-1.5 pl-5">
-          <li>{t("Delivered order: price minus product cost, packing and courier fee.")}</li>
-          <li>{t("Returned order: you lose the packing, the courier fee and the return trip. The product goes back on the shelf, so its cost is not lost.")}</li>
-          <li>{t("Profit per order placed = (share delivered x delivered profit) minus (share returned x loss on a return).")}</li>
-          <li>{t("Break-even cost per purchase = that profit. Break-even ROAS = price divided by it.")}</li>
+          <li>Delivered order: price minus product cost, packing and courier fee.</li>
+          <li>Returned order: you lose the packing, the courier fee and the return trip. The product goes back on the shelf, so its cost is not lost.</li>
+          <li>Profit per order placed = (share delivered x delivered profit) minus (share returned x loss on a return).</li>
+          <li>Break-even cost per purchase = that profit. Break-even ROAS = price divided by it.</li>
         </ul>
       </details>
     </div>
@@ -178,14 +177,13 @@ function ProfitStep({ project }: { project: Project }) {
 }
 
 function Warning({ code }: { code: string }) {
-  const { t } = useLanguage();
   const w = WARNINGS[code];
   if (!w) return null;
   const Icon = w.icon;
   return (
     <div role="note" className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm text-ink ${w.className}`}>
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <p>{t(w.text)}</p>
+      <p>{w.text}</p>
     </div>
   );
 }

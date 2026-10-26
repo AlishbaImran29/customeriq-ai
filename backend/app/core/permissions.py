@@ -22,9 +22,8 @@ OWNER_ONLY_READS = (
     r"^/api/v1/customer-records/(audit|export\.csv)$",
 )
 
-# Changing nothing: a viewer may use these (a question to the assistant, a dry-run test, a check).
+# Changing nothing: a viewer may use these (a dry-run test, a check).
 VIEWER_SAFE_WRITES = (
-    r"^/api/v1/assistant(/.*)?$",
     r"^/api/v1/workflows/(validate|test)$",
     r"^/api/v1/auth/.*$",
 )

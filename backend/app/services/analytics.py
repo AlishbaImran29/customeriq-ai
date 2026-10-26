@@ -27,29 +27,6 @@ MIN_CUSTOMERS_FOR_SEGMENTS = 20
 SINGLE_ORDER_GAP_DAYS = 90
 AVG_MONTH_DAYS = 30.44
 
-HEALTH_WEIGHTS = {
-    "purchaseFrequency": 0.30,
-    "spendingBehavior": 0.30,
-    "engagement": 0.20,
-    "activityTrend": 0.20,
-}
-# Used when a customer has no engagement data: engagement is left out (never
-# treated as 0) and the other weights are scaled up proportionally.
-HEALTH_WEIGHTS_WITHOUT_ENGAGEMENT = {
-    "purchaseFrequency": 0.375,
-    "spendingBehavior": 0.375,
-    "engagement": 0.0,
-    "activityTrend": 0.25,
-}
-
-HEALTH_BANDS = [  # (min score, label, range text)
-    (90, "Excellent", "90–100"),
-    (75, "Healthy", "75–89"),
-    (55, "Watch", "55–74"),
-    (30, "At risk", "30–54"),
-    (0, "Critical", "0–29"),
-]
-
 SEGMENTS = [
     "Champions",
     "Loyal Customers",
@@ -103,17 +80,11 @@ class CustomerMetrics:
     typical_gap_days: float
     activity_ratio: float
     orders_per_month: float
-    engagement: float | None
     order_dates: list[date] = field(repr=False, default_factory=list)
     # Filled in by the scoring steps:
     r_score: int = 0
     fm_score: int = 0
     segment: str | None = None
-    frequency_factor: float = 0.0
-    spending_factor: float = 0.0
-    activity_trend: float = 0.0
-    health_score: int = 0
-    engagement_missing: bool = True
     inactivity_level: str = "Low"
     recommended_action: str = ""
 
@@ -152,15 +123,6 @@ def midrank_percentiles(values: list[float]) -> list[float]:
     return result
 
 
-def rank_scale(values: list[float]) -> list[float]:
-    """Scale to 0–100 by rank: lowest = 0, highest = 100, ties share the lower rank."""
-    n = len(values)
-    if n == 1:
-        return [50.0]
-    ordered = sorted(values)
-    return [bisect_left(ordered, v) / (n - 1) * 100 for v in values]
-
-
 def quintile_score(percentile: float) -> int:
     return min(5, int(percentile // 20) + 1)
 
@@ -193,7 +155,6 @@ def build_snapshot(orders: list[OrderFact]) -> Snapshot:
         typical_gap = max(1.0, typical_gap)
         recency = (as_of - dates[-1]).days
         months_active = max(1.0, (as_of - dates[0]).days / AVG_MONTH_DAYS)
-        engagements = [float(o.engagement) for o in items if o.engagement is not None]
         latest = items[-1]
         customers.append(
             CustomerMetrics(
@@ -211,14 +172,12 @@ def build_snapshot(orders: list[OrderFact]) -> Snapshot:
                 typical_gap_days=typical_gap,
                 activity_ratio=recency / typical_gap,
                 orders_per_month=len(items) / months_active,
-                engagement=sum(engagements) / len(engagements) if engagements else None,
                 order_dates=dates,
             )
         )
 
     segmented = len(customers) >= MIN_CUSTOMERS_FOR_SEGMENTS
     _score_rfm(customers, segmented)
-    _score_health(customers)
     for c in customers:
         c.inactivity_level = inactivity_level(c.activity_ratio)
         c.recommended_action = recommended_action(c)
@@ -249,25 +208,6 @@ def segment_for(r: int, fm: int) -> str:
     return "Lost Customers"
 
 
-def _score_health(customers: list[CustomerMetrics]) -> None:
-    frequency = rank_scale([c.orders_per_month for c in customers])
-    spending = rank_scale([c.revenue_12m for c in customers])
-    for c, freq, spend in zip(customers, frequency, spending):
-        c.frequency_factor = freq
-        c.spending_factor = spend
-        # Within the usual gap = 100; three times the usual gap or more = 0.
-        c.activity_trend = clamp(100 * (3 - c.activity_ratio) / 2)
-        c.engagement_missing = c.engagement is None
-        weights = HEALTH_WEIGHTS_WITHOUT_ENGAGEMENT if c.engagement_missing else HEALTH_WEIGHTS
-        score = (
-            weights["purchaseFrequency"] * freq
-            + weights["spendingBehavior"] * spend
-            + weights["engagement"] * (c.engagement or 0.0)
-            + weights["activityTrend"] * c.activity_trend
-        )
-        c.health_score = round_half_up(clamp(score))
-
-
 def inactivity_level(ratio: float) -> str:
     """Rule-based (not a prediction): days since last order ÷ usual gap."""
     if ratio <= 1.0:
@@ -285,13 +225,6 @@ def recommended_action(c: CustomerMetrics) -> str:
     if c.inactivity_level == "Low":
         return "Keep in regular campaigns"
     return "Re-engage with a reminder or offer"
-
-
-def health_band(score: int) -> str:
-    for minimum, label, _ in HEALTH_BANDS:
-        if score >= minimum:
-            return label
-    return "Critical"
 
 
 # --- aggregate views ------------------------------------------------------------
@@ -364,38 +297,35 @@ def retention_rate(
     return retained / len(cohort) * 100
 
 
-# Growth Score: our own composite of four MEASURED metrics, each turned into a 0-100
+# Growth Score: our own composite of three MEASURED metrics, each turned into a 0-100
 # sub-score. It is not an industry standard and is not a prediction. The page shows the
 # inputs and weights. Inputs that cannot be measured yet (short history) are left out and
-# the remaining weights are scaled up; at least three inputs are needed.
+# the remaining weights are scaled up; at least two inputs are needed.
 def growth_components(days: int = WINDOW_DAYS) -> list[tuple[str, str, float]]:
     return [
         ("revenueGrowth", f"Revenue growth (last {days} days vs the {days} before)", 0.35),
         ("retention", f"Retention rate ({days} days)", 0.30),
-        ("health", "Average customer health score", 0.20),
         ("customerGrowth", f"Customer growth (vs {days} days ago)", 0.15),
     ]
 
 
 GROWTH_COMPONENTS = growth_components()
-MIN_GROWTH_INPUTS = 3
+MIN_GROWTH_INPUTS = 2
 
 
 def growth_score(snapshot: Snapshot, values: dict, deltas: dict, days: int = WINDOW_DAYS) -> dict | None:
     """0-100 growth score with its breakdown, or None when fewer than three inputs exist.
 
     Sub-scores: revenue growth -50%..+50% maps to 0..100; customer growth -20%..+20% maps
-    to 0..100; retention and health are already 0..100.
+    to 0..100; retention is already 0..100.
     """
     if snapshot.empty or not snapshot.customers:
         return None
-    average_health = sum(c.health_score for c in snapshot.customers) / len(snapshot.customers)
     revenue_change, customer_change = deltas.get("revenue"), deltas.get("totalCustomers")
     retention = values.get("retentionRate")
     inputs: dict[str, tuple[float, str] | None] = {
         "revenueGrowth": None if revenue_change is None else (clamp(50 + revenue_change), f"{revenue_change:+.1f}%"),
         "retention": None if retention is None else (clamp(retention), f"{retention:.1f}%"),
-        "health": (clamp(average_health), f"{average_health:.0f}/100"),
         "customerGrowth": None if customer_change is None else (clamp(50 + 2.5 * customer_change), f"{customer_change:+.1f}%"),
     }
     components = growth_components(days)
@@ -420,27 +350,20 @@ def growth_score(snapshot: Snapshot, values: dict, deltas: dict, days: int = WIN
     }
 
 
-def segment_summaries(
-    snapshot: Snapshot, predicted_spend: dict[str, float] | None = None
-) -> list[dict]:
-    """Per-segment totals. With `predicted_spend` (a trained CLV model's next-180-day
-    spend per customer), also the average predicted CLV = revenue to date + that spend."""
+def segment_summaries(snapshot: Snapshot) -> list[dict]:
+    """Per-segment totals. "Average CLV" is the average spend to date (historical)."""
     if not snapshot.segmented:
         return []
     rows = []
     for name in SEGMENTS:
         members = [c for c in snapshot.customers if c.segment == name]
         revenue = sum(c.revenue for c in members)
-        predicted = None
-        if predicted_spend is not None and members:
-            predicted = (revenue + sum(predicted_spend.get(c.customer_id, 0.0) for c in members)) / len(members)
         rows.append(
             {
                 "name": name,
                 "customers": len(members),
                 "revenue": revenue,
                 "avgClv": revenue / len(members) if members else 0.0,
-                "avgPredictedClv": predicted,
             }
         )
     return rows
@@ -499,16 +422,14 @@ def revenue_drivers(snapshot: Snapshot) -> dict:
     first_order = {c.customer_id: c.first_order for c in snapshot.customers}
 
     by_category: Counter[str] = Counter()
-    by_channel: Counter[str] = Counter()
     by_country: Counter[str] = Counter()
     new_vs_returning: Counter[str] = Counter()
-    buyers: dict[str, dict[str, Counter[str]]] = {"category": {}, "channel": {}, "country": {}}
+    buyers: dict[str, dict[str, Counter[str]]] = {"category": {}, "country": {}}
     for o in snapshot.orders:
         value = float(o.value)
         if o.order_date >= year_start:
             for dimension, totals, name in (
                 ("category", by_category, o.category or "Not specified"),
-                ("channel", by_channel, o.channel or "Not specified"),
                 ("country", by_country, o.country or "Not specified"),
             ):
                 totals[name] += value
@@ -518,7 +439,6 @@ def revenue_drivers(snapshot: Snapshot) -> dict:
             new_vs_returning["New customers" if is_new else "Returning customers"] += value
     return {
         "byCategory": _share_rows(by_category, buyers["category"]),
-        "byChannel": _share_rows(by_channel, buyers["channel"]),
         "byCountry": _share_rows(by_country, buyers["country"]),
         "newVsReturning": _share_rows(new_vs_returning),
     }
@@ -586,14 +506,6 @@ def revenue_at_risk(snapshot: Snapshot) -> list[dict]:
             }
         )
     return rows
-
-
-def health_distribution(snapshot: Snapshot) -> list[dict]:
-    counts = Counter(health_band(c.health_score) for c in snapshot.customers)
-    return [
-        {"range": text, "label": label, "customers": counts.get(label, 0)}
-        for _, label, text in HEALTH_BANDS
-    ]
 
 
 def inactivity_distribution(snapshot: Snapshot) -> list[dict]:

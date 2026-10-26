@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addPayment } from "@/lib/api/cash";
 import { ApiError } from "@/lib/api/config";
-import { useLanguage } from "@/lib/i18n";
+import { fmt } from "@/lib/format";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Add one courier payment by hand: courier, date, amount (PKR), and optionally a reference and the orders it paid for. */
 export function PaymentForm({ couriers, onSaved }: { couriers: string[]; onSaved: () => void }) {
-  const { t, tf } = useLanguage();
   const uid = useId();
   const [courier, setCourier] = useState("");
   const [date, setDate] = useState(today());
@@ -28,21 +27,21 @@ export function PaymentForm({ couriers, onSaved }: { couriers: string[]; onSaved
     setError(null);
     setSaved(null);
     const number = Number(amount.replace(/,/g, ""));
-    if (!courier.trim()) return setError(t("Enter the courier name."));
-    if (!Number.isFinite(number) || number <= 0) return setError(t("Enter an amount of more than 0."));
+    if (!courier.trim()) return setError("Enter the courier name.");
+    if (!Number.isFinite(number) || number <= 0) return setError("Enter an amount of more than 0.");
     setBusy(true);
     try {
       const result = await addPayment({
         courierName: courier.trim(), paymentDate: date, amount: number,
         reference: reference.trim() || undefined, orderIds: orders.trim() || undefined,
       });
-      setSaved(tf("Saved a payment from {courier}.", { courier: result.courier }));
+      setSaved(fmt("Saved a payment from {courier}.", { courier: result.courier }));
       setAmount("");
       setReference("");
       setOrders("");
       onSaved();
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -52,32 +51,32 @@ export function PaymentForm({ couriers, onSaved }: { couriers: string[]; onSaved
   return (
     <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2" noValidate>
       <label className={field}>
-        {t("Courier name")}
+        Courier name
         <Input list={`${uid}-couriers`} value={courier} onChange={(e) => setCourier(e.target.value)} autoComplete="off" />
         <datalist id={`${uid}-couriers`}>
           {couriers.map((c) => <option key={c} value={c} />)}
         </datalist>
       </label>
       <label className={field}>
-        {t("Payment date")}
+        Payment date
         <Input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} />
       </label>
       <label className={field}>
-        {t("Amount (PKR)")}
+        Amount (PKR)
         <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
       </label>
       <label className={field}>
-        {t("Reference (optional)")}
+        Reference (optional)
         <Input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={100} />
       </label>
       <label className={`${field} sm:col-span-2`}>
-        {t("Order numbers this paid for (optional, separated by commas)")}
+        Order numbers this paid for (optional, separated by commas)
         <Input value={orders} onChange={(e) => setOrders(e.target.value)} maxLength={2000} />
       </label>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
         <Button type="submit" disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
-          {t("Add payment")}
+          Add payment
         </Button>
         {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
         {saved ? (

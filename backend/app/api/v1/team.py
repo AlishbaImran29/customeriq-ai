@@ -49,7 +49,7 @@ def _out(u: User) -> MemberOut:
 
 @router.get("/team/users", response_model=list[MemberOut], summary="Everyone who can sign in, with their role")
 def members(db: Session = Depends(get_db)) -> list[MemberOut]:
-    return [_out(u) for u in db.scalars(select(User).where(User.email_verified_at.is_not(None)).order_by(User.created_at))]
+    return [_out(u) for u in db.scalars(select(User).order_by(User.is_active, User.created_at))]
 
 
 @router.patch("/team/users/{user_id}", response_model=MemberOut, summary="Change someone's role or switch their account off")

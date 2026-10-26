@@ -8,8 +8,8 @@ import {
   MAX_SHIPMENT_BYTES, deleteDemoShipments, getShipmentSummary, uploadShipments,
   type ShipmentImportResult, type ShipmentSummary,
 } from "@/lib/api/shipments";
-import { useLanguage } from "@/lib/i18n";
 import { formatNumber } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 const linkClass =
   "inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm font-medium text-ink-2 hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60";
@@ -20,7 +20,6 @@ const linkClass =
  * Made-up demo shipments are always labelled, and can be deleted here.
  */
 export function ShipmentUpload() {
-  const { t, tf } = useLanguage();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +43,7 @@ export function ShipmentUpload() {
     setError(null);
     setResult(null);
     if (file.size > MAX_SHIPMENT_BYTES) {
-      setError(t("The file is larger than 4 MB. Split it and upload the parts."));
+      setError("The file is larger than 4 MB. Split it and upload the parts.");
       return;
     }
     setBusy(true);
@@ -52,7 +51,7 @@ export function ShipmentUpload() {
       setResult(await uploadShipments(file));
       setRefresh((k) => k + 1);
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -66,7 +65,7 @@ export function ShipmentUpload() {
       setConfirming(false);
       setRefresh((k) => k + 1);
     } catch {
-      setError(t("Something went wrong. Please try again."));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -75,22 +74,22 @@ export function ShipmentUpload() {
   return (
     <div className="space-y-3 text-sm">
       <p className="text-ink-2">
-        {t("Upload a sheet of the parcels you handed to couriers: courier, city, booked date, status (delivered, returned, in_transit or lost), and the date it was delivered or came back.")}
+        Upload a sheet of the parcels you handed to couriers: courier, city, booked date, status (delivered, returned, in_transit or lost), and the date it was delivered or came back.
       </p>
       <div className="flex flex-wrap gap-2">
         <a href="/shipments_template.xlsx" download className={linkClass}>
           <Download className="h-4 w-4" aria-hidden="true" />
-          {t("Excel template")}
+          Excel template
         </a>
         <a href="/shipments_template.csv" download className={linkClass}>
           <Download className="h-4 w-4" aria-hidden="true" />
-          {t("CSV template")}
+          CSV template
         </a>
       </div>
       <input ref={input} type="file" accept=".csv,.xlsx" className="sr-only" id="shipments-file" onChange={(e) => send(e.target.files?.[0])} />
       <Button disabled={busy} onClick={() => input.current?.click()}>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
-        {t("Upload shipments")}
+        Upload shipments
       </Button>
 
       <div aria-live="polite" className="space-y-2">
@@ -99,33 +98,33 @@ export function ShipmentUpload() {
           <div className="space-y-1 rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-ink-2">
             <p className="text-success">
               <strong>
-                {tf("{created} new and {updated} updated shipments. {rejected} rows were rejected.", {
+                {fmt("{created} new and {updated} updated shipments. {rejected} rows were rejected.", {
                   created: formatNumber(result.created), updated: formatNumber(result.updated), rejected: formatNumber(result.rejected),
                 })}
               </strong>
             </p>
             <p>
-              {tf("{linked} are linked to an order, {unlinked} are not (they still count for the courier figures). {orders} orders got the courier's result.", {
+              {fmt("{linked} are linked to an order, {unlinked} are not (they still count for the courier figures). {orders} orders got the courier's result.", {
                 linked: formatNumber(result.linkedToOrders), unlinked: formatNumber(result.unlinked), orders: formatNumber(result.ordersUpdated),
               })}
             </p>
             {result.newCourierNames.length > 0 ? (
               <p>
-                {tf("New courier names (not in the list, kept as typed): {names}. If one is just another spelling of a courier you know, add it to backend/app/data/courier_names.json.", {
+                {fmt("New courier names (not in the list, kept as typed): {names}. If one is just another spelling of a courier you know, add it to backend/app/data/courier_names.json.", {
                   names: result.newCourierNames.join(", "),
                 })}
               </p>
             ) : null}
             {result.newCityNames.length > 0 ? (
               <p>
-                {tf("New city names (kept as typed): {names}. Add a spelling to backend/app/data/city_names.json if needed.", {
+                {fmt("New city names (kept as typed): {names}. Add a spelling to backend/app/data/city_names.json if needed.", {
                   names: result.newCityNames.slice(0, 12).join(", "),
                 })}
               </p>
             ) : null}
             {result.errors.slice(0, 5).map((e, i) => (
               <p key={i} className="text-xs">
-                {t("Row")} {e.row ?? "?"}: {e.column ? `${e.column}: ` : ""}
+                Row {e.row ?? "?"}: {e.column ? `${e.column}: ` : ""}
                 {e.message}
               </p>
             ))}
@@ -135,7 +134,7 @@ export function ShipmentUpload() {
 
       {summary && summary.shipments > 0 ? (
         <p className="text-xs text-muted">
-          {tf("{count} shipments saved ({linked} linked to orders).", { count: formatNumber(summary.shipments), linked: formatNumber(summary.linkedToOrders) })}
+          {fmt("{count} shipments saved ({linked} linked to orders).", { count: formatNumber(summary.shipments), linked: formatNumber(summary.linkedToOrders) })}
         </p>
       ) : null}
 
@@ -144,22 +143,22 @@ export function ShipmentUpload() {
           <p className="flex items-start gap-2 text-warning">
             <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>
-              <strong>{t("Demo data.")}</strong>{" "}
-              {tf("{count} of these shipments are made up (marked demo (synthetic)). They are not real results.", { count: formatNumber(summary.demoShipments) })}
+              <strong>Demo data.</strong>{" "}
+              {fmt("{count} of these shipments are made up (marked demo (synthetic)). They are not real results.", { count: formatNumber(summary.demoShipments) })}
             </span>
           </p>
           {confirming ? (
             <div className="flex gap-2">
               <Button onClick={removeDemo} disabled={busy} className="bg-danger text-white hover:bg-danger/90">
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
-                {t("Yes, delete")}
+                Yes, delete
               </Button>
-              <Button variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>{t("Cancel")}</Button>
+              <Button variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>Cancel</Button>
             </div>
           ) : (
             <Button variant="secondary" onClick={() => setConfirming(true)}>
               <Trash2 className="h-4 w-4" aria-hidden="true" />
-              {t("Delete demo shipments")}
+              Delete demo shipments
             </Button>
           )}
         </div>

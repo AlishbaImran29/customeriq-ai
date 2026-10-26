@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, PackageX } from "lucide-react";
 import { load } from "@/components/data-state";
-import { T } from "@/components/t";
 import { Card } from "@/components/ui/card";
 import { getOrderRisk } from "@/lib/api/customer-intelligence";
 import { formatNumber } from "@/lib/utils";
@@ -29,17 +28,17 @@ export async function OrderRiskCard() {
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              <T>Order Risk</T>
+              Order Risk
             </p>
             {available ? (
               <p className="text-sm text-ink-2">
                 <strong className="text-2xl font-semibold tabular-nums text-ink">{formatNumber(risky)}</strong>{" "}
-                <T>risky orders need checking</T> · <T>High</T> {formatNumber(levelCounts.High)}, <T>Medium</T>{" "}
-                {formatNumber(levelCounts.Medium)} ({windowDays} <T>days</T>)
+                risky orders need checking · High {formatNumber(levelCounts.High)}, Medium{" "}
+                {formatNumber(levelCounts.Medium)} ({windowDays} days)
               </p>
             ) : (
               <p className="text-sm text-ink-2">
-                <T>Not available yet</T> · <span className="text-muted"><T>See why</T></span>
+                Not available yet · <span className="text-muted">See why</span>
               </p>
             )}
           </div>

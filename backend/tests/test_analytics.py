@@ -39,11 +39,6 @@ def test_midrank_percentiles_share_value_for_ties():
     assert a.midrank_percentiles([1, 1, 3, 4]) == [25.0, 25.0, 62.5, 87.5]
 
 
-def test_rank_scale_lowest_zero_highest_hundred():
-    assert a.rank_scale([10, 0, 5, 0]) == [100.0, 0.0, pytest.approx(66.67, 0.01), 0.0]
-    assert a.rank_scale([7]) == [50.0]
-
-
 @pytest.mark.parametrize("r, fm, segment", [
     (5, 5, "Champions"), (4, 4, "Champions"),
     (5, 3, "Loyal Customers"), (3, 4, "Loyal Customers"),
@@ -81,28 +76,11 @@ def test_activity_ratio_and_typical_gap():
     c = by_id(a.build_snapshot([order("A", 120), order("A", 90), order("A", 60), order("Z", 0)]))["A"]
     assert c.typical_gap_days == 30 and c.recency_days == 60
     assert c.activity_ratio == 2.0 and c.inactivity_level == "High"
-    assert c.activity_trend == 50.0  # 100 * (3 - 2) / 2
 
 
 def test_single_order_uses_90_day_gap():
     c = by_id(a.build_snapshot([order("A", 45), order("Z", 0)]))["A"]
     assert c.typical_gap_days == 90 and c.activity_ratio == 0.5
-
-
-def test_health_reweights_when_engagement_missing():
-    snapshot = a.build_snapshot([
-        order("WITH", 0, 100, engagement=80), order("WITH", 10, 100, engagement=60),
-        order("WITHOUT", 0, 100), order("WITHOUT", 10, 100),
-    ])
-    c = by_id(snapshot)
-    # Same orders, so frequency/spending/trend factors are identical.
-    assert c["WITH"].frequency_factor == c["WITHOUT"].frequency_factor
-    assert c["WITH"].engagement == 70.0 and not c["WITH"].engagement_missing
-    assert c["WITHOUT"].engagement is None and c["WITHOUT"].engagement_missing
-    f, s, t = c["WITH"].frequency_factor, c["WITH"].spending_factor, c["WITH"].activity_trend
-    assert c["WITH"].health_score == a.round_half_up(0.3 * f + 0.3 * s + 0.2 * 70 + 0.2 * t)
-    # Missing engagement is left out (not counted as zero) and others re-weighted.
-    assert c["WITHOUT"].health_score == a.round_half_up(0.375 * f + 0.375 * s + 0.25 * t)
 
 
 def test_segmentation_needs_twenty_customers():
@@ -178,16 +156,15 @@ def _expected_score(parts):
     return a.round_half_up(sum(v * w for v, w in parts.values()) / sum(w for _, w in parts.values()))
 
 
-def test_growth_score_combines_four_measured_inputs():
+def test_growth_score_combines_three_measured_inputs():
     snapshot = _snapshot_for_growth()
-    health = sum(c.health_score for c in snapshot.customers) / len(snapshot.customers)
     result = a.growth_score(snapshot, {"retentionRate": 60.0}, {"revenue": 20.0, "totalCustomers": 10.0})
-    parts = {"rev": (70.0, 0.35), "ret": (60.0, 0.30), "health": (health, 0.20), "cust": (75.0, 0.15)}
+    parts = {"rev": (70.0, 0.35), "ret": (60.0, 0.30), "cust": (75.0, 0.15)}
     assert result["score"] == _expected_score(parts)
     by_key = {c["key"]: c for c in result["components"]}
     assert by_key["revenueGrowth"]["value"] == 70 and by_key["revenueGrowth"]["measure"] == "+20.0%"
     assert by_key["customerGrowth"]["value"] == 75 and by_key["retention"]["measure"] == "60.0%"
-    assert [c["weight"] for c in result["components"]] == [35, 30, 20, 15] and result["missing"] == []
+    assert [c["weight"] for c in result["components"]] == [44, 38, 19] and result["missing"] == []
 
 
 def test_growth_sub_scores_are_clamped_to_0_100():
@@ -201,35 +178,33 @@ def test_growth_sub_scores_are_clamped_to_0_100():
 
 def test_growth_score_rescales_weights_when_an_input_is_missing():
     snapshot = _snapshot_for_growth()
-    health = sum(c.health_score for c in snapshot.customers) / len(snapshot.customers)
     result = a.growth_score(snapshot, {"retentionRate": 60.0}, {"revenue": 20.0, "totalCustomers": None})
     assert result["missing"] == ["Customer growth (vs 90 days ago)"]
-    assert [c["weight"] for c in result["components"]] == [41, 35, 24]  # 0.35 / 0.30 / 0.20 over 0.85
-    assert result["score"] == _expected_score({"rev": (70.0, 0.35), "ret": (60.0, 0.30), "health": (health, 0.20)})
+    assert [c["weight"] for c in result["components"]] == [54, 46]  # 0.35 / 0.30 over 0.65
+    assert result["score"] == _expected_score({"rev": (70.0, 0.35), "ret": (60.0, 0.30)})
 
 
-def test_growth_score_needs_at_least_three_inputs():
+def test_growth_score_needs_at_least_two_inputs():
     snapshot = _snapshot_for_growth()
-    assert a.growth_score(snapshot, {"retentionRate": None}, {"revenue": 20.0, "totalCustomers": None}) is None
+    assert a.growth_score(snapshot, {"retentionRate": None}, {"revenue": 20.0, "totalCustomers": None}) is None   # only one input
     assert a.growth_score(a.build_snapshot([]), {"retentionRate": 60.0}, {"revenue": 1.0, "totalCustomers": 1.0}) is None
 
 
-# --- revenue drivers: order stats per channel ------------------------------------
+# --- revenue drivers: order stats per country ------------------------------------
 
 def test_revenue_drivers_report_orders_customers_average_and_repeat_rate():
-    facts = [
-        order("A", 10, 100, channel="Shopify"),
-        order("A", 20, 50, channel="Shopify"),    # A buys twice on Shopify -> repeat
-        order("B", 30, 150, channel="Shopify"),   # B buys once on Shopify
-        order("B", 40, 80, channel="Etsy"),
-    ]
-    rows = {r["name"]: r for r in a.revenue_drivers(a.build_snapshot(facts))["byChannel"]}
+    def sale(customer, days_ago, value, country):
+        return a.OrderFact(customer, customer, f"{customer.lower()}@example.com", AS_OF - timedelta(days=days_ago), Decimal(str(value)), None, "Skincare", country, None)
 
-    shopify = rows["Shopify"]
-    assert (shopify["orders"], shopify["customers"]) == (3, 2)
-    assert shopify["avgOrderValue"] == 100.0
-    assert shopify["repeatRate"] == 50.0  # 1 of 2 customers ordered twice on Shopify
-    assert rows["Etsy"]["repeatRate"] == 0.0 and rows["Etsy"]["orders"] == 1
+    facts = [sale("A", 10, 100, "United Kingdom"), sale("A", 20, 50, "United Kingdom"), sale("B", 30, 150, "United Kingdom"), sale("B", 40, 80, "France")]
+    drivers = a.revenue_drivers(a.build_snapshot(facts))
+    assert "byChannel" not in drivers                      # revenue by channel was removed: the dataset has no channel
+    rows = {r["name"]: r for r in drivers["byCountry"]}
+    uk = rows["United Kingdom"]
+    assert (uk["orders"], uk["customers"]) == (3, 2)
+    assert uk["avgOrderValue"] == 100.0
+    assert uk["repeatRate"] == 50.0  # 1 of 2 customers ordered twice in the UK
+    assert rows["France"]["repeatRate"] == 0.0 and rows["France"]["orders"] == 1
 
 
 # --- KPI period length and cohort retention ----------------------------------------

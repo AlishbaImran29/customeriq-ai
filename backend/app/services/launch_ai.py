@@ -1,6 +1,6 @@
 """Launch Studio AI helper: "Ask AI for ideas".
 
-It REUSES the AI assistant's connection (`get_model`, the same provider and API key as the chat), so there
+It uses the shared AI connection (`llm.get_model`: one provider and one API key), so there
 is no new key and no new library. Rules for every AI text in Launch Studio:
 - It is only ever shown as an "AI suggestion". The seller can change it and nothing is used until they
   accept it (one click turns an idea into a launch project, with the name editable first).
@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.errors import ApiError
 from app.models.launch import AiCache
-from app.services.assistant import ChatTurn, get_model
+from app.services.llm import ChatTurn, get_model
 
 KIND_IDEAS = "launch_ideas"
 MAX_IDEAS = 5

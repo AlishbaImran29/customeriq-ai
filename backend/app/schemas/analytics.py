@@ -39,8 +39,6 @@ class ModelInfo(CamelModel):
 
 class ModelsMeta(CamelModel):
     churn: ModelInfo
-    clv: ModelInfo
-    forecast: ModelInfo
 
 
 class Meta(CamelModel):
@@ -54,13 +52,6 @@ class Meta(CamelModel):
     unavailable: list[Unavailable]
 
 
-class HealthFactors(CamelModel):
-    purchase_frequency: float
-    spending_behavior: float
-    engagement: float | None
-    activity_trend: float
-
-
 class CustomerOut(CamelModel):
     id: str
     name: str
@@ -70,13 +61,9 @@ class CustomerOut(CamelModel):
     orders: int
     revenue: float
     current_clv: float
-    predicted_clv: float | None = None
     churn_probability: float | None = None
     # Rule-based inactivity level (days since last order ÷ usual gap), not a prediction.
     risk_level: RiskLevel
-    health_score: int
-    health_factors: HealthFactors
-    engagement_missing: bool
     last_purchase: date
     days_since_last_order: int
     recommended_action: str
@@ -125,16 +112,13 @@ class SegmentStats(CamelModel):
     customers: int
     revenue: float
     avg_clv: float
-    avg_predicted_clv: float | None
 
 
 class RevenuePoint(CamelModel):
-    """Actual months have `actual`; forecast months have `forecast` and `range`."""
+    """One calendar month of revenue. `partial` = the month is still in progress."""
 
     month: str
     actual: float | None = None
-    forecast: float | None = None
-    range: tuple[float, float] | None = None
     partial: bool = False
 
 
@@ -142,7 +126,7 @@ class ShareRow(CamelModel):
     name: str
     revenue: float
     share: float
-    # Only set for category/channel/country groups (not for new-vs-returning).
+    # Only set for category/country groups (not for new-vs-returning).
     orders: int | None = None
     customers: int | None = None
     avg_order_value: float | None = None
@@ -151,7 +135,6 @@ class ShareRow(CamelModel):
 
 class RevenueDrivers(CamelModel):
     by_category: list[ShareRow]
-    by_channel: list[ShareRow]
     by_country: list[ShareRow]
     new_vs_returning: list[ShareRow]
 
@@ -181,12 +164,6 @@ class ExecutiveSummary(CamelModel):
     method: Literal["rules"]
 
 
-class HealthBucket(CamelModel):
-    range: str
-    label: str
-    customers: int
-
-
 class RiskBucket(CamelModel):
     level: RiskLevel
     customers: int
@@ -208,21 +185,9 @@ class GrowthScoreDetails(CamelModel):
     missing: list[str]
 
 
-class ChannelRevenue(CamelModel):
-    """Revenue of one sales channel in the chosen period (always all channels, whatever the filter)."""
-
-    channel: str          # instagram | whatsapp | facebook | website | other
-    revenue: float
-    orders: int
-    customers: int
-
-
 class OverviewOut(CamelModel):
     meta: Meta
     channel: str | None                      # the channel the figures are filtered to; None = all
-    revenue_by_channel: list[ChannelRevenue]
-    channel_period_start: date | None
-    channel_period_end: date | None
     segments_needed: int                     # more customers needed before customers can be segmented
     kpis: Kpis
     kpi_deltas: Kpis
@@ -272,16 +237,7 @@ class ChurnOut(CamelModel):
 class ClvOut(CamelModel):
     meta: Meta
     average_clv: float | None
-    average_predicted_clv: float | None
     segments: list[SegmentStats]
-    customers: list[CustomerOut]
-
-
-class HealthOut(CamelModel):
-    meta: Meta
-    weights: dict[str, float]
-    weights_without_engagement: dict[str, float]
-    distribution: list[HealthBucket]
     customers: list[CustomerOut]
 
 

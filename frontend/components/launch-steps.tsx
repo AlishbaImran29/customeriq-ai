@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 /** The six steps of a launch, each with its own page. The chosen project travels in the address (?project=ID). */
 const STEPS = [
@@ -16,13 +16,12 @@ const STEPS = [
 ] as const;
 
 export function LaunchSteps({ current }: { current: number }) {
-  const { t, tf } = useLanguage();
   const project = useSearchParams().get("project");
   const step = STEPS[current - 1];
   return (
-    <nav aria-label={t("Launch steps")} className="space-y-2">
+    <nav aria-label="Launch steps" className="space-y-2">
       <p className="text-sm font-medium text-ink">
-        {tf("Step {n} of {total}: {name}", { n: current, total: STEPS.length, name: t(step.name) })}
+        {fmt("Step {n} of {total}: {name}", { n: current, total: STEPS.length, name: step.name })}
       </p>
       <ol className="flex flex-wrap gap-2">
         {STEPS.map((s, i) => {
@@ -44,7 +43,7 @@ export function LaunchSteps({ current }: { current: number }) {
                 >
                   {i + 1}
                 </span>
-                {t(s.name)}
+                {s.name}
               </Link>
             </li>
           );

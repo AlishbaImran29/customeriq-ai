@@ -1,4 +1,4 @@
-"""Dashboard channel filter, revenue by channel, and the "X more needed" messages. All data is made up."""
+"""Dashboard channel filter and the "X more needed" messages. All data is made up."""
 
 from datetime import date, timedelta
 
@@ -43,27 +43,13 @@ def overview(client, **params):
 
 
 @requires_database
-def test_revenue_by_channel_lists_all_five_channels_with_their_totals(db_client):
-    import_orders(db_client)
-    body = overview(db_client)
-    rows = {r["channel"]: r for r in body["revenueByChannel"]}
-    assert list(rows) == ["website", "instagram", "whatsapp", "facebook", "other"] or set(rows) == {"instagram", "whatsapp", "facebook", "website", "other"}
-    assert body["revenueByChannel"][0]["channel"] == "website"                                # biggest first
-    assert (rows["instagram"]["revenue"], rows["instagram"]["orders"], rows["instagram"]["customers"]) == (1500.0, 2, 1)
-    assert (rows["whatsapp"]["revenue"], rows["whatsapp"]["orders"], rows["whatsapp"]["customers"]) == (500.0, 2, 2)
-    assert (rows["website"]["revenue"], rows["facebook"]["revenue"], rows["other"]["orders"]) == (4000.0, 0.0, 0)
-    assert sum(r["revenue"] for r in rows.values()) == 6000.0
-    assert body["channelPeriodEnd"] == day(2) and body["channel"] is None
-
-
-@requires_database
-def test_the_channel_filter_changes_the_figures_but_not_the_chart(db_client):
+def test_the_channel_filter_changes_the_figures(db_client):
     import_orders(db_client)
     everyone = overview(db_client)
     whatsapp = overview(db_client, channel="whatsapp")
     assert everyone["kpis"]["totalCustomers"] == 4 and whatsapp["kpis"]["totalCustomers"] == 2        # 2 WhatsApp customers
     assert whatsapp["meta"]["customerCount"] == 2 and whatsapp["channel"] == "whatsapp"
-    assert whatsapp["revenueByChannel"] == everyone["revenueByChannel"]                            # the chart always compares all
+    assert "revenueByChannel" not in everyone                                                          # the revenue-by-channel chart was removed
     insta = overview(db_client, channel="instagram")
     assert insta["kpis"]["totalCustomers"] == 1 and insta["meta"]["asOf"] == day(5)
 
@@ -82,22 +68,6 @@ def test_a_channel_with_no_orders_gives_an_empty_page_not_an_error(db_client):
     import_orders(db_client)
     body = overview(db_client, channel="facebook")
     assert body["meta"]["asOf"] is None and body["meta"]["customerCount"] == 0 and body["channel"] == "facebook"
-    assert any(r["channel"] == "website" and r["revenue"] == 4000.0 for r in body["revenueByChannel"])   # the chart still shows the rest
-
-
-@requires_database
-def test_the_chart_period_follows_the_chosen_dates(db_client):
-    import_orders(db_client)
-    body = overview(db_client, start=day(9), end=day(4))
-    rows = {r["channel"]: r for r in body["revenueByChannel"]}
-    assert (rows["instagram"]["revenue"], rows["whatsapp"]["revenue"], rows["website"]["revenue"]) == (500.0, 200.0, 0.0)
-    assert (body["channelPeriodStart"], body["channelPeriodEnd"]) == (day(9), day(4))
-
-
-@requires_database
-def test_no_data_at_all_gives_an_empty_chart(db_client):
-    body = overview(db_client)
-    assert body["revenueByChannel"] == [] and body["channelPeriodEnd"] is None and body["segmentsNeeded"] == a.MIN_CUSTOMERS_FOR_SEGMENTS
 
 
 @requires_database

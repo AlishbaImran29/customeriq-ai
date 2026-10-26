@@ -1,7 +1,4 @@
-"""The churn "Why?": reasons come from the model, are few, and every template can be translated. Made-up data only."""
-
-import re
-from pathlib import Path
+"""The churn "Why?": reasons come from the model and are few. Made-up data only."""
 
 import numpy as np
 
@@ -49,10 +46,3 @@ def test_trained_model_explains_customers_it_scores():
     assert preds.churn.reasons[riskiest], "the riskiest customer should have at least one reason"
     # The scores for the report card are numbers, not text.
     assert preds.churn.metric == "ROC-AUC" and preds.churn.model_score > preds.churn.baseline_score
-
-
-def test_every_template_has_an_urdu_translation():
-    source = (Path(__file__).resolve().parents[2] / "frontend" / "lib" / "i18n.ts").read_text(encoding="utf-8")
-    missing = [t for t in cr.TEMPLATES if f'"{t}":' not in source]
-    assert not missing, missing
-    assert re.search(r"\{value\}", " ".join(cr.TEMPLATES))

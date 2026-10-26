@@ -10,13 +10,12 @@ import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api/config";
 import { createQuickOrder, lookupCustomer, type CustomerLookup, type QuickOrderResponse } from "@/lib/api/orders";
 import { getShipmentSummary } from "@/lib/api/shipments";
-import { setCurrencies, useCurrency } from "@/lib/currency";
-import { useLanguage } from "@/lib/i18n";
 import {
   CHANNELS, PAYMENT_TYPES, PK_CITIES, PLATFORM_SUGGESTIONS, addProduct, addProducts, firstError, loadLastUsed, localToday,
   parseAmount, saveLastUsed, validate, type FieldErrors, type FieldName, type FormValues,
 } from "@/lib/quick-order";
 import { formatDate } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 const textareaClass =
   "w-full rounded-xl border border-line bg-surface-2 px-3 py-2 text-base text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
@@ -32,7 +31,6 @@ export function Field({
   hint?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const { t } = useLanguage();
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="block text-sm font-medium text-ink-2">
@@ -43,7 +41,7 @@ export function Field({
       {error ? (
         <p id={`${id}-error`} role="alert" className="flex items-start gap-1.5 text-sm text-danger">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          {t(error)}
+          {error}
         </p>
       ) : null}
     </div>
@@ -60,8 +58,6 @@ const blank = (today: string): FormValues => ({
  * phone number first, because typing it tells the seller whether this is a returning customer.
  */
 export function QuickOrderForm() {
-  const { t, tf } = useLanguage();
-  const { state: currency } = useCurrency();
   const uid = useId();
   const id = (name: FieldName) => `${uid}-${name}`;
   const productId = `${uid}-productInput`; // the products field is a list, so its box has its own id
@@ -177,46 +173,29 @@ export function QuickOrderForm() {
   const productsError = errors.products;
   return (
     <form onSubmit={submit} noValidate className="mx-auto max-w-xl space-y-5">
-      {currency.source !== "PKR" ? (
-        <div className="rounded-xl border border-info/30 bg-info/10 px-3 py-2 text-sm text-ink-2">
-          <p>
-            {tf("Amounts are saved as typed, in Pakistani rupees. Your dashboards currently read your data as {currency}.", {
-              currency: currency.source,
-            })}
-          </p>
-          <button
-            type="button"
-            className="mt-1 text-sm font-medium text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            onClick={() => setCurrencies("PKR", currency.target)}
-          >
-            {t("Show my data in PKR")}
-          </button>
-        </div>
-      ) : null}
-
       <div aria-live="polite">
         {saved ? (
           <div className="flex items-start gap-2 rounded-xl border border-success/30 bg-success/10 px-3 py-3 text-sm text-success">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
             <p>
-              <strong>{tf("Order {id} saved for {name}.", { id: saved.orderId, name: saved.customerName })}</strong>{" "}
+              <strong>{fmt("Order {id} saved for {name}.", { id: saved.orderId, name: saved.customerName })}</strong>{" "}
               {saved.returning
-                ? tf("Returning customer: {count} orders in total.", { count: saved.customerOrders })
-                : t("New customer added.")}
+                ? fmt("Returning customer: {count} orders in total.", { count: saved.customerOrders })
+                : "New customer added."}
             </p>
           </div>
         ) : null}
         {topError ? (
           <p role="alert" className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            {t(topError)}
+            {topError}
           </p>
         ) : null}
       </div>
 
       <Field
         id={id("phone")}
-        label={t("Phone number")}
+        label="Phone number"
         error={errors.phone}
         hint={
           known ? (
@@ -225,18 +204,18 @@ export function QuickOrderForm() {
                 <UserCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>
                   {known.orders === 1
-                    ? t("Returning customer: 1 past order")
-                    : tf("Returning customer: {count} past orders", { count: known.orders })}
-                  {known.lastOrderDate ? ` · ${tf("Last order: {date}", { date: formatDate(known.lastOrderDate) })}` : ""}
+                    ? "Returning customer: 1 past order"
+                    : fmt("Returning customer: {count} past orders", { count: known.orders })}
+                  {known.lastOrderDate ? ` · ${fmt("Last order: {date}", { date: formatDate(known.lastOrderDate) })}` : ""}
                 </span>
               </p>
             ) : known.valid ? (
               <p className="flex items-center gap-1.5 text-sm text-muted">
                 <UserPlus className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {t("New customer")}
+                New customer
               </p>
             ) : (
-              <p className="text-sm text-muted">{t("Enter a Pakistani mobile number, like 0300 1234567.")}</p>
+              <p className="text-sm text-muted">Enter a Pakistani mobile number, like 0300 1234567.</p>
             )
           ) : null
         }
@@ -261,9 +240,9 @@ export function QuickOrderForm() {
 
       <Field
         id={id("customerName")}
-        label={t("Customer name")}
+        label="Customer name"
         error={errors.customerName}
-        hint={prefilled ? <p className="text-xs text-muted">{t("Name and city were filled in from their last order.")}</p> : null}
+        hint={prefilled ? <p className="text-xs text-muted">Name and city were filled in from their last order.</p> : null}
       >
         <Input
           id={id("customerName")}
@@ -276,7 +255,7 @@ export function QuickOrderForm() {
         />
       </Field>
 
-      <Field id={id("city")} label={t("City")} error={errors.city}>
+      <Field id={id("city")} label="City" error={errors.city}>
         <Input
           id={id("city")}
           list={`${uid}-cities`}
@@ -294,12 +273,12 @@ export function QuickOrderForm() {
         </datalist>
       </Field>
 
-      <Field id={id("courier")} label={t("Courier (optional)")} error={errors.courier}>
+      <Field id={id("courier")} label="Courier (optional)" error={errors.courier}>
         <Input
           id={id("courier")}
           list={`${uid}-couriers`}
           autoComplete="off"
-          placeholder={t("For example TCS, Leopards or Trax")}
+          placeholder="For example TCS, Leopards or Trax"
           value={values.courier}
           onChange={(e) => change("courier", e.target.value)}
           aria-invalid={errors.courier ? true : undefined}
@@ -314,15 +293,15 @@ export function QuickOrderForm() {
         <CourierSuggestionNote city={values.city} onPick={(name) => change("courier", name)} />
       </Field>
 
-      <Field id={productId} label={t("Products")} error={productsError}>
+      <Field id={productId} label="Products" error={productsError}>
         {values.products.length > 0 ? (
-          <ul className="flex flex-wrap gap-2" aria-label={t("Products")}>
+          <ul className="flex flex-wrap gap-2" aria-label="Products">
             {values.products.map((product) => (
               <li key={product} className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-3 py-1 pl-3 pr-1 text-sm text-ink">
                 {product}
                 <button
                   type="button"
-                  aria-label={tf("Remove {product}", { product })}
+                  aria-label={fmt("Remove {product}", { product })}
                   className="rounded-full p-1.5 text-muted hover:bg-surface-2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
                   onClick={() => change("products", values.products.filter((p) => p !== product))}
                 >
@@ -336,7 +315,7 @@ export function QuickOrderForm() {
           <Input
             id={productId}
             autoComplete="off"
-            placeholder={t("Type a product and press Enter")}
+            placeholder="Type a product and press Enter"
             value={values.productInput}
             onChange={(e) => change("productInput", e.target.value)}
             onKeyDown={(e) => {
@@ -356,7 +335,7 @@ export function QuickOrderForm() {
             onClick={() => setValues((v) => ({ ...v, products: addProduct(v.products, v.productInput), productInput: "" }))}
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            {t("Add")}
+            Add
           </Button>
         </div>
         {values.products.length === 0 && lastProducts.length > 0 ? (
@@ -365,12 +344,12 @@ export function QuickOrderForm() {
             className="text-sm text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             onClick={() => change("products", lastProducts)}
           >
-            {t("Use last products")}: {lastProducts.join(", ")}
+            Use last products: {lastProducts.join(", ")}
           </button>
         ) : null}
       </Field>
 
-      <Field id={id("amount")} label={t("Amount (PKR)")} error={errors.amount}>
+      <Field id={id("amount")} label="Amount (PKR)" error={errors.amount}>
         <Input
           id={id("amount")}
           inputMode="decimal"
@@ -384,21 +363,21 @@ export function QuickOrderForm() {
         />
       </Field>
 
-      <Field id={id("paymentType")} label={t("Payment")} error={errors.paymentType}>
+      <Field id={id("paymentType")} label="Payment" error={errors.paymentType}>
         <FilterPills
-          label={t("Payment")}
-          options={PAYMENT_TYPES.map((p) => ({ value: p.value, label: t(p.label) }))}
+          label="Payment"
+          options={PAYMENT_TYPES.map((p) => ({ value: p.value, label: p.label }))}
           value={values.paymentType as "cod" | "prepaid"}
           onChange={(value) => change("paymentType", value)}
         />
       </Field>
 
-      <Field id={id("channel")} label={t("Where did the order come from?")} error={errors.channel}>
+      <Field id={id("channel")} label="Where did the order come from?" error={errors.channel}>
         <FilterPills
-          label={t("Where did the order come from?")}
+          label="Where did the order come from?"
           options={CHANNELS.map((c) => ({
             value: c.value,
-            label: <ChannelLabel channel={c.value}>{c.value === "other" ? t("Other") : c.label}</ChannelLabel>,
+            label: <ChannelLabel channel={c.value}>{c.value === "other" ? "Other" : c.label}</ChannelLabel>,
           }))}
           value={values.channel as "instagram"}
           onChange={(value) => {
@@ -410,12 +389,12 @@ export function QuickOrderForm() {
       </Field>
 
       {values.channel === "other" ? (
-        <Field id={id("platform")} label={t("Which platform? (optional)")} error={errors.platform}>
+        <Field id={id("platform")} label="Which platform? (optional)" error={errors.platform}>
           <Input
             id={id("platform")}
             list={`${uid}-platforms`}
             autoComplete="off"
-            placeholder={t("For example TikTok, Daraz or walk-in")}
+            placeholder="For example TikTok, Daraz or walk-in"
             value={values.platform}
             onChange={(e) => change("platform", e.target.value)}
             aria-invalid={errors.platform ? true : undefined}
@@ -430,7 +409,7 @@ export function QuickOrderForm() {
         </Field>
       ) : null}
 
-      <Field id={id("orderDate")} label={t("Date")} error={errors.orderDate}>
+      <Field id={id("orderDate")} label="Date" error={errors.orderDate}>
         <Input
           id={id("orderDate")}
           type="date"
@@ -445,10 +424,10 @@ export function QuickOrderForm() {
 
       <label className="flex items-start gap-2 text-sm text-ink-2">
         <input type="checkbox" checked={whatsappOk} onChange={(e) => setWhatsappOk(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--color-accent)]" />
-        {t("The customer agreed to get order updates on WhatsApp")}
+        The customer agreed to get order updates on WhatsApp
       </label>
 
-      <Field id={id("note")} label={t("Note (optional)")} error={errors.note}>
+      <Field id={id("note")} label="Note (optional)" error={errors.note}>
         <textarea
           id={id("note")}
           rows={2}
@@ -462,7 +441,7 @@ export function QuickOrderForm() {
 
       <Button type="submit" disabled={saving} className="h-12 w-full text-base">
         {saving ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
-        {saving ? t("Saving…") : t("Save order")}
+        {saving ? "Saving…" : "Save order"}
       </Button>
     </form>
   );

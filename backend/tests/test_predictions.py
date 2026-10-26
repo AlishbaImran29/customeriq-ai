@@ -86,28 +86,24 @@ def test_churn_label_means_no_order_in_the_next_90_days():
         fact("LEAVES", date(2026, 1, 1)), fact("LEAVES", date(2026, 7, 1)),
     ]
     hists = pr._histories(a.build_snapshot(facts))
-    _, y, ids = pr._dataset(hists, date(2026, 2, 1), 90, "churn")
+    _, y, ids = pr._dataset(hists, date(2026, 2, 1), 90)
     labels = dict(zip(ids, y, strict=True))
     assert labels == {"STAYS": 0.0, "LEAVES": 1.0}  # LEAVES' next order is outside 90 days
-    _, spend, ids = pr._dataset(hists, date(2026, 2, 1), 90, "spend")
-    assert dict(zip(ids, spend, strict=True)) == {"STAYS": 50.0, "LEAVES": 0.0}
 
 
 # --- quality gates ---------------------------------------------------------------------------
 
 def test_empty_data_is_unavailable():
     preds = pr.train_all(a.build_snapshot([]))
-    assert {m.status for m in (preds.churn, preds.clv, preds.forecast)} == {"unavailable"}
-    assert preds.churn_probability == {} and preds.forecast_points == []
+    assert preds.churn.status == "unavailable"
+    assert preds.churn_probability == {}
 
 
 def test_short_history_is_unavailable_with_reason():
     facts = [fact(f"C{i}", date(2026, 9, 1) + timedelta(days=i % 30)) for i in range(60)]
     preds = pr.train_all(a.build_snapshot(facts))
     assert preds.churn.reason.startswith("Not enough data yet")
-    assert preds.clv.reason.startswith("Not enough data yet")
-    assert preds.forecast.reason.startswith("Not enough data yet")
-    assert preds.churn_probability == {} and preds.predicted_spend == {}
+    assert preds.churn_probability == {}
 
 
 def test_too_few_customers_is_unavailable():
@@ -115,7 +111,6 @@ def test_too_few_customers_is_unavailable():
     facts = [fact(f"C{i}", date(2025, 1, 1) + timedelta(days=30 * k + i)) for i in range(40) for k in range(20)]
     preds = pr.train_all(a.build_snapshot(facts))
     assert preds.churn.status == "unavailable" and "needs at least 200" in preds.churn.reason
-    assert preds.clv.status == "unavailable"
 
 
 # --- full pipeline on a larger made-up dataset --------------------------------------------------
@@ -135,62 +130,6 @@ def test_models_train_validate_and_predict():
     recent = [preds.churn_probability[c.customer_id] for c in by_recency[:50]]
     silent = [preds.churn_probability[c.customer_id] for c in by_recency[-50:]]
     assert sum(silent) / 50 > sum(recent) / 50
-
-    # CLV is gated on beating the repeat-last-6-months baseline; either outcome is consistent.
-    assert preds.clv.available == bool(preds.predicted_spend)
-    assert all(v >= 0 for v in preds.predicted_spend.values())
-
-
-# --- revenue forecast -----------------------------------------------------------------------------
-
-def monthly_orders(values: list[float], last_day: date) -> list[a.OrderFact]:
-    """One order per month (day 28) with the given values; the last order is on `last_day`."""
-    facts = []
-    year, month = last_day.year, last_day.month
-    start = year * 12 + month - 1 - (len(values) - 1)
-    for k, value in enumerate(values):
-        y, m = divmod(start + k, 12)
-        day = last_day if k == len(values) - 1 else date(y, m + 1, 28)
-        facts.append(fact(f"M{k}", day, value))
-    return facts
-
-
-def test_forecast_follows_a_clear_trend_with_an_uncertainty_range():
-    values = [1000 + 300 * k + (60 if k % 2 else -60) for k in range(18)]
-    snapshot = a.build_snapshot(monthly_orders(values, date(2026, 10, 31)))
-    preds = pr.train_all(snapshot)
-    assert preds.forecast.available, preds.forecast.reason
-    assert [p["month"] for p in preds.forecast_points] == ["Nov 2026", "Dec 2026", "Jan 2027"]
-    first = preds.forecast_points[0]
-    assert first["forecast"] == pytest.approx(1000 + 300 * 18, rel=0.08)
-    for point in preds.forecast_points:
-        assert point["range"][0] <= point["forecast"] <= point["range"][1]
-    assert preds.forecast_points[2]["forecast"] > preds.forecast_points[0]["forecast"]
-
-
-def test_forecast_skips_the_unfinished_current_month():
-    values = [1000 + 300 * k + (60 if k % 2 else -60) for k in range(18)]
-    snapshot = a.build_snapshot(monthly_orders(values, date(2026, 10, 15)))  # mid-month -> partial
-    assert a.monthly_revenue(snapshot)[-1]["partial"]
-    preds = pr.train_all(snapshot)
-    assert preds.forecast.available, preds.forecast.reason
-    assert [p["month"] for p in preds.forecast_points] == ["Nov 2026", "Dec 2026", "Jan 2027"]
-    # Trend is anchored on the last complete month (Sep): Nov is two steps after it.
-    assert preds.forecast_points[0]["forecast"] == pytest.approx(1000 + 300 * 18, rel=0.1)
-
-
-def test_forecast_needs_twelve_complete_months():
-    snapshot = a.build_snapshot(monthly_orders([1000 + 100 * k for k in range(10)], date(2026, 10, 31)))
-    assert "at least 12 complete months" in pr.train_all(snapshot).forecast.reason
-
-
-def test_forecast_is_rejected_when_no_better_than_repeating_the_average():
-    # Rising, then flat: a straight trend overshoots the flat final months.
-    values = [1000 + 500 * k for k in range(15)] + [8000, 8000, 8000]
-    snapshot = a.build_snapshot(monthly_orders(values, date(2026, 10, 31)))
-    forecast = pr.train_all(snapshot).forecast
-    assert forecast.status == "unavailable"
-    assert "no better than repeating the recent average" in forecast.reason
 
 
 # --- retraining ----------------------------------------------------------------------------------------
@@ -247,34 +186,6 @@ def test_api_shows_predictions_only_when_models_are_available(db_client):
     assert "growthScore" not in {u["field"] for u in overview["meta"]["unavailable"]}
 
 
-# --- AI assistant context ----------------------------------------------------------------------------------
-
-def test_assistant_context_has_estimates_with_validation_and_no_personal_data():
-    import json
-
-    from app.services.assistant_context import build_context
-
-    ctx = build_context(a.build_snapshot(synthetic_facts(800)))
-    churn = ctx["predictions"]["models"]["churn"]
-    assert churn["status"] == "available"
-    assert "Accuracy on unseen period (AUC)" in churn["validation"]
-    assert ctx["predictions"]["churn"]["highestExpectedRevenueLoss"]
-    assert not any(item.startswith("churn probability") for item in ctx["notAvailable"])
-    assert isinstance(ctx["kpis"]["growthScore"], (int, float)) and ctx["growthScoreBreakdown"]
-    assert not any(item.startswith("growth score") for item in ctx["notAvailable"])
-    assert "@example.com" not in json.dumps(ctx, default=str)
-
-
-def test_assistant_context_lists_unavailable_models_with_reasons():
-    from app.services.assistant_context import build_context
-
-    facts = [fact(f"C{i}", date(2026, 9, 1) + timedelta(days=i % 30)) for i in range(60)]
-    ctx = build_context(a.build_snapshot(facts))
-    assert ctx["predictions"]["models"]["churn"]["status"] == "unavailable"
-    assert "churn" not in ctx["predictions"]
-    assert any(item.startswith("churn probability (Not enough data yet") for item in ctx["notAvailable"])
-
-
 # --- regression: found with the real public dataset ----------------------------------------------------------
 
 def test_data_with_no_engagement_at_all_still_trains():
@@ -285,11 +196,8 @@ def test_data_with_no_engagement_at_all_still_trains():
         for f in synthetic_facts(800)
     ]
     preds = pr.train_all(a.build_snapshot(facts))
-    for model in (preds.churn, preds.clv, preds.forecast):
-        # Each model either trains or is declined by its quality gate; none may crash.
-        assert "could not be trained" not in (model.reason or ""), model.reason
-    assert preds.clv.available, preds.clv.reason
-    assert all(v >= 0 for v in preds.predicted_spend.values())
+    # The model either trains or is declined by its quality gate; it may not crash.
+    assert "could not be trained" not in (preds.churn.reason or ""), preds.churn.reason
     # Without engagement, churn may legitimately fall short of the simple recency rule.
     assert preds.churn.available or "Not reliable enough yet" in (preds.churn.reason or "")
     assert all(0.0 <= p <= 1.0 for p in preds.churn_probability.values())
@@ -312,4 +220,3 @@ def test_a_failing_model_reports_unavailable_instead_of_crashing(monkeypatch):
     preds = pr.train_all(a.build_snapshot(synthetic_facts(300)))
     assert preds.churn.status == "unavailable"
     assert "could not be trained" in preds.churn.reason and preds.churn_probability == {}
-    assert preds.clv.status in ("available", "unavailable")  # the other models are unaffected

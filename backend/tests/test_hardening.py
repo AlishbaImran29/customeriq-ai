@@ -1,4 +1,4 @@
-"""Hardening: security headers, and the per-account limit on assistant questions."""
+"""Hardening: security headers, and the rate limiter."""
 
 import pytest
 
@@ -23,11 +23,11 @@ def test_every_response_carries_the_safe_headers(db_client):
 
 def test_the_limit_stops_the_sixteenth_use_but_not_another_account():
     for _ in range(15):
-        check_rate_limit("assistant:user-1", limit=15, window_seconds=600, what="the assistant")
+        check_rate_limit("ai:user-1", limit=15, window_seconds=600, what="the AI")
     with pytest.raises(ApiError) as caught:
-        check_rate_limit("assistant:user-1", limit=15, window_seconds=600, what="the assistant")
+        check_rate_limit("ai:user-1", limit=15, window_seconds=600, what="the AI")
     assert caught.value.status_code == 429 and caught.value.code == "rate_limited"
-    check_rate_limit("assistant:user-2", limit=15, window_seconds=600, what="the assistant")   # a different account is unaffected
+    check_rate_limit("ai:user-2", limit=15, window_seconds=600, what="the AI")   # a different account is unaffected
 
 
 def test_uses_expire_after_the_window(monkeypatch):
@@ -40,19 +40,3 @@ def test_uses_expire_after_the_window(monkeypatch):
         check_rate_limit("k", limit=1, window_seconds=60, what="x")
     now[0] += 61
     check_rate_limit("k", limit=1, window_seconds=60, what="x")
-
-
-def test_the_assistant_endpoint_is_limited_per_account(db_client, monkeypatch):
-    import uuid
-    from types import SimpleNamespace
-
-    import app.api.v1.assistant as assistant
-    from app.api.deps import require_user
-    from app.main import app
-
-    monkeypatch.setattr(assistant, "QUESTIONS_PER_WINDOW", 2)
-    same_account = SimpleNamespace(id=uuid.uuid4(), email="test@example.com", name="Test User", role="owner")
-    app.dependency_overrides[require_user] = lambda: same_account
-    body = {"messages": [{"role": "user", "content": "How many customers do I have?"}]}
-    statuses = [db_client.post("/api/v1/assistant/chat", json=body).status_code for _ in range(3)]
-    assert statuses[:2] == [200, 200] and statuses[2] == 429

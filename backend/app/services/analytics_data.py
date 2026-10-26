@@ -1,13 +1,10 @@
 """Load imported orders from PostgreSQL into the analytics snapshot."""
 
-from datetime import date
-
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Customer, Order
 from app.services.analytics import OrderFact, Snapshot, build_snapshot
-from app.services.channels import CHANNELS
 
 
 def load_snapshot(db: Session, channel: str | None = None) -> Snapshot:
@@ -47,29 +44,3 @@ def load_snapshot(db: Session, channel: str | None = None) -> Snapshot:
         ) in db.execute(query)
     ]
     return build_snapshot(facts)
-
-
-def latest_order_date(db: Session) -> date | None:
-    return db.scalar(select(func.max(Order.order_date)))
-
-
-def channel_revenue(db: Session, start: date, end: date) -> list[dict]:
-    """Revenue, orders and customers of EVERY channel between two dates (both included), biggest
-    first. Channels with no orders are listed with zeros, so the chart always shows all five."""
-    rows = db.execute(
-        select(
-            Order.sales_channel,
-            func.coalesce(func.sum(Order.order_value), 0),
-            func.count(Order.id),
-            func.count(func.distinct(Order.customer_id)),
-        )
-        .where(Order.order_date >= start, Order.order_date <= end)
-        .group_by(Order.sales_channel)
-    ).all()
-    found = {channel: (float(revenue), int(orders), int(customers)) for channel, revenue, orders, customers in rows}
-    result = [
-        {"channel": c, "revenue": found.get(c, (0.0, 0, 0))[0], "orders": found.get(c, (0.0, 0, 0))[1],
-         "customers": found.get(c, (0.0, 0, 0))[2]}
-        for c in CHANNELS
-    ]
-    return sorted(result, key=lambda r: (-r["revenue"], CHANNELS.index(r["channel"])))

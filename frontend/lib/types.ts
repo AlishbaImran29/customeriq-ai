@@ -1,9 +1,8 @@
 // Domain types shared by the UI, the mock data module, and the API service layer.
 // They mirror the FastAPI response shapes (backend/app/schemas/analytics.py).
 //
-// `null` means "not available": predictions (churn probability, predicted CLV,
-// forecasts) are only present when their model passed a quality gate (see
-// `DataMeta.models`); the growth score stays null (no agreed formula).
+// `null` means "not available": the churn prediction is only present when its model passed a quality gate
+// (see `DataMeta.models`); the growth score is null until it has enough measured inputs.
 
 export type SegmentName =
   | "Champions"
@@ -25,7 +24,7 @@ export type ModelInfo = {
   metrics: { label: string; value: string }[];
 };
 
-export type ModelsMeta = { churn: ModelInfo; clv: ModelInfo; forecast: ModelInfo };
+export type ModelsMeta = { churn: ModelInfo };
 
 /** Context returned with every analytics response. */
 export type DataMeta = {
@@ -38,15 +37,6 @@ export type DataMeta = {
   models: ModelsMeta;
   /** Values that cannot be shown yet, with the reason. */
   unavailable: { field: string; reason: string }[];
-};
-
-/** Inputs to the customer health score, each 0–100. */
-export type HealthFactors = {
-  purchaseFrequency: number;
-  spendingBehavior: number;
-  /** null = no engagement data; the score re-weights the other factors. */
-  engagement: number | null;
-  activityTrend: number;
 };
 
 export type Customer = {
@@ -62,7 +52,6 @@ export type Customer = {
   revenue: number;
   /** Revenue to date (historical CLV). */
   currentClv: number;
-  predictedClv: number | null;
   /** 0–100; null unless the churn model passed its quality gate. */
   churnProbability: number | null;
   /**
@@ -71,10 +60,6 @@ export type Customer = {
    * (days since last order ÷ usual gap between orders) — not a prediction.
    */
   riskLevel: RiskLevel;
-  /** 0–100, weighted from `healthFactors`. */
-  healthScore: number;
-  healthFactors: HealthFactors;
-  engagementMissing?: boolean;
   lastPurchase: string;
   daysSinceLastOrder?: number;
   recommendedAction: string;
@@ -102,7 +87,6 @@ export type SegmentStats = {
   customers: number;
   revenue: number;
   avgClv: number;
-  avgPredictedClv: number | null;
 };
 
 /** Segment numbers plus the UI's fixed colour and wording. */
@@ -114,12 +98,8 @@ export type SegmentSummary = SegmentStats & {
 
 export type RevenuePoint = {
   month: string;
-  /** Recorded revenue; absent for forecast-only months. */
+  /** Recorded revenue. */
   actual?: number;
-  /** Model forecast; absent when no forecast exists. */
-  forecast?: number;
-  /** Forecast confidence interval [low, high]. */
-  range?: [number, number];
   /** True for a month that is not over yet (month to date). */
   partial?: boolean;
 };
@@ -130,7 +110,7 @@ export type ShareRow = {
   name: string;
   revenue: number;
   share: number;
-  /** Order statistics; set for category, channel and country groups in live data. */
+  /** Order statistics; set for category and country groups in live data. */
   orders?: number | null;
   customers?: number | null;
   avgOrderValue?: number | null;
@@ -162,8 +142,6 @@ export type Recommendation = {
   historicalRevenue?: number | null;
   nextAction: string;
 };
-
-export type HealthBucket = { range: string; label: string; customers: number };
 
 export type RiskBucket = { level: RiskLevel; customers: number };
 
@@ -244,12 +222,4 @@ export type OrderRiskOverview = {
   truncated: boolean;
   savingsHigh: SavingsCounts | null;
   savingsMediumHigh: SavingsCounts | null;
-};
-
-/** Revenue of one sales channel in the chosen period (the dashboard's "Revenue by channel"). */
-export type ChannelRevenue = {
-  channel: string;
-  revenue: number;
-  orders: number;
-  customers: number;
 };

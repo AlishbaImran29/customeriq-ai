@@ -8,8 +8,8 @@ import {
   MAX_PAYMENT_BYTES, deleteDemoPayments, getPaymentsSummary, uploadPayments,
   type PaymentImportResult, type PaymentsSummary,
 } from "@/lib/api/cash";
-import { useLanguage } from "@/lib/i18n";
 import { formatNumber } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 const linkClass =
   "inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm font-medium text-ink-2 hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60";
@@ -19,7 +19,6 @@ const linkClass =
  * does not count the money twice. Made-up demo payments are always labelled and can be deleted here.
  */
 export function PaymentUpload({ onChange }: { onChange?: () => void }) {
-  const { t, tf } = useLanguage();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +42,7 @@ export function PaymentUpload({ onChange }: { onChange?: () => void }) {
     setError(null);
     setResult(null);
     if (file.size > MAX_PAYMENT_BYTES) {
-      setError(t("The file is larger than 4 MB. Split it and upload the parts."));
+      setError("The file is larger than 4 MB. Split it and upload the parts.");
       return;
     }
     setBusy(true);
@@ -52,7 +51,7 @@ export function PaymentUpload({ onChange }: { onChange?: () => void }) {
       setRefresh((k) => k + 1);
       onChange?.();
     } catch (e) {
-      setError(e instanceof ApiError ? t(e.message) : t("Something went wrong. Please try again."));
+      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -67,7 +66,7 @@ export function PaymentUpload({ onChange }: { onChange?: () => void }) {
       setRefresh((k) => k + 1);
       onChange?.();
     } catch {
-      setError(t("Something went wrong. Please try again."));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -76,17 +75,17 @@ export function PaymentUpload({ onChange }: { onChange?: () => void }) {
   return (
     <div className="space-y-3 text-sm">
       <p className="text-ink-2">
-        {t("Upload the payments couriers sent you: courier, payment date and amount. You can also name the orders a payment was for.")}
+        Upload the payments couriers sent you: courier, payment date and amount. You can also name the orders a payment was for.
       </p>
       <a href="/payments_template.csv" download className={linkClass}>
         <Download className="h-4 w-4" aria-hidden="true" />
-        {t("CSV template")}
+        CSV template
       </a>
       <div>
         <input ref={input} type="file" accept=".csv,.xlsx" className="sr-only" id="payments-file" onChange={(e) => send(e.target.files?.[0])} />
         <Button disabled={busy} onClick={() => input.current?.click()}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
-          {t("Upload payments")}
+          Upload payments
         </Button>
       </div>
 
@@ -96,21 +95,21 @@ export function PaymentUpload({ onChange }: { onChange?: () => void }) {
           <div className="space-y-1 rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-ink-2">
             <p className="text-success">
               <strong>
-                {tf("{created} new and {updated} updated payments. {rejected} rows were rejected.", {
+                {fmt("{created} new and {updated} updated payments. {rejected} rows were rejected.", {
                   created: formatNumber(result.created), updated: formatNumber(result.updated), rejected: formatNumber(result.rejected),
                 })}
               </strong>
             </p>
             {result.newCourierNames.length > 0 ? (
               <p>
-                {tf("New courier names (not in the list, kept as typed): {names}. If one is just another spelling of a courier you know, add it to backend/app/data/courier_names.json.", {
+                {fmt("New courier names (not in the list, kept as typed): {names}. If one is just another spelling of a courier you know, add it to backend/app/data/courier_names.json.", {
                   names: result.newCourierNames.join(", "),
                 })}
               </p>
             ) : null}
             {result.errors.slice(0, 5).map((e, i) => (
               <p key={i} className="text-xs">
-                {t("Row")} {e.row ?? "?"}: {e.column ? `${e.column}: ` : ""}
+                Row {e.row ?? "?"}: {e.column ? `${e.column}: ` : ""}
                 {e.message}
               </p>
             ))}
@@ -119,7 +118,7 @@ export function PaymentUpload({ onChange }: { onChange?: () => void }) {
       </div>
 
       {summary && summary.payments > 0 ? (
-        <p className="text-xs text-muted">{tf("{count} payments saved.", { count: formatNumber(summary.payments) })}</p>
+        <p className="text-xs text-muted">{fmt("{count} payments saved.", { count: formatNumber(summary.payments) })}</p>
       ) : null}
 
       {summary && summary.demoPayments > 0 ? (
@@ -127,22 +126,22 @@ export function PaymentUpload({ onChange }: { onChange?: () => void }) {
           <p className="flex items-start gap-2 text-warning">
             <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>
-              <strong>{t("Demo data.")}</strong>{" "}
-              {tf("{count} of these payments are made up (marked demo (synthetic)). They are not real results.", { count: formatNumber(summary.demoPayments) })}
+              <strong>Demo data.</strong>{" "}
+              {fmt("{count} of these payments are made up (marked demo (synthetic)). They are not real results.", { count: formatNumber(summary.demoPayments) })}
             </span>
           </p>
           {confirming ? (
             <div className="flex gap-2">
               <Button onClick={removeDemo} disabled={busy} className="bg-danger text-white hover:bg-danger/90">
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
-                {t("Yes, delete")}
+                Yes, delete
               </Button>
-              <Button variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>{t("Cancel")}</Button>
+              <Button variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>Cancel</Button>
             </div>
           ) : (
             <Button variant="secondary" onClick={() => setConfirming(true)}>
               <Trash2 className="h-4 w-4" aria-hidden="true" />
-              {t("Delete demo payments")}
+              Delete demo payments
             </Button>
           )}
         </div>

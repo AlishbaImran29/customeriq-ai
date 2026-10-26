@@ -1,6 +1,8 @@
-// Sign-in service. Runs in the browser (cookies are HttpOnly, so page code never sees them).
+// Sign-in (browser side). Accounts and passwords are Supabase Auth (email + password, no email-confirmation step).
+// The Supabase client keeps the sign-in in cookies; `lib/api/config.ts` sends its token to the API with every call.
 
-import { apiGet, apiPostJson } from "@/lib/api/config";
+import { apiGet } from "@/lib/api/config";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 export type AuthUser = {
   id: string;
@@ -8,55 +10,58 @@ export type AuthUser = {
   name: string;
   lastLoginAt: string | null;
   /** owner can do everything, staff the daily work, viewer can only look. The server enforces it. */
-  role?: "owner" | "staff" | "viewer";
+  role: "owner" | "staff" | "viewer";
+  /** False while the owner has not approved the account yet: it cannot see any data until then. */
+  isActive: boolean;
 };
 
-/** What the sign-in page needs to know before anyone is signed in. */
-export type AuthStatus = {
-  /** No account exists yet: show "create your account". */
-  setupRequired: boolean;
-  /** Creating the first account needs the owner's setup code. */
-  setupCodeRequired: boolean;
-  authenticated: boolean;
-  user: AuthUser | null;
-  /** Anyone with a real email address may create an account. */
-  signupOpen: boolean;
-  /** New accounts confirm their email with a 6-digit code. */
-  verificationEnabled: boolean;
-};
+export const MIN_PASSWORD_LENGTH = 8;
 
-/** The account exists, but the email still has to be confirmed with the code we sent. */
-export type VerificationPending = { verificationRequired: true; email: string };
+/** A sign-in problem in words a person can act on. */
+export class AuthProblem extends Error {
+  constructor(message: string, readonly field?: "email" | "password" | "name") {
+    super(message);
+    this.name = "AuthProblem";
+  }
+}
 
-export const needsVerification = (result: AuthUser | VerificationPending): result is VerificationPending =>
-  "verificationRequired" in result;
-
-export const getAuthStatus = () => apiGet<AuthStatus>("/api/v1/auth/status");
+function problemFrom(message: string): AuthProblem {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login") || m.includes("invalid credentials")) return new AuthProblem("That email or password is not correct.");
+  if (m.includes("already registered") || m.includes("already been registered")) return new AuthProblem("An account with this email already exists. Please sign in instead.", "email");
+  if (m.includes("password") && (m.includes("least") || m.includes("weak") || m.includes("short"))) return new AuthProblem(`Choose a longer password (at least ${MIN_PASSWORD_LENGTH} characters).`, "password");
+  if (m.includes("valid email") || m.includes("invalid email")) return new AuthProblem("Please enter a valid email address.", "email");
+  if (m.includes("rate limit") || m.includes("too many")) return new AuthProblem("Too many attempts. Please wait a few minutes and try again.");
+  if (m.includes("email not confirmed")) return new AuthProblem("This account's email is not confirmed. Ask the site owner to switch off email confirmation in Supabase (Authentication, Providers, Email).");
+  return new AuthProblem("Something went wrong. Please try again.");
+}
 
 export const getMe = () => apiGet<AuthUser>("/api/v1/auth/me");
 
-export const signIn = (email: string, password: string, remember: boolean) =>
-  apiPostJson<AuthUser>("/api/v1/auth/login", { email, password, remember });
+export async function signIn(email: string, password: string): Promise<void> {
+  const { error } = await supabaseBrowser().auth.signInWithPassword({ email: email.trim(), password });
+  if (error) throw problemFrom(error.message);
+}
 
-export const createAccount = (input: {
-  name: string;
-  email: string;
-  password: string;
-  setupCode?: string;
-}) => apiPostJson<AuthUser | VerificationPending>("/api/v1/auth/setup", { ...input, remember: true });
+/** Creates the account. With email confirmation switched off in Supabase the person is signed in at once. */
+export async function signUp(name: string, email: string, password: string): Promise<{ signedIn: boolean }> {
+  const { data, error } = await supabaseBrowser().auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() } } });
+  if (error) throw problemFrom(error.message);
+  return { signedIn: Boolean(data.session) };
+}
 
-export const signUp = (input: { name: string; email: string; password: string }) =>
-  apiPostJson<VerificationPending>("/api/v1/auth/signup", input);
+export async function signOut(): Promise<void> {
+  await supabaseBrowser().auth.signOut();
+}
 
-export const verifyEmail = (email: string, code: string, remember: boolean) =>
-  apiPostJson<AuthUser>("/api/v1/auth/verify", { email, code, remember });
-
-export const resendCode = (email: string) => apiPostJson<VerificationPending>("/api/v1/auth/resend", { email });
-
-export const signOut = () => apiPostJson<void>("/api/v1/auth/logout", {});
-
-export const changePassword = (currentPassword: string, newPassword: string) =>
-  apiPostJson<void>("/api/v1/auth/change-password", { currentPassword, newPassword });
+/** Checks the current password by signing in with it, then sets the new one. */
+export async function changePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {
+  const supabase = supabaseBrowser();
+  const check = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+  if (check.error) throw new AuthProblem("Your current password is not correct.", "password");
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw problemFrom(error.message);
+}
 
 /** Only follow same-site paths after sign-in (never an address on another website). */
 export function safeNext(next: string | null | undefined): string {

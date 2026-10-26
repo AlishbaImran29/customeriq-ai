@@ -28,7 +28,6 @@ def as_role(role: str, email: str | None = None):
     ("POST", "/api/v1/leads/5/move", "staff"),
     ("POST", "/api/v1/returns/5/approve", "staff"),
     ("POST", "/api/v1/inventory/items/5/adjust", "staff"),
-    ("POST", "/api/v1/assistant/ask", "viewer"),
     ("POST", "/api/v1/workflows/test", "viewer"),
     ("PUT", "/api/v1/messaging/settings", "owner"),
     ("POST", "/api/v1/customer-records/anonymise", "owner"),
@@ -116,9 +115,7 @@ def test_the_owner_reads_the_log_with_filters(db_client):
 
 
 def make_user(db, email, role, active=True):
-    from datetime import UTC, datetime
-
-    user = User(email=email, name=email.split("@")[0], password_hash="x", role=role, is_active=active, email_verified_at=datetime.now(UTC))
+    user = User(id=uuid.uuid4(), email=email, name=email.split("@")[0], role=role, is_active=active)
     db.add(user)
     db.flush()
     return user
@@ -138,13 +135,3 @@ def test_the_owner_changes_roles_and_the_last_owner_is_protected(db_client, db_s
     assert db_client.patch(f"/api/v1/team/users/{only_owner.id}", json={"role": "staff"}).status_code == 200            # now there is another owner
     assert db_client.patch(f"/api/v1/team/users/{uuid.uuid4()}", json={"role": "staff"}).status_code == 404
     assert db_client.patch(f"/api/v1/team/users/{worker.id}", json={"role": "boss"}).status_code == 422
-
-
-@pytest.mark.real_auth
-def test_the_first_account_is_the_owner_and_later_signups_are_viewers(db_client, db_session):
-    from app.services import auth as svc
-
-    first = db_client.post("/api/v1/auth/setup", json={"email": "first.owner@test.example", "name": "First", "password": "A-very-long-test-passphrase-1!"})
-    assert first.status_code in (201, 202)                                                    # 202 = waiting for the emailed code
-    assert svc.user_by_email(db_session, "first.owner@test.example").role == "owner"
-    assert svc.create_user(db_session, email="second.person@test.example", name="Second", password="A-very-long-test-passphrase-2!").role == "viewer"

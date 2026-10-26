@@ -6,11 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { changePassword, getMe, type AuthUser } from "@/lib/api/auth";
+import { AuthProblem, MIN_PASSWORD_LENGTH, changePassword, getMe, type AuthUser } from "@/lib/api/auth";
 import { API_MODE, ApiError } from "@/lib/api/config";
 import { formatDate } from "@/lib/utils";
-
-const MIN_PASSWORD_LENGTH = 10;
 
 export function AccountPanel() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -71,12 +69,12 @@ export function AccountPanel() {
           </dl>
         </CardContent>
       </Card>
-      <PasswordForm />
+      <PasswordForm email={user.email} />
     </div>
   );
 }
 
-function PasswordForm() {
+function PasswordForm({ email }: { email: string }) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -95,15 +93,14 @@ function PasswordForm() {
     setError(null);
     setBusy(true);
     try {
-      await changePassword(current, next);
+      await changePassword(email, current, next);
       setDone(true);
       setCurrent("");
       setNext("");
       setConfirm("");
     } catch (cause) {
-      if (cause instanceof ApiError) {
-        const field = (cause.details as { field?: string } | null)?.field;
-        setError({ message: cause.message, field });
+      if (cause instanceof AuthProblem) {
+        setError({ message: cause.message, field: cause.field === "password" ? "currentPassword" : cause.field });
       } else {
         setError({ message: "Something went wrong. Please try again." });
       }
@@ -119,7 +116,7 @@ function PasswordForm() {
     <Card>
       <CardHeader>
         <CardTitle>Change password</CardTitle>
-        <CardDescription>Other devices where you&apos;re signed in will be signed out.</CardDescription>
+        <CardDescription>Use at least {MIN_PASSWORD_LENGTH} characters.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} noValidate className="space-y-4">
@@ -142,7 +139,7 @@ function PasswordForm() {
           {done ? (
             <p role="status" className="flex items-start gap-2 rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              Password changed. Your other devices were signed out.
+              Password changed.
             </p>
           ) : null}
 

@@ -3,7 +3,7 @@ import Link from "next/link";
 import {
   Activity,
   ArrowRight,
-  HeartPulse,
+  Repeat,
   Sparkles,
   TrendingUp,
   Users,
@@ -19,14 +19,13 @@ import {
   reasonFor,
 } from "@/components/data-state";
 import { ChannelFilter } from "@/components/channel-filter";
-import { ChannelRevenueCard } from "@/components/channel-revenue-card";
 import { KpiCard } from "@/components/kpi-card";
 import { NeedMoreCustomers, NoOrdersInChannel } from "@/components/need-more-data";
 import { OrderRiskCard } from "@/components/order-risk-card";
 import { PageHeader } from "@/components/page-header";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { dayCount, formatRange, lastDays, rangeFromParams } from "@/lib/dates";
-import { RevenueForecastChart, SegmentDonutChart } from "@/components/charts/dashboard-charts";
+import { RevenueTrendChart, SegmentDonutChart } from "@/components/charts/dashboard-charts";
 import { EmptyState } from "@/components/states";
 import { Badge, impactVariant, riskVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,9 +106,6 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
     segments,
     topRecommendations,
     atRiskCustomers,
-    revenueByChannel,
-    channelPeriodStart,
-    channelPeriodEnd,
     segmentsNeeded,
   } = result.data;
   if (meta.source === "live" && !meta.asOf) {
@@ -117,7 +113,7 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
     if (channel) {
       return (
         <>
-          <ChannelFilter current={channel} channels={revenueByChannel} keep={{ from: params.from, to: params.to }} />
+          <ChannelFilter current={channel} keep={{ from: params.from, to: params.to }} />
           <NoOrdersInChannel channel={CHANNELS.find((c) => c.value === channel)?.label ?? channel} />
         </>
       );
@@ -126,7 +122,6 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
   }
   const live = meta.source === "live";
   const churnPredicted = meta.models.churn.status === "available";
-  const forecastPredicted = meta.models.forecast.status === "available";
   const value = (v: number | null, format: (n: number) => React.ReactNode) => (v === null ? null : format(v));
   const money = (n: number) => <Money value={n} />;
 
@@ -134,14 +129,11 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
     <>
       <DataSourceBanner meta={meta} />
 
-      {live && revenueByChannel.length > 0 ? (
-        <ChannelFilter current={channel ?? null} channels={revenueByChannel} keep={{ from: params.from, to: params.to }} />
-      ) : null}
+      {live ? <ChannelFilter current={channel ?? null} keep={{ from: params.from, to: params.to }} /> : null}
 
       {live && meta.asOf ? <DateRangePicker asOf={meta.asOf} current={range ?? lastDays(meta.asOf, 90)} /> : null}
 
       <ModelNote model={meta.models.churn} title="Churn model" />
-      <ModelNote model={meta.models.forecast} title="Revenue forecast" />
 
       <section aria-label="Key metrics" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard label="Total Customers" value={value(kpis.totalCustomers, formatNumber)} delta={kpiDeltas.totalCustomers} icon={Users} />
@@ -163,7 +155,7 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
           delta={kpiDeltas.retentionRate}
           deltaUnit="pts"
           unavailableReason="Needs at least 180 days of order history."
-          icon={HeartPulse}
+          icon={Repeat}
         />
         <KpiCard
           label={live ? "Predicted Churn Risk" : "Churn Risk"}
@@ -197,17 +189,13 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3">
           <CardHeader>
-            <CardTitle>{forecastPredicted ? "Revenue trend & forecast" : "Revenue trend"}</CardTitle>
+            <CardTitle>Revenue trend</CardTitle>
             <CardDescription>
-              {!live
-                ? "Monthly revenue with a three-month forecast and confidence range."
-                : forecastPredicted
-                  ? "Monthly revenue from your orders with a 3-month trend forecast (model estimate, shaded 80% range). The last month may be partial."
-                  : `Monthly revenue from your orders. The last month may be partial (month to date). Forecast not shown: ${reasonFor(meta, "revenueForecast") ?? "not available."}`}
+              {live ? "Monthly revenue from your orders. The last month may be partial (month to date)." : "Monthly sample revenue."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RevenueForecastChart data={revenueSeries} />
+            <RevenueTrendChart data={revenueSeries} />
           </CardContent>
         </Card>
         <Card className="xl:col-span-2">
@@ -228,10 +216,6 @@ async function OverviewContent({ searchParams }: { searchParams: Promise<{ from?
           </CardContent>
         </Card>
       </div>
-
-      {live && revenueByChannel.length > 0 ? (
-        <ChannelRevenueCard channels={revenueByChannel} start={channelPeriodStart} end={channelPeriodEnd} />
-      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>

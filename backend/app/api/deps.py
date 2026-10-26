@@ -8,23 +8,32 @@ from app.core.errors import ApiError
 from app.db.session import get_db
 from app.core import permissions
 from app.models import AuditLog, User
-from app.services.auth import user_for_token
+from app.services.auth import identity_for_token, user_for_identity
 
 
-def session_token(request: Request, settings: Settings = Depends(get_settings)) -> str | None:
-    return request.cookies.get(settings.session_cookie_name)
+def bearer_token(request: Request) -> str | None:
+    """The sign-in token the website sends with every call: `Authorization: Bearer <token>`."""
+    header = request.headers.get("authorization", "")
+    scheme, _, token = header.partition(" ")
+    return token.strip() or None if scheme.lower() == "bearer" else None
 
 
 def current_user(
-    token: str | None = Depends(session_token), db: Session = Depends(get_db)
+    token: str | None = Depends(bearer_token), db: Session = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> User | None:
-    return user_for_token(db, token)
+    """The signed-in person (even if still waiting for approval), or None."""
+    if not token:
+        return None
+    identity = identity_for_token(settings, token)
+    return user_for_identity(db, settings, identity) if identity else None
 
 
 def require_user(user: User | None = Depends(current_user)) -> User:
-    """Guard for endpoints that need a signed-in user (401 otherwise)."""
+    """Guard for endpoints that need a signed-in, approved user (401 if signed out, 403 while waiting for the owner's approval)."""
     if user is None:
         raise ApiError(401, "not_signed_in", "Please sign in to continue.")
+    if not user.is_active:
+        raise ApiError(403, "account_pending", "Your account is waiting for the owner's approval.")
     return user
 
 

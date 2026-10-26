@@ -8,7 +8,6 @@ import { OrderRiskModelNote, OrderRiskUnavailable } from "@/components/order-ris
 import { PageHeader } from "@/components/page-header";
 import { SavingsCalculator } from "@/components/savings-calculator";
 import { EmptyState } from "@/components/states";
-import { T } from "@/components/t";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOrderRisk } from "@/lib/api/customer-intelligence";
 import { formatNumber } from "@/lib/utils";
@@ -76,9 +75,9 @@ async function OrderRiskContent() {
 
           <Card>
             <CardHeader>
-              <CardTitle><T>Recent orders</T></CardTitle>
+              <CardTitle>Recent orders</CardTitle>
               <CardDescription>
-                <T>The orders that need action come first. The percentage is the model&apos;s estimate, not a fact.</T>
+                The orders that need action come first. The percentage is the model&apos;s estimate, not a fact.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -88,9 +87,9 @@ async function OrderRiskContent() {
 
           <Card>
             <CardHeader>
-              <CardTitle><T>Savings estimate</T></CardTitle>
+              <CardTitle>Savings estimate</CardTitle>
               <CardDescription>
-                <T>What flagging these orders could have saved, worked out on past orders the model had not seen.</T>
+                What flagging these orders could have saved, worked out on past orders the model had not seen.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -102,9 +101,9 @@ async function OrderRiskContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle><T>Courier results</T></CardTitle>
+          <CardTitle>Courier results</CardTitle>
           <CardDescription>
-            <T>Real delivered and returned results make the model more accurate than cancelled orders alone.</T>
+            Real delivered and returned results make the model more accurate than cancelled orders alone.
           </CardDescription>
         </CardHeader>
         <CardContent>

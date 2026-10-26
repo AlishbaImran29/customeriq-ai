@@ -1,4 +1,4 @@
-"""Trained prediction models: churn probability, predicted CLV, revenue forecast.
+"""The trained prediction model: churn probability.
 
 Honesty rules (agreed for Phase 4):
 - Every model is trained on an OLDER period and tested on a LATER period it has
@@ -13,9 +13,10 @@ Honesty rules (agreed for Phase 4):
 
 Definitions (all relative to the latest order date, `as_of`):
 - Churn: the customer places NO order in the next 90 days.
-- Predicted CLV: revenue to date + predicted spend over the next 180 days.
-- Revenue forecast: next 3 calendar months, linear trend on the last 12 complete
-  months, shown with an 80% prediction range.
+
+Only churn is trained. Predicted lifetime value and a revenue forecast were tried and removed: on the Online Retail II data neither beat its
+simple baseline (predicted spend was off by £689 per customer against £620 for "repeat the last 6 months"; the revenue trend was off by 56%
+against 39% for "repeat the recent average"), so under the honesty rule they would never have been shown.
 """
 
 from __future__ import annotations
@@ -32,26 +33,20 @@ from statistics import median
 from typing import Literal
 
 import numpy as np
-from scipy.stats import t as student_t
-from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
-from sklearn.metrics import brier_score_loss, mean_absolute_error, roc_auc_score
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.metrics import brier_score_loss, roc_auc_score
 
 from app.services import churn_reasons
-from app.services.analytics import SINGLE_ORDER_GAP_DAYS, Snapshot, monthly_revenue
+from app.services.analytics import SINGLE_ORDER_GAP_DAYS, Snapshot
 
 logger = logging.getLogger(__name__)
 
 CHURN_HORIZON_DAYS = 90
-CLV_HORIZON_DAYS = 180
-FORECAST_MONTHS = 3
-FORECAST_FIT_MONTHS = 12
-MIN_FORECAST_MONTHS = 12
 
 # Quality gates.
 MIN_TRAIN_ROWS = 200      # customers with history at the training cutoff
 MIN_CLASS_ROWS = 30       # churned and retained examples, in training and in testing
 MIN_CHURN_AUC = 0.65
-INTERVAL_LEVEL = 0.80     # forecast prediction range
 
 FEATURES = [
     "recency_days", "orders", "orders_90d", "orders_180d", "spend_total", "spend_90d",
@@ -59,7 +54,6 @@ FEATURES = [
     "engagement",
 ]
 _RECENCY_INDEX = FEATURES.index("recency_days")
-_SPEND_180_INDEX = FEATURES.index("spend_180d")
 
 ModelStatus = Literal["available", "unavailable"]
 
@@ -104,11 +98,7 @@ class ModelResult:
 @dataclass
 class Predictions:
     churn: ModelResult
-    clv: ModelResult
-    forecast: ModelResult
     churn_probability: dict[str, float] = field(default_factory=dict)  # 0–1
-    predicted_spend: dict[str, float] = field(default_factory=dict)    # next 180 days
-    forecast_points: list[dict] = field(default_factory=list)
 
 
 # --- per-customer history and point-in-time features --------------------------------
@@ -168,7 +158,7 @@ def _features(h: _Hist, cutoff: date) -> list[float] | None:
 
 
 def _dataset(
-    hists: dict[str, _Hist], cutoff: date, horizon: int, target: Literal["churn", "spend"]
+    hists: dict[str, _Hist], cutoff: date, horizon: int
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """Features at `cutoff`; label from the `horizon` days AFTER it."""
     end = cutoff + timedelta(days=horizon)
@@ -178,7 +168,7 @@ def _dataset(
         if features is None:
             continue
         i, j = bisect_right(h.dates, cutoff), bisect_right(h.dates, end)
-        labels.append(float(j == i) if target == "churn" else h.cum[j] - h.cum[i])
+        labels.append(float(j == i))                       # 1 = no order in the next `horizon` days
         rows.append(features)
         ids.append(customer_id)
     return np.array(rows, dtype=float).reshape(-1, len(FEATURES)), np.array(labels), ids
@@ -218,13 +208,6 @@ def _classifier() -> HistGradientBoostingClassifier:
     )
 
 
-def _regressor() -> HistGradientBoostingRegressor:
-    return HistGradientBoostingRegressor(
-        max_iter=150, learning_rate=0.08, max_depth=3, min_samples_leaf=20,
-        l2_regularization=1.0, early_stopping=False, random_state=0,
-    )
-
-
 def _history_days(snapshot: Snapshot) -> int:
     assert snapshot.as_of is not None
     return (snapshot.as_of - min(o.order_date for o in snapshot.orders)).days
@@ -239,8 +222,8 @@ def _train_churn(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResu
     if _history_days(snapshot) < need + 90:
         return ModelResult.unavailable(_more_days(need + 90, _history_days(snapshot))), {}
     train_cutoff, test_cutoff = snapshot.as_of - timedelta(days=2 * h), snapshot.as_of - timedelta(days=h)
-    x_train, y_train, _ = _dataset(hists, train_cutoff, h, "churn")
-    x_test, y_test, _ = _dataset(hists, test_cutoff, h, "churn")
+    x_train, y_train, _ = _dataset(hists, train_cutoff, h)
+    x_test, y_test, _ = _dataset(hists, test_cutoff, h)
 
     if len(y_train) < MIN_TRAIN_ROWS:
         return ModelResult.unavailable(_more_customers(MIN_TRAIN_ROWS, len(y_train), 2 * h)), {}
@@ -267,7 +250,7 @@ def _train_churn(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResu
 
     # Final model learns from both periods, then scores every customer as of today.
     final = _fit(_classifier(), np.vstack([x_train, x_test]), np.concatenate([y_train, y_test]))
-    x_now, _, ids = _dataset(hists, snapshot.as_of, h, "churn")
+    x_now, _, ids = _dataset(hists, snapshot.as_of, h)
     probabilities = dict(zip(ids, (float(p) for p in final.predict(x_now)), strict=True))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)  # a column with no values at all (engagement) is fine
@@ -299,124 +282,6 @@ def _class_problems(y_train: np.ndarray, y_test: np.ndarray) -> list[str]:
 
 # --- predicted CLV --------------------------------------------------------------------
 
-def _train_clv(snapshot: Snapshot, hists: dict[str, _Hist]) -> tuple[ModelResult, dict[str, float]]:
-    assert snapshot.as_of is not None
-    h = CLV_HORIZON_DAYS
-    if _history_days(snapshot) < 2 * h + 90:
-        return ModelResult.unavailable(_more_days(2 * h + 90, _history_days(snapshot))), {}
-    train_cutoff, test_cutoff = snapshot.as_of - timedelta(days=2 * h), snapshot.as_of - timedelta(days=h)
-    x_train, y_train, _ = _dataset(hists, train_cutoff, h, "spend")
-    x_test, y_test, _ = _dataset(hists, test_cutoff, h, "spend")
-    if len(y_train) < MIN_TRAIN_ROWS:
-        return ModelResult.unavailable(_more_customers(MIN_TRAIN_ROWS, len(y_train), 2 * h)), {}
-
-    model = _fit(_regressor(), x_train, y_train)
-    prediction = np.maximum(model.predict(x_test), 0.0)
-    mae = float(mean_absolute_error(y_test, prediction))
-    # Baseline: assume each customer spends the next 180 days what they spent in the last 180.
-    baseline_mae = float(mean_absolute_error(y_test, x_test[:, _SPEND_180_INDEX]))
-    scores = dict(metric="MAE ($)", model_score=mae, baseline_score=baseline_mae, higher_is_better=False, test_size=len(y_test), split_date=test_cutoff)
-    if mae >= baseline_mae:
-        return ModelResult.unavailable(
-            f"Not reliable enough yet: the model's average error (${mae:,.0f}) was no better than "
-            f"assuming customers repeat their last {h} days (${baseline_mae:,.0f}).", **scores
-        ), {}
-
-    final = _fit(_regressor(), np.vstack([x_train, x_test]), np.concatenate([y_train, y_test]))
-    x_now, _, ids = _dataset(hists, snapshot.as_of, h, "spend")
-    spend = dict(zip(ids, (max(0.0, float(v)) for v in final.predict(x_now)), strict=True))
-    metrics = [
-        ("Average error per customer", f"${mae:,.0f}"),
-        ("Repeat-last-6-months rule", f"${baseline_mae:,.0f}"),
-        ("Average actual spend (test period)", f"${float(y_test.mean()):,.0f}"),
-        ("Tested on", f"the last {h} days of orders, not used for training"),
-        ("Trained on", f"{len(y_train) + len(y_test):,} customer snapshots"),
-    ]
-    return ModelResult("available", None, metrics, **scores), spend
-
-
-# --- revenue forecast ---------------------------------------------------------------------
-
-def _month_start(label: str) -> date:
-    """Parse a "Mar 2026" label produced by monthly_revenue()."""
-    return datetime.strptime(label, "%b %Y").date()
-
-
-def _add_months(d: date, months: int) -> date:
-    index = d.year * 12 + d.month - 1 + months
-    return date(index // 12, index % 12 + 1, 1)
-
-
-def _trend_forecast(y: np.ndarray, steps: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Linear trend with an OLS prediction interval. Returns (mean, low, high)."""
-    n = len(y)
-    x = np.arange(n, dtype=float)
-    slope, intercept = np.polyfit(x, y, 1)
-    residuals = y - (slope * x + intercept)
-    sigma = float(np.sqrt(residuals @ residuals / (n - 2)))
-    sxx = float(((x - x.mean()) ** 2).sum())
-    x_new = np.arange(n, n + steps, dtype=float)
-    mean = slope * x_new + intercept
-    margin = student_t.ppf((1 + INTERVAL_LEVEL) / 2, n - 2) * sigma * np.sqrt(
-        1 + 1 / n + (x_new - x.mean()) ** 2 / sxx
-    )
-    return np.maximum(mean, 0.0), np.maximum(mean - margin, 0.0), mean + margin
-
-
-def _train_forecast(snapshot: Snapshot) -> tuple[ModelResult, list[dict]]:
-    series = monthly_revenue(snapshot)
-    complete = [p for p in series if not p["partial"]]
-    if len(complete) < MIN_FORECAST_MONTHS:
-        return ModelResult.unavailable(
-            f"Not enough data yet: {MIN_FORECAST_MONTHS - len(complete)} more complete months of orders needed "
-            f"(you have {len(complete)}; a forecast needs at least {MIN_FORECAST_MONTHS} complete months)."
-        ), []
-    revenue = np.array([p["actual"] for p in complete], dtype=float)
-
-    # Backtest: predict the last 3 complete months from the 12 months before them.
-    held, earlier = revenue[-FORECAST_MONTHS:], revenue[:-FORECAST_MONTHS][-FORECAST_FIT_MONTHS:]
-    if len(earlier) < 9 or (held <= 0).any():
-        return ModelResult.unavailable(
-            "Not reliable enough yet: not enough complete months to test the forecast on past data."
-        ), []
-    backtest, _, _ = _trend_forecast(earlier, FORECAST_MONTHS)
-    mape = float(np.mean(np.abs(held - backtest) / held) * 100)
-    naive = np.full(FORECAST_MONTHS, earlier[-FORECAST_MONTHS:].mean())
-    naive_mape = float(np.mean(np.abs(held - naive) / held) * 100)
-    scores = dict(metric="MAPE (%)", model_score=mape, baseline_score=naive_mape, higher_is_better=False, test_size=len(held), split_date=_month_start(complete[-FORECAST_MONTHS]["month"]))
-    if mape >= naive_mape:
-        return ModelResult.unavailable(
-            f"Not reliable enough yet: on past data the trend forecast was off by {mape:.0f}% on "
-            f"average, no better than repeating the recent average ({naive_mape:.0f}%).", **scores
-        ), []
-
-    fit = revenue[-FORECAST_FIT_MONTHS:]
-    # When the current month is still in progress it is not forecast; forecasting
-    # starts with the first full month after it. The trend is anchored on the last
-    # complete month, so a partial month shifts the step index by one.
-    skip = 1 if series[-1]["partial"] else 0
-    mean, low, high = _trend_forecast(fit, FORECAST_MONTHS + skip)
-    first_forecast = _add_months(_month_start(series[-1]["month"]), 1)
-    points = [
-        {
-            "month": _add_months(first_forecast, k).strftime("%b %Y"),
-            "forecast": round(float(mean[k + skip]), 2),
-            "range": [round(float(low[k + skip]), 2), round(float(high[k + skip]), 2)],
-        }
-        for k in range(FORECAST_MONTHS)
-    ]
-    metrics = [
-        ("Average error on past 3 months", f"{mape:.0f}%"),
-        ("Repeat-recent-average rule", f"{naive_mape:.0f}%"),
-        ("Method", f"linear trend on the last {len(fit)} complete months"),
-        ("Shaded range", f"{int(INTERVAL_LEVEL * 100)}% prediction range"),
-        ("Seasonality", "not modelled (needs 2+ years of history)"),
-    ]
-    return ModelResult("available", None, metrics, **scores), points
-
-
-# --- entry points ------------------------------------------------------------------------------
-
 def _safely(name: str, train, empty):
     """Run one trainer. An unexpected failure must never break the dashboards: the model
     is reported as unavailable instead, and the details go to the server log."""
@@ -432,16 +297,11 @@ def _safely(name: str, train, empty):
 def train_all(snapshot: Snapshot) -> Predictions:
     if snapshot.empty:
         none = ModelResult.unavailable("No customer data has been imported yet.")
-        return Predictions(churn=none, clv=none, forecast=none)
+        return Predictions(churn=none)
     hists = _histories(snapshot)
     churn, probabilities = _safely("churn", lambda: _train_churn(snapshot, hists), {})
-    clv, spend = _safely("clv", lambda: _train_clv(snapshot, hists), {})
-    forecast, points = _safely("forecast", lambda: _train_forecast(snapshot), [])
-    logger.info(
-        "Models trained: churn=%s clv=%s forecast=%s (%d customers)",
-        churn.status, clv.status, forecast.status, len(snapshot.customers),
-    )
-    return Predictions(churn, clv, forecast, probabilities, spend, points)
+    logger.info("Churn model trained: %s (%d customers)", churn.status, len(snapshot.customers))
+    return Predictions(churn, probabilities)
 
 
 def _fingerprint(snapshot: Snapshot) -> tuple:

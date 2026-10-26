@@ -12,4 +12,3 @@ openai==3.31.0
 anthropic==1.14.0
 scikit-learn==1.9.1
 numpy==2.5.4
-scipy==1.18.1

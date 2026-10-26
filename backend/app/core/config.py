@@ -35,13 +35,13 @@ class Settings(BaseSettings):
     # Comma-separated list of browser origins allowed by CORS.
     frontend_origins: str = "http://localhost:3000,http://localhost:3001"
 
-    # "production" turns on secure cookies and hides the interactive API docs.
+    # "production" hides the interactive API docs.
     app_env: Literal["development", "production"] = "development"
-    # Optional code required to create the FIRST account through the website. Set it
-    # on a public deployment so a stranger cannot claim the owner account.
-    setup_code: SecretStr | None = None
-    # Email (SMTP), used to send sign-up verification codes. When it is not configured, accounts
-    # are created without verification and public sign-up stays closed (only the owner account).
+    # Sign-in is Supabase Auth (email + password). The backend only needs the project address and the PUBLIC anon key to check a token.
+    # OWNER_EMAIL (optional): only this address can become the owner when the site has none yet.
+    supabase_anon_key: str | None = None
+    owner_email: str | None = None
+    # Email (SMTP / Brevo / webhook), used by the Auto Messenger to send emails to customers.
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_user: str | None = None
@@ -56,15 +56,6 @@ class Settings(BaseSettings):
     # the email from your own Gmail (see docs/DEPLOY.md). The secret must match the one in the script.
     mail_webhook_url: str | None = None
     mail_webhook_secret: SecretStr | None = None
-    # Lets anyone with a real email address create an account (only works with email configured).
-    allow_signup: bool = True
-    session_cookie_name: str = "ciq_session"
-    session_hours: int = 24            # login without "remember me"
-    remember_session_days: int = 30    # login with "remember me"
-
-    @property
-    def cookie_secure(self) -> bool:
-        return self.app_env == "production"
 
     @property
     def email_configured(self) -> bool:
@@ -78,19 +69,6 @@ class Settings(BaseSettings):
             and self.mail_webhook_secret.get_secret_value().strip()
         )
         return has_webhook or bool(sender and (has_api_key or (self.smtp_host and has_password)))
-
-    @property
-    def email_verification_required(self) -> bool:
-        """New accounts must confirm their email with a code (needs email to be set up)."""
-        return self.email_configured
-
-    @property
-    def signup_open(self) -> bool:
-        return self.email_verification_required and self.allow_signup
-
-    @property
-    def setup_code_required(self) -> bool:
-        return bool(self.setup_code and self.setup_code.get_secret_value().strip())
 
     # Screenshot storage for Launch Studio (Supabase Storage, a PRIVATE bucket). The service key stays on the server.
     supabase_url: str | None = None
@@ -129,26 +107,26 @@ class Settings(BaseSettings):
     supabase_evidence_bucket: str = "return-evidence"   # private bucket for return photos and videos
     supabase_media_bucket: str = "customer-media"       # private bucket for customer videos (part 3)
 
-    # AI assistant (server-side only; never exposed to the browser).
+    # AI connection for Launch Studio and Auto Messenger drafts (server-side only; never exposed to the browser).
     # Provider: "anthropic" (Claude, default) or "openai".
     ai_provider: Literal["anthropic", "openai"] = "anthropic"
     anthropic_api_key: SecretStr | None = None
     anthropic_model: str = "claude-opus-5-5"
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-6-luna"
-    assistant_timeout_seconds: float = 60.0
+    ai_timeout_seconds: float = 60.0
 
     @property
-    def assistant_api_key(self) -> SecretStr | None:
+    def ai_api_key(self) -> SecretStr | None:
         return self.anthropic_api_key if self.ai_provider == "anthropic" else self.openai_api_key
 
     @property
-    def assistant_model(self) -> str:
+    def ai_model_name(self) -> str:
         return self.anthropic_model if self.ai_provider == "anthropic" else self.openai_model
 
     @property
-    def assistant_configured(self) -> bool:
-        key = self.assistant_api_key
+    def ai_configured(self) -> bool:
+        key = self.ai_api_key
         return bool(key and key.get_secret_value().strip())
 
     @property

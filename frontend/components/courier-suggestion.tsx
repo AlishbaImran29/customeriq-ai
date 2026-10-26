@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Lightbulb } from "lucide-react";
 import { SCORECARD_AVAILABLE, getCourierSuggestion, type CourierSuggestion } from "@/lib/api/couriers";
-import { useLanguage } from "@/lib/i18n";
 import { formatPercent } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 /**
  * Under the courier box of Add Order: which courier has returned the fewest parcels in this city, but only
@@ -12,7 +12,6 @@ import { formatPercent } from "@/lib/utils";
  * enough history. It is advice from past parcels, never a promise.
  */
 export function CourierSuggestionNote({ city, onPick }: { city: string; onPick: (courier: string) => void }) {
-  const { t, tf } = useLanguage();
   const [found, setFound] = useState<{ city: string; value: CourierSuggestion | null } | null>(null);
 
   useEffect(() => {
@@ -40,21 +39,21 @@ export function CourierSuggestionNote({ city, onPick }: { city: string; onPick: 
       {value.available && value.best ? (
         <>
           <span>
-            {tf("Fewest returns in {city}: {courier} ({rate} returned, {closed} parcels).", {
+            {fmt("Fewest returns in {city}: {courier} ({rate} returned, {closed} parcels).", {
               city: value.city, courier: value.best.courier, rate: formatPercent((value.best.returnRate ?? 0) * 100, 0), closed: value.best.closed,
             })}
-            {value.sourceUsed === "demo" ? ` ${t("(demo data)")}` : ""}
+            {value.sourceUsed === "demo" ? ` ${"(demo data)"}` : ""}
           </span>
           <button
             type="button"
             onClick={() => onPick(value.best!.courier)}
             className="rounded font-medium text-accent underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
-            {tf("Use {courier}", { courier: value.best.courier })}
+            {fmt("Use {courier}", { courier: value.best.courier })}
           </button>
         </>
       ) : (
-        <span>{t("No courier has enough history in this city yet.")}</span>
+        <span>No courier has enough history in this city yet.</span>
       )}
     </p>
   );

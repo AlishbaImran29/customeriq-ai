@@ -68,9 +68,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   let response: Response;
   try {
+    // In the browser the sign-in token comes from Supabase; on the server the caller passes it in the headers.
+    const token = inBrowser() ? await (await import("@/lib/supabase/client")).browserAccessToken() : null;
     response = await fetch(`${requestBase()}${path}`, {
       ...init,
-      headers: { Accept: "application/json", ...init?.headers },
+      headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init?.headers },
     });
   } catch {
     throw new ApiError(

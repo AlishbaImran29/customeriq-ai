@@ -75,7 +75,7 @@ def _out(report: OrderRiskReport, limit: int, no_reply: frozenset[str] = frozens
             as_of=report.as_of,
             customer_count=report.customer_count,
             segmented=True,
-            models=ModelsMeta(churn=not_used, clv=not_used, forecast=not_used),
+            models=ModelsMeta(churn=not_used),
             unavailable=[],
         ),
         model=OrderRiskModelOut(

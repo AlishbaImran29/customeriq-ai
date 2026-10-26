@@ -4,7 +4,7 @@ Prediction fields come from trained models (services/predictions.py) and are
 null unless the model passed its quality gate; `meta.models` explains why.
 """
 
-from datetime import date, timedelta
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -13,14 +13,12 @@ from app.core.errors import ApiError
 from app.db.session import get_db
 from app.schemas.analytics import (
     MODEL_NOT_TRAINED,
-    ChannelRevenue,
     ChurnOut,
     ClvOut,
     CohortsOut,
     CustomerDetailOut,
     CustomerOut,
     CustomersOut,
-    HealthOut,
     Kpis,
     Meta,
     Metric,
@@ -37,7 +35,7 @@ from app.schemas.analytics import (
 from app.services import analytics as a
 from app.services import churn_reasons
 from app.services import predictions as pr
-from app.services.analytics_data import channel_revenue, latest_order_date, load_snapshot
+from app.services.analytics_data import load_snapshot
 from app.services.channels import CHANNELS
 
 router = APIRouter(tags=["analytics"])
@@ -51,11 +49,9 @@ MAX_LIMIT = 2000
 _FIELD_MODEL = {
     "churnProbability": "churn",
     "churnRisk": "churn",
-    "predictedClv": "clv",
-    "revenueForecast": "forecast",
 }
 GROWTH_SCORE_REASON = (
-    "Needs at least three of its four inputs; revenue and customer growth need 180+ days of order history."
+    "Needs at least two of its three inputs; revenue and customer growth need 180+ days of order history."
 )
 
 
@@ -92,8 +88,6 @@ def _meta(snapshot: a.Snapshot, preds: pr.Predictions, *fields: str, growth: dic
         segmented=snapshot.segmented,
         models=ModelsMeta(
             churn=_model_info(preds.churn),
-            clv=_model_info(preds.clv),
-            forecast=_model_info(preds.forecast),
         ),
         unavailable=unavailable,
     )
@@ -103,13 +97,8 @@ def _churn_probability(c: a.CustomerMetrics, preds: pr.Predictions) -> float | N
     return preds.churn_probability.get(c.customer_id) if preds.churn.available else None
 
 
-def _predicted_spend(c: a.CustomerMetrics, preds: pr.Predictions) -> float | None:
-    return preds.predicted_spend.get(c.customer_id) if preds.clv.available else None
-
-
 def _customer(c: a.CustomerMetrics, preds: pr.Predictions) -> CustomerOut:
     probability = _churn_probability(c, preds)
-    spend = _predicted_spend(c, preds)
     return CustomerOut(
         id=c.customer_id,
         name=c.name,
@@ -119,19 +108,10 @@ def _customer(c: a.CustomerMetrics, preds: pr.Predictions) -> CustomerOut:
         orders=c.orders,
         revenue=round(c.revenue, 2),
         current_clv=round(c.revenue, 2),
-        predicted_clv=None if spend is None else round(c.revenue + spend, 2),
         churn_probability=None if probability is None else round(probability * 100, 1),
         # With a churn model the level comes from the probability; otherwise it is the
         # rule-based inactivity level (days since last order ÷ usual gap).
         risk_level=pr.risk_level_from_probability(probability) if probability is not None else c.inactivity_level,
-        health_score=c.health_score,
-        health_factors={
-            "purchase_frequency": round(c.frequency_factor),
-            "spending_behavior": round(c.spending_factor),
-            "engagement": round(c.engagement) if c.engagement is not None else None,
-            "activity_trend": round(c.activity_trend),
-        },
-        engagement_missing=c.engagement_missing,
         last_purchase=c.last_order,
         days_since_last_order=c.recency_days,
         recommended_action=c.recommended_action,
@@ -160,16 +140,9 @@ def _risk_distribution(snapshot: a.Snapshot, preds: pr.Predictions) -> list[dict
     return [{"level": level, "customers": counts[level]} for level in a.INACTIVITY_LEVELS]
 
 
-def _revenue_series(snapshot: a.Snapshot, preds: pr.Predictions) -> list[dict]:
-    """Actual months, plus forecast months when the forecast model is available. The
-    last complete month also carries the forecast so the chart lines connect."""
-    series: list[dict] = a.monthly_revenue(snapshot)
-    if not preds.forecast.available or not preds.forecast_points:
-        return series
-    last_complete = max(i for i, p in enumerate(series) if not p["partial"])
-    anchor = series[last_complete]["actual"]
-    series[last_complete] = {**series[last_complete], "forecast": anchor, "range": [anchor, anchor]}
-    return series + preds.forecast_points
+def _revenue_series(snapshot: a.Snapshot) -> list[dict]:
+    """Actual revenue per calendar month (the last one may still be in progress)."""
+    return a.monthly_revenue(snapshot)
 
 
 @router.get("/dashboard/overview", response_model=OverviewOut)
@@ -215,24 +188,16 @@ def overview(
     else:
         attention = sorted(snapshot.customers, key=lambda c: c.activity_ratio, reverse=True)
     recs = a.recommendations(snapshot)
-    # The chart compares ALL channels over the same period as the figures, whatever the filter is.
-    latest = latest_order_date(db)
-    chart_end = min(requested_end, latest) if requested_end and latest else latest
-    chart_start = chart_end - timedelta(days=days - 1) if chart_end else None
-    by_channel = channel_revenue(db, chart_start, chart_end) if chart_end and chart_start else []
     return OverviewOut(
         channel=channel,
-        revenue_by_channel=[ChannelRevenue(**row) for row in by_channel],
-        channel_period_start=chart_start,
-        channel_period_end=chart_end,
         segments_needed=max(0, a.MIN_CUSTOMERS_FOR_SEGMENTS - len(snapshot.customers)),
-        meta=_meta(snapshot, preds, "churnRisk", "growthScore", "revenueForecast", growth=growth),
+        meta=_meta(snapshot, preds, "churnRisk", "growthScore", growth=growth),
         kpis=Kpis.model_validate(values),
         kpi_deltas=Kpis.model_validate(deltas),
         growth_score_details=growth,
         executive_summary=a.executive_summary(snapshot, values, deltas, days, end),
-        revenue_series=_revenue_series(snapshot, preds),
-        segments=a.segment_summaries(snapshot, preds.predicted_spend if preds.clv.available else None),
+        revenue_series=_revenue_series(snapshot),
+        segments=a.segment_summaries(snapshot),
         top_recommendations=[r for r in recs if r["impact"] == "High"][:3] or recs[:3],
         at_risk_customers=_customers(attention, 4, preds),
     )
@@ -246,7 +211,7 @@ def customers(
     preds = pr.get_predictions(snapshot)
     ranked = sorted(snapshot.customers, key=lambda c: c.revenue, reverse=True)
     return CustomersOut(
-        meta=_meta(snapshot, preds, "churnProbability", "predictedClv"),
+        meta=_meta(snapshot, preds, "churnProbability"),
         total=len(ranked),
         customers=_customers(ranked, limit, preds),
     )
@@ -261,7 +226,7 @@ def cohorts(db: Session = Depends(get_db)) -> CohortsOut:
         as_of=snapshot.as_of,
         customer_count=len(snapshot.customers),
         segmented=snapshot.segmented,
-        models=ModelsMeta(churn=not_used, clv=not_used, forecast=not_used),
+        models=ModelsMeta(churn=not_used),
         unavailable=[],
     )
     return CohortsOut(meta=meta, **a.cohort_retention(snapshot))
@@ -272,8 +237,8 @@ def segments(db: Session = Depends(get_db)) -> SegmentsOut:
     snapshot = load_snapshot(db)
     preds = pr.get_predictions(snapshot)
     return SegmentsOut(
-        meta=_meta(snapshot, preds, "predictedClv"),
-        segments=a.segment_summaries(snapshot, preds.predicted_spend if preds.clv.available else None),
+        meta=_meta(snapshot, preds),
+        segments=a.segment_summaries(snapshot),
     )
 
 
@@ -298,37 +263,15 @@ def churn(
 def clv(
     limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT), db: Session = Depends(get_db)
 ) -> ClvOut:
-    """Current (historical) CLV, plus predicted CLV when its model passed the quality gate."""
+    """Customer lifetime value to date (historical spending). Predicted future CLV was removed: it did not beat its baseline."""
     snapshot = load_snapshot(db)
     preds = pr.get_predictions(snapshot)
     values, _ = a.kpis(snapshot)
-    average_predicted = None
-    if preds.clv.available and snapshot.customers:
-        average_predicted = sum(
-            c.revenue + (_predicted_spend(c, preds) or 0.0) for c in snapshot.customers
-        ) / len(snapshot.customers)
     ranked = sorted(snapshot.customers, key=lambda c: c.revenue, reverse=True)
     return ClvOut(
-        meta=_meta(snapshot, preds, "predictedClv"),
-        average_clv=values["averageClv"],
-        average_predicted_clv=average_predicted,
-        segments=a.segment_summaries(snapshot, preds.predicted_spend if preds.clv.available else None),
-        customers=_customers(ranked, limit, preds),
-    )
-
-
-@router.get("/customers/health", response_model=HealthOut)
-def health_scores(
-    limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT), db: Session = Depends(get_db)
-) -> HealthOut:
-    snapshot = load_snapshot(db)
-    preds = pr.get_predictions(snapshot)
-    ranked = sorted(snapshot.customers, key=lambda c: c.health_score)
-    return HealthOut(
         meta=_meta(snapshot, preds),
-        weights=a.HEALTH_WEIGHTS,
-        weights_without_engagement=a.HEALTH_WEIGHTS_WITHOUT_ENGAGEMENT,
-        distribution=a.health_distribution(snapshot),
+        average_clv=values["averageClv"],
+        segments=a.segment_summaries(snapshot),
         customers=_customers(ranked, limit, preds),
     )
 
@@ -338,8 +281,8 @@ def revenue(db: Session = Depends(get_db)) -> RevenueOut:
     snapshot = load_snapshot(db)
     preds = pr.get_predictions(snapshot)
     return RevenueOut(
-        meta=_meta(snapshot, preds, "revenueForecast"),
-        series=_revenue_series(snapshot, preds),
+        meta=_meta(snapshot, preds),
+        series=_revenue_series(snapshot),
         at_risk_by_segment=a.revenue_at_risk(snapshot),
         drivers=a.revenue_drivers(snapshot),
     )
@@ -367,7 +310,7 @@ def customer_detail(
     dates = sorted(found.order_dates)
     gaps = [(later - earlier).days for earlier, later in zip(dates, dates[1:])]
     return CustomerDetailOut(
-        meta=_meta(snapshot, preds, "churnProbability", "predictedClv"),
+        meta=_meta(snapshot, preds, "churnProbability"),
         customer=_customer(found, preds),
         churn_reasons=[ReasonOut(**r) for r in churn_reasons.as_reasons(preds.churn.reasons.get(id, []))] if preds.churn.available else [],
         first_order=found.first_order,

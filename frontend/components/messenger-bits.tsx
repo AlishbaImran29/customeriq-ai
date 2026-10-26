@@ -3,19 +3,18 @@
 import { Ban, Check, CheckCheck, CircleX, Clock, Eye, Hourglass, MessageCircle, Reply, Send, ShieldCheck, ShieldOff, ShieldQuestion } from "lucide-react";
 import { EmptyState } from "@/components/states";
 import { MESSENGER_AVAILABLE, type ConsentState, type MessageStatus } from "@/lib/api/messaging";
-import { useLanguage } from "@/lib/i18n";
 import { reasonPhrase } from "@/lib/messenger-text";
 import { cn } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 /** The page body only when the backend is connected: Auto Messenger saves everything in the database. */
 export function MessengerGate({ children }: { children: React.ReactNode }) {
-  const { t } = useLanguage();
   if (!MESSENGER_AVAILABLE) {
     return (
       <EmptyState
         icon={MessageCircle}
-        title={t("Auto Messenger needs the backend")}
-        description={t("Messages, consent and templates are saved in your database. Connect the backend to use Auto Messenger.")}
+        title="Auto Messenger needs the backend"
+        description="Messages, consent and templates are saved in your database. Connect the backend to use Auto Messenger."
       />
     );
   }
@@ -34,23 +33,21 @@ const STATUS_LOOK: Record<MessageStatus, { label: string; icon: typeof Send; cla
 
 /** A message status as an icon AND a word, never colour alone. */
 export function MessageStatusBadge({ status }: { status: MessageStatus }) {
-  const { t } = useLanguage();
   const look = STATUS_LOOK[status];
   const Icon = look.icon;
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium", look.className)}>
       <Icon className="h-3 w-3" aria-hidden="true" />
-      {t(look.label)}
+      {look.label}
     </span>
   );
 }
 
 /** Why a message was not sent, in plain words. Renders nothing when there is no reason. */
 export function Reason({ code }: { code: string | null | undefined }) {
-  const { t, tf } = useLanguage();
   const phrase = reasonPhrase(code);
   if (!phrase) return null;
-  return <>{phrase.params ? tf(phrase.text, phrase.params) : t(phrase.text)}</>;
+  return <>{phrase.params ? fmt(phrase.text, phrase.params) : phrase.text}</>;
 }
 
 const CONSENT_LOOK: Record<ConsentState, { label: string; icon: typeof ShieldCheck; className: string }> = {
@@ -60,35 +57,32 @@ const CONSENT_LOOK: Record<ConsentState, { label: string; icon: typeof ShieldChe
 };
 
 export function ConsentBadge({ state }: { state: ConsentState }) {
-  const { t } = useLanguage();
   const look = CONSENT_LOOK[state];
   const Icon = look.icon;
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium", look.className)}>
       <Icon className="h-3 w-3" aria-hidden="true" />
-      {t(look.label)}
+      {look.label}
     </span>
   );
 }
 
 /** "AI draft" label: AI text is always marked, and the seller can edit it before anything is used. */
 export function AiDraftLabel({ children }: { children?: React.ReactNode }) {
-  const { t } = useLanguage();
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-      <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">{t("AI draft")}</span>
+      <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">AI draft</span>
       {children}
     </span>
   );
 }
 
 export function DryRunTag({ show }: { show: boolean }) {
-  const { t } = useLanguage();
   if (!show) return null;
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
       <Clock className="h-3 w-3" aria-hidden="true" />
-      {t("Dry run: not really sent")}
+      Dry run: not really sent
     </span>
   );
 }

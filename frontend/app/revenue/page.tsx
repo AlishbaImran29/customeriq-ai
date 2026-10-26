@@ -1,9 +1,8 @@
 import { Suspense } from "react";
-import { DataErrorState, DataSourceBanner, ModelNote, NoDataState, PageSkeleton, load, reasonFor } from "@/components/data-state";
-import { NotAvailableValue } from "@/components/not-available";
+import { DataErrorState, DataSourceBanner, NoDataState, PageSkeleton, load } from "@/components/data-state";
 import { PageHeader } from "@/components/page-header";
 import { RevenueAtRiskCalculator, type CalculatorDefaults } from "@/components/revenue-at-risk-calculator";
-import { RevenueAtRiskChart, RevenueForecastChart } from "@/components/charts/dashboard-charts";
+import { RevenueAtRiskChart, RevenueTrendChart } from "@/components/charts/dashboard-charts";
 import { EmptyState } from "@/components/states";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -16,7 +15,7 @@ export default function RevenuePage() {
     <div className="space-y-6">
       <PageHeader
         title="Revenue Intelligence"
-        description="Revenue trends, forecasting, revenue drivers, and revenue-at-risk analysis for growth decisions."
+        description="Revenue trends, revenue by country, and revenue at risk, for growth decisions."
       />
       <Suspense fallback={<PageSkeleton cards={4} />}>
         <RevenueContent />
@@ -31,7 +30,6 @@ async function RevenueContent() {
   const { meta, series, atRiskTrend, atRiskBySegment, drivers } = result.data;
   if (meta.source === "live" && !meta.asOf) return <NoDataState />;
   const live = meta.source === "live";
-  const forecastPredicted = meta.models.forecast.status === "available";
 
   const actuals = series.filter((p) => p.actual !== undefined);
   // Compare complete months only; a month still in progress would look like a drop.
@@ -39,8 +37,6 @@ async function RevenueContent() {
   const latest = complete[complete.length - 1];
   const previous = complete[complete.length - 2];
   const monthChange = latest?.actual && previous?.actual ? ((latest.actual - previous.actual) / previous.actual) * 100 : null;
-  const forecast = series.filter((p) => p.actual === undefined && p.forecast !== undefined);
-  const forecastTotal = forecast.reduce((sum, p) => sum + (p.forecast ?? 0), 0);
   const totalAtRisk = atRiskBySegment.reduce((sum, s) => sum + s.atRisk, 0);
   const revenue12m = live ? (drivers[0]?.rows.reduce((sum, r) => sum + r.revenue, 0) ?? 0) : 0;
   const currentAtRisk = atRiskTrend?.[atRiskTrend.length - 1]?.atRisk ?? 0;
@@ -59,9 +55,7 @@ async function RevenueContent() {
   return (
     <>
       <DataSourceBanner meta={meta} />
-      <ModelNote model={meta.models.forecast} title="Revenue forecast" />
-
-      <section aria-label="Revenue summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Revenue summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">
             {latest ? `Last full month (${latest.month})` : "Last full month"}
@@ -73,17 +67,6 @@ async function RevenueContent() {
             </p>
           ) : (
             <p className="text-xs text-muted">Not enough history to compare</p>
-          )}
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Next 3 months forecast</p>
-          {forecast.length === 0 ? (
-            <NotAvailableValue reason={reasonFor(meta, "revenueForecast")} />
-          ) : (
-            <>
-              <p className="mt-2 text-2xl font-semibold tabular-nums"><Money value={forecastTotal} /></p>
-              <p className="text-xs text-muted">{live ? "Model estimate (see range on the chart)" : "Includes holiday peak"}</p>
-            </>
           )}
         </Card>
         {live ? (
@@ -117,17 +100,13 @@ async function RevenueContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{live && !forecastPredicted ? "Revenue trend" : "Revenue trend & forecast"}</CardTitle>
+          <CardTitle>Revenue trend</CardTitle>
           <CardDescription>
-            {!live
-              ? "Actual revenue through October; forecast with confidence range for the next three months."
-              : forecastPredicted
-                ? "Monthly revenue from your orders, then a 3-month trend forecast (model estimate) with a shaded 80% range. The last actual month may be partial."
-                : `Monthly revenue from your orders. The last month may be partial (month to date). Forecast not shown: ${reasonFor(meta, "revenueForecast") ?? "not available."}`}
+            {live ? "Monthly revenue from your orders. The last month may be partial (month to date)." : "Monthly sample revenue."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <RevenueForecastChart data={series} />
+          <RevenueTrendChart data={series} />
         </CardContent>
       </Card>
 

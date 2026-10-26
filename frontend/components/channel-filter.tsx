@@ -3,10 +3,8 @@
 import { useRouter } from "next/navigation";
 import { ChannelLabel } from "@/components/channel-icon";
 import { FilterPills } from "@/components/ui/filter-pills";
-import { useLanguage } from "@/lib/i18n";
 import { CHANNELS } from "@/lib/quick-order";
-import type { ChannelRevenue } from "@/lib/types";
-import { formatNumber } from "@/lib/utils";
+import { fmt } from "@/lib/format";
 
 type Choice = "all" | (typeof CHANNELS)[number]["value"];
 
@@ -16,18 +14,12 @@ type Choice = "all" | (typeof CHANNELS)[number]["value"];
  */
 export function ChannelFilter({
   current,
-  channels,
   keep,
 }: {
   current: string | null;
-  channels: ChannelRevenue[];
   keep: { from?: string; to?: string };
 }) {
   const router = useRouter();
-  const { t, tf } = useLanguage();
-  const orders = (channel: string) => channels.find((c) => c.channel === channel)?.orders ?? 0;
-  const total = channels.reduce((sum, c) => sum + c.orders, 0);
-
   function choose(value: Choice) {
     const params = new URLSearchParams();
     if (keep.from) params.set("from", keep.from);
@@ -37,17 +29,16 @@ export function ChannelFilter({
     router.push(query ? `/?${query}` : "/");
   }
 
-  const label = (value: string, text: string) => (value === "other" ? t("Other") : text);
+  const label = (value: string, text: string) => (value === "other" ? "Other" : text);
   return (
     <div className="space-y-2">
       <FilterPills
-        label={t("Filter by sales channel")}
+        label="Filter by sales channel"
         options={[
-          { value: "all" as Choice, label: t("All channels"), count: total },
+          { value: "all" as Choice, label: "All channels" },
           ...CHANNELS.map((c) => ({
             value: c.value as Choice,
             label: <ChannelLabel channel={c.value}>{label(c.value, c.label)}</ChannelLabel>,
-            count: orders(c.value),
           })),
         ]}
         value={(current ?? "all") as Choice}
@@ -55,10 +46,9 @@ export function ChannelFilter({
       />
       {current ? (
         <p className="text-xs text-muted">
-          {tf("Showing figures for {channel} orders only. The revenue by channel chart below still compares all channels.", {
+          {fmt("Showing figures for {channel} orders only.", {
             channel: label(current, CHANNELS.find((c) => c.value === current)?.label ?? current),
-          })}{" "}
-          <span className="sr-only">{formatNumber(orders(current))}</span>
+          })}
         </p>
       ) : null}
     </div>
