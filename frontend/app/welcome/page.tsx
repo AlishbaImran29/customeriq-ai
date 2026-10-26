@@ -123,7 +123,7 @@ function DashboardPreview() {
         <div className="space-y-4 p-4">
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Revenue", value: "£48.2k", delta: "+8.4%" },
+              { label: "Revenue", value: "Rs. 48.2k", delta: "+8.4%" },
               { label: "Retention", value: "62%", delta: "+3 pts" },
               { label: "Growth score", value: "71/100", delta: "" },
             ].map((kpi) => (

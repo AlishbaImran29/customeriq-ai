@@ -57,7 +57,7 @@ export function SavingsCalculator({
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium text-ink-2">
-          {"Shipping cost per parcel, both ways (£)"}
+          {"Shipping cost per parcel, both ways (Rs.)"}
           <Input
             type="number"
             inputMode="decimal"

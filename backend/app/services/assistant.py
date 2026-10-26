@@ -28,7 +28,7 @@ Rules:
 - Mention the data date (dataAsOf) when giving figures. Use the definitions provided.
 - Customers are identified by customerId only. You have no names or contact details.
 - Be concise: a short answer, then up to 4 bullet points with figures, then one
-  practical next step. Use the currency symbol £ for money.
+  practical next step. Use the currency label Rs. for money (for example Rs. 3,500).
 
 Data summary (JSON):
 """

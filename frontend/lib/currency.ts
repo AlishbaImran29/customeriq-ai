@@ -1,12 +1,16 @@
-// Every amount in the app is shown in British pounds (£): the dataset (Online Retail II) is from a UK store, and the numbers
-// are shown exactly as stored. There is no currency choice and no exchange rate.
+// Every amount in the app is shown in Pakistani rupees ("Rs. 3,500"), the same way the customer emails and WhatsApp messages
+// write prices. Amounts are shown exactly as stored: there is no exchange rate and no currency choice.
+// (The public Online Retail II test dataset is in pounds; its numbers are shown unchanged, only the label is Rs.)
 
-const FORMATTER = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 2 });
-const WHOLE_FORMATTER = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
-const COMPACT_FORMATTER = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", notation: "compact", maximumFractionDigits: 1 });
+const WHOLE = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+const CENTS = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const COMPACT = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
-/** £1,234 for large amounts, £12.50 for small ones. */
+/** Rs. 1,234 for large amounts and whole numbers, Rs. 12.50 for small amounts with paisa, Rs. 1.2M when compact. */
 export function formatMoney(value: number, compact = false): string {
-  if (compact) return COMPACT_FORMATTER.format(value);
-  return (Math.abs(value) >= 1000 ? WHOLE_FORMATTER : FORMATTER).format(value);
+  const sign = value < 0 ? "-" : "";
+  const amount = Math.abs(value);
+  if (compact) return `${sign}Rs. ${COMPACT.format(amount)}`;
+  const whole = amount >= 1000 || Number.isInteger(amount);
+  return `${sign}Rs. ${(whole ? WHOLE : CENTS).format(amount)}`;
 }

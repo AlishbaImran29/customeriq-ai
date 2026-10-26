@@ -243,7 +243,7 @@ export const recommendations: Recommendation[] = [
   {
     id: "REC-07", category: "Customer Recovery",
     title: "Recover Lost Customers with a restart offer",
-    detail: "Lost Customers still represent £85.6k historical revenue. A one-time restart offer plus survey can identify product-fit issues.",
+    detail: "Lost Customers still represent Rs. 85.6k historical revenue. A one-time restart offer plus survey can identify product-fit issues.",
     impact: "Medium", targetSegment: "Lost Customers", audienceSize: 2530, estimatedRevenue: 26000,
     nextAction: "Send recovery campaign with 30-day expiry",
   },
