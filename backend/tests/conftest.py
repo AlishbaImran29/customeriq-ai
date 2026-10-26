@@ -82,6 +82,8 @@ def db_session():
     connection.execute(text("DELETE FROM workflows"))
     connection.execute(text("DELETE FROM customer_audit"))
     connection.execute(text("DELETE FROM cod_confirmations"))
+    connection.execute(text("DELETE FROM email_log"))
+    connection.execute(text("DELETE FROM email_announcements"))
     connection.execute(text("DELETE FROM stock_movements"))
     connection.execute(text("DELETE FROM stock_items"))
     connection.execute(text("DELETE FROM model_reports"))

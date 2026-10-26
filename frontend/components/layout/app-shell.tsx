@@ -40,6 +40,7 @@ import {
   History,
   Workflow,
   ScrollText,
+  Mail,
   PhoneCall,
   ShoppingCart,
   Send,
@@ -99,6 +100,7 @@ const navGroups = [
       { href: "/messenger/messages", label: "Messages", icon: Inbox },
       { href: "/messenger/orders", label: "Order Updates", icon: Send },
       { href: "/messenger/cod", label: "COD Confirmation", icon: PhoneCall },
+      { href: "/email-automations", label: "Email Automations", icon: Mail },
       { href: "/messenger/carts", label: "Abandoned Carts", icon: ShoppingCart },
       { href: "/messenger/videos", label: "Customer Videos", icon: Video },
       { href: "/messenger/campaigns", label: "Announcements", icon: Megaphone },
@@ -208,7 +210,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen">
         {open ? (
           <div
-            className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+            className="fixed inset-0 z-30 bg-slate-900/50 lg:hidden"
             aria-hidden="true"
             onClick={() => closeDrawer()}
           />
@@ -217,7 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           id="app-sidebar"
           inert={drawerHidden}
           className={cn(
-            "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-line bg-sidebar text-ink-2 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
+            "theme-sidebar fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-line bg-sidebar text-ink-2 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
             open ? "translate-x-0" : "-translate-x-full",
           )}
         >
@@ -227,14 +229,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 IQ
               </span>
               <span>
-                <span className="block text-sm font-semibold text-white">CustomerIQ AI</span>
+                <span className="block text-sm font-semibold text-ink">CustomerIQ AI</span>
                 <span className="block text-[11px] text-faint">Predictive customer intelligence</span>
               </span>
             </Link>
             <button
               ref={closeButtonRef}
               type="button"
-              className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-white lg:hidden"
+              className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink lg:hidden"
               onClick={() => closeDrawer()}
               aria-label="Close navigation"
             >
@@ -284,7 +286,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-app/85 px-4 py-3 backdrop-blur">
+          <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-surface px-4 py-3">
             <button
               ref={menuButtonRef}
               type="button"
@@ -298,7 +300,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             <p className="min-w-0 truncate text-sm font-medium text-ink lg:hidden">{currentLabel}</p>
             <p className="hidden text-sm text-muted lg:block">
-              E-commerce growth copilot for Shopify, WooCommerce, and Magento
+              Customer intelligence for e-commerce stores
             </p>
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <span

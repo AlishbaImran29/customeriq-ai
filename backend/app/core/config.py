@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # servers). `mail_from` must be a sender address verified in your Brevo account.
     brevo_api_key: SecretStr | None = None
     mail_from: str | None = None
+    # Email Automations (Brevo free plan: 300 emails a day). SENDER_EMAIL must be verified in Brevo.
+    sender_email: str | None = None
+    sender_name: str | None = None
+    app_url: str | None = None                          # the web address of the shop, for visit-the-store links
     # Another HTTPS option that needs no extra company: a tiny Google Apps Script "web app" that sends
     # the email from your own Gmail (see docs/DEPLOY.md). The secret must match the one in the script.
     mail_webhook_url: str | None = None

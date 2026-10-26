@@ -1,0 +1,1 @@
+Reminder: your order{% if order_number %} #{{ order_number }}{% endif %} is waiting, {{ first_name }}

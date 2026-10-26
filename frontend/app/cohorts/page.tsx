@@ -21,11 +21,11 @@ export default function CohortsPage() {
   );
 }
 
-/** Cyan that gets brighter as retention rises; the number is always printed too. */
+/** Blue that gets deeper as retention rises (kept light so the printed number stays readable). */
 function cellStyle(value: number | null, max: number) {
   if (value === null) return undefined;
-  const alpha = 0.1 + Math.min(value / max, 1) * 0.75;
-  return { backgroundColor: `rgba(34, 211, 238, ${alpha.toFixed(2)})` };
+  const alpha = 0.08 + Math.min(value / max, 1) * 0.5;
+  return { backgroundColor: `rgba(37, 99, 235, ${alpha.toFixed(2)})` };
 }
 
 async function CohortsContent() {
@@ -140,7 +140,7 @@ async function CohortsContent() {
               <span
                 aria-hidden="true"
                 className="h-2.5 w-32 rounded-full"
-                style={{ background: "linear-gradient(to right, rgba(34,211,238,0.1), rgba(34,211,238,0.85))" }}
+                style={{ background: "linear-gradient(to right, rgba(37,99,235,0.08), rgba(37,99,235,0.58))" }}
               />
               Higher retention (colours are scaled to the best month shown, {scaleMax.toFixed(0)}%)
             </span>

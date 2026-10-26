@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     async def reject_other_websites(request: Request, call_next):
         """Browsers send an Origin header on cross-site writes. Refuse any that is not
         one of ours, as a second defence on top of SameSite cookies."""
-        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and not request.url.path.startswith("/api/v1/email/cod/"):
             origin = request.headers.get("origin")
             if origin and origin not in settings.cors_origins:
                 return JSONResponse(

@@ -1,0 +1,37 @@
+{# Pieces shared by several emails. A piece with no data prints nothing. #}
+
+{% macro button(url, label, primary=True) %}
+<a href="{{ url }}" style="display:inline-block;padding:13px 26px;border-radius:6px;font-weight:bold;font-size:15px;text-decoration:none;{% if primary %}background:{{ brand_color }};color:#ffffff;{% else %}background:#ffffff;color:#4b5563;border:1px solid #d1d5db;{% endif %}">{{ label }}</a>
+{% endmacro %}
+
+{% macro order_summary(items, order_total, delivery_city) %}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:6px;margin:16px 0;">
+  {% for item in items %}
+  <tr>
+    {% if item.image %}<td width="72" style="padding:12px 0 12px 12px;"><img src="{{ item.image }}" alt="" width="60" height="60" style="border-radius:4px;border:0;object-fit:cover;"></td>{% endif %}
+    <td style="padding:12px;font-size:15px;">
+      <strong>{{ item.name }}</strong>
+      {% if item.quantity %}<br><span style="color:#6b7280;">Quantity: {{ item.quantity }}</span>{% endif %}
+    </td>
+    {% if item.price %}<td align="right" style="padding:12px;font-size:15px;white-space:nowrap;">{{ item.price }}</td>{% endif %}
+  </tr>
+  {% endfor %}
+  {% if order_total %}
+  <tr><td colspan="3" style="padding:12px;border-top:1px solid #e5e7eb;font-size:15px;"><strong>Order total: {{ order_total }}</strong>{% if delivery_city %}<br><span style="color:#6b7280;">Delivery to {{ delivery_city }}</span>{% endif %}</td></tr>
+  {% elif delivery_city %}
+  <tr><td colspan="3" style="padding:12px;border-top:1px solid #e5e7eb;font-size:14px;color:#6b7280;">Delivery to {{ delivery_city }}</td></tr>
+  {% endif %}
+</table>
+{% endmacro %}
+
+{% macro product_cards(products) %}
+{% for p in products %}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:6px;margin:10px 0;">
+  <tr>
+    {% if p.image %}<td width="96" style="padding:12px;"><img src="{{ p.image }}" alt="" width="80" height="80" style="border-radius:4px;border:0;object-fit:cover;"></td>{% endif %}
+    <td style="padding:12px;font-size:15px;"><strong>{{ p.name }}</strong>{% if p.price %}<br><span style="color:#6b7280;">{{ p.price }}</span>{% endif %}</td>
+    {% if p.url %}<td align="right" style="padding:12px;"><a href="{{ p.url }}" style="color:{{ brand_color }};font-weight:bold;text-decoration:none;white-space:nowrap;">Shop now &rarr;</a></td>{% endif %}
+  </tr>
+</table>
+{% endfor %}
+{% endmacro %}

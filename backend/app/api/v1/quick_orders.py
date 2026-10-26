@@ -75,6 +75,9 @@ def _after_order_added(db: Session, result, whatsapp_ok: bool) -> None:
             consent.set_consent(db, customer.id, "whatsapp", True, "add_order", note="The seller ticked: customer agreed to WhatsApp order updates")
         if order is not None:
             order_status.record_status(db, get_settings(), order, "confirmed", source="manual")
+            from app.services.email_auto import service as email_auto
+
+            email_auto.on_new_cod_order(db, get_settings(), order)
             cod_confirm.ask(db, get_settings(), order)       # a COD order: ask the customer to confirm (only if a template is approved)
             from app.services.workflows import hooks
 

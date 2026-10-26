@@ -1,0 +1,15 @@
+Hi {{ first_name }},
+
+Just a friendly reminder: your order{% if order_number %} #{{ order_number }}{% endif %} from {{ store_name }} is waiting for your confirmation.
+
+{% for item in items %}- {{ item.name }}{% if item.quantity %} x {{ item.quantity }}{% endif %}{% if item.price %} - {{ item.price }}{% endif %}
+{% endfor %}{% if order_total %}Order total: {{ order_total }}
+{% endif %}{% if delivery_city %}Delivery to: {{ delivery_city }}
+{% endif %}
+One tap and we'll send it out to you.
+
+Confirm my order: {{ confirm_url }}
+Cancel order: {{ cancel_url }}
+
+Warm regards,
+The {{ store_name }} Team

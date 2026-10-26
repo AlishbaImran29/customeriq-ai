@@ -1,0 +1,1 @@
+{% if same_category %}{{ first_name }}, you'll love our new {{ product_name }}{% else %}{{ first_name }}, something new just arrived at {{ store_name }}{% endif %}

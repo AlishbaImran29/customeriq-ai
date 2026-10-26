@@ -1,0 +1,21 @@
+{% extends "_layout.html" %}{% from "_parts.html" import order_summary with context %}
+{% block body %}
+{% if state == "ask" %}
+<h1 style="font-size:22px;margin:0 0 12px 0;">{% if action == "confirm" %}Confirm your order{% else %}Cancel your order{% endif %}</h1>
+<p style="margin:0 0 8px 0;">Hi {{ first_name }}, here is your order{% if order_number %} <strong>#{{ order_number }}</strong>{% endif %}:</p>
+{{ order_summary(items, order_total, delivery_city) }}
+<form method="post" style="margin:20px 0;text-align:center;">
+  <button type="submit" style="padding:13px 28px;border-radius:6px;border:0;font-weight:bold;font-size:15px;cursor:pointer;{% if action == 'confirm' %}background:{{ brand_color }};color:#ffffff;{% else %}background:#b91c1c;color:#ffffff;{% endif %}">{% if action == "confirm" %}Yes, confirm my order{% else %}Yes, cancel my order{% endif %}</button>
+</form>
+<p style="margin:0;font-size:14px;color:#6b7280;text-align:center;">Nothing changes until you press the button.</p>
+{% elif state == "confirmed" %}
+<h1 style="font-size:22px;margin:0 0 12px 0;">Thank you, {{ first_name }}!</h1>
+<p style="margin:0;">Your order{% if order_number %} <strong>#{{ order_number }}</strong>{% endif %} is confirmed. We will dispatch it right away and you pay when it arrives.</p>
+{% elif state == "cancelled" %}
+<h1 style="font-size:22px;margin:0 0 12px 0;">Your order is cancelled</h1>
+<p style="margin:0;">Hi {{ first_name }}, your order{% if order_number %} <strong>#{{ order_number }}</strong>{% endif %} has been cancelled. We hope to see you again soon.</p>
+{% else %}
+<h1 style="font-size:22px;margin:0 0 12px 0;">This link is not valid</h1>
+<p style="margin:0;">The link is damaged or has expired. Please reply to the email or contact the shop{% if support_email %} at <a href="mailto:{{ support_email }}" style="color:{{ brand_color }};">{{ support_email }}</a>{% endif %}.</p>
+{% endif %}
+{% endblock %}

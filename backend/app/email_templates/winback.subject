@@ -1,0 +1,1 @@
+{% if discount_code and discount_value %}{{ first_name }}, here's {{ discount_value }} off, just for you{% else %}We miss you, {{ first_name }}!{% endif %}

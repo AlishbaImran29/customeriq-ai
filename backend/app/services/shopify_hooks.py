@@ -152,6 +152,9 @@ def handle(db: Session, settings: Settings, topic: str, payload: dict, now: date
         from app.services.messaging import cod_confirm
 
         cod_confirm.ask(db, settings, order, now)
+        from app.services.email_auto import service as email_auto
+
+        email_auto.on_new_cod_order(db, settings, order)         # the COD confirmation EMAIL (never fails the order)
         from app.services import carts
 
         carts.mark_recovered(db, order, payload.get("checkout_id"), now)        # they bought: stop any cart reminder
@@ -175,11 +178,11 @@ def handle(db: Session, settings: Settings, topic: str, payload: dict, now: date
         cart = carts.record_checkout(db, payload, now)
         return {"cart": cart.checkout_id if cart else None, "status": cart.status if cart else "ignored"}
     if topic == "products/create":
-        return _new_product(db, payload)
+        return _new_product(db, payload, settings.shopify_shop_domain)
     return {"ignored": topic}
 
 
-def _new_product(db: Session, payload: dict) -> dict:
+def _new_product(db: Session, payload: dict, settings_shop: str | None = None) -> dict:
     """A product added in Shopify: save it, and make its DRAFT announcement campaign (nothing is sent)."""
     import re
 
@@ -198,5 +201,14 @@ def _new_product(db: Session, payload: dict) -> dict:
         db, name=str(payload["title"]), category=payload.get("product_type") or None, price=price, description=description,
         source="shopify", external_id=str(payload["id"]),
     )
+    from app.services.email_auto import render as email_render
+    from app.services.email_auto import service as email_auto
+
+    image = payload.get("image") if isinstance(payload.get("image"), dict) else {}
+    product.image_url = email_render.clean_url(image.get("src"))
+    shop = (settings_shop or "").strip()
+    if payload.get("handle") and shop:
+        product.product_url = f"https://{shop}/products/{payload['handle']}"
+    email_auto.draft_for(db, product)                             # a DRAFT email too: the seller previews it and presses Send
     return {"product": product.name, "campaign": campaign.id, "status": campaign.status}
 

@@ -1,0 +1,20 @@
+Hi {{ first_name }},
+
+It's been a while since your last order with us{% if days_since_last_order %} ({{ days_since_last_order }} days){% endif %}, and we wanted to check in.
+{% if last_product_name %}
+We hope you loved your {{ last_product_name }}!{% if recommended_products %} Here are a few picks we think you'll like:{% endif %}
+{% elif recommended_products %}
+Here are a few picks we think you'll like:
+{% endif %}{% for p in recommended_products %}
+- {{ p.name }}{% if p.price %} - {{ p.price }}{% endif %}{% if p.url %}
+  Shop now: {{ p.url }}{% endif %}
+{% endfor %}{% if discount_code %}
+Use code {{ discount_code }}{% if discount_value %} to get {{ discount_value }} off your next order.{% else %} on your next order.{% endif %}
+{% endif %}
+Visit {{ store_name }}: {{ store_url }}
+
+See you soon,
+The {{ store_name }} Team
+{% if unsubscribe_url %}
+Unsubscribe: {{ unsubscribe_url }}
+{% endif %}

@@ -37,6 +37,7 @@ OWNER_ONLY_WRITES = (
     r"^/api/v1/workflows/\d+/(enable|disable)$",
     r"^/api/v1/team(/.*)?$",
     r"^/api/v1/profit/settings$",
+    r"^/api/v1/email-auto/settings$",
     r"^/api/v1/meta-ads/(audiences/push|events/send|ad-spend/sync)$",
 )
 

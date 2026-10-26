@@ -9,6 +9,7 @@ from app.models.import_job import ImportJob, ImportStatus
 from app.models.abandoned_cart import AbandonedCart
 from app.models.audit_log import AuditLog
 from app.models.cod_confirmation import CodConfirmation
+from app.models.email_auto import CodEmail, EmailAnnouncement, EmailLog, EmailSettings
 from app.models.meta_event import MetaEvent
 from app.models.inbox import Conversation, FaqEntry, InboxNote
 from app.models.profit import AdSpend, BusinessSettings
@@ -28,4 +29,4 @@ from app.models.product_sale import ProductSale
 from app.models.shipment import Shipment
 from app.models.user import User
 
-__all__ = ["MetaEvent", "Conversation", "FaqEntry", "InboxNote", "AdSpend", "BusinessSettings", "AuditLog", "Refund", "ReturnEvent", "ReturnEvidence", "ReturnRequest", "Ticket", "TicketNote", "AbandonedCart", "Lead", "LeadEvent", "Job", "Task", "Workflow", "WorkflowRun", "CustomerAudit", "CodConfirmation", "StockItem", "StockMovement", "ModelReport", "Journey", "JourneyEnrollment", "SchedulerState", "Campaign", "CampaignRecipient", "CatalogProduct", "CustomerMedia", "OrderStatusHistory", "WebhookEvent", "ConsentEvent", "CustomerConsent", "IncomingMessage", "Message", "MessageTemplate", "MessagingSettings", "AiCache", "Base", "CompetitorAd", "CreativeItem", "LaunchProduct", "Vendor", "VendorQuote", "LaunchProject", "TrendUpload", "CourierPayment", "Customer", "ImportJob", "ImportStatus", "Order", "OrderRiskRun", "ProductSale", "Shipment", "User"]
+__all__ = ["CodEmail", "EmailAnnouncement", "EmailLog", "EmailSettings", "MetaEvent", "Conversation", "FaqEntry", "InboxNote", "AdSpend", "BusinessSettings", "AuditLog", "Refund", "ReturnEvent", "ReturnEvidence", "ReturnRequest", "Ticket", "TicketNote", "AbandonedCart", "Lead", "LeadEvent", "Job", "Task", "Workflow", "WorkflowRun", "CustomerAudit", "CodConfirmation", "StockItem", "StockMovement", "ModelReport", "Journey", "JourneyEnrollment", "SchedulerState", "Campaign", "CampaignRecipient", "CatalogProduct", "CustomerMedia", "OrderStatusHistory", "WebhookEvent", "ConsentEvent", "CustomerConsent", "IncomingMessage", "Message", "MessageTemplate", "MessagingSettings", "AiCache", "Base", "CompetitorAd", "CreativeItem", "LaunchProduct", "Vendor", "VendorQuote", "LaunchProject", "TrendUpload", "CourierPayment", "Customer", "ImportJob", "ImportStatus", "Order", "OrderRiskRun", "ProductSale", "Shipment", "User"]

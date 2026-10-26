@@ -26,6 +26,8 @@ class CatalogProduct(TimestampMixin, Base):
     category: Mapped[str | None] = mapped_column(String(100))
     price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     description: Mapped[str | None] = mapped_column(Text)                    # facts the seller gives; the AI may use ONLY these
+    image_url: Mapped[str | None] = mapped_column(String(500))                # shown in emails
+    product_url: Mapped[str | None] = mapped_column(String(500))              # where Shop now goes
     source: Mapped[str] = mapped_column(String(14), default="manual", server_default="manual")
     external_id: Mapped[str | None] = mapped_column(String(60), unique=True)   # Shopify's product id
     launch_project_id: Mapped[int | None] = mapped_column(ForeignKey("launch_projects.id", ondelete="SET NULL"))

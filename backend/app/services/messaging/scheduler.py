@@ -34,6 +34,9 @@ def run_due(db: Session, settings: Settings, now: datetime | None = None) -> dic
     from app.services.workflows import engine as workflow_engine
 
     parts["cod"] = lambda: cod_confirm.mark_overdue(db, now)
+    from app.services.email_auto import service as email_auto
+
+    parts["cod_email_reminders"] = lambda: email_auto.send_due_reminders(db, settings, now)
     from app.services import leads as lead_service
 
     from app.services import carts as cart_service

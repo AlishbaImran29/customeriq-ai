@@ -29,25 +29,25 @@ const formatCurrency = (value: number) => formatMoney(value);
 const formatCompactCurrency = (value: number) => formatMoney(value, true);
 
 // Validated categorical slot (see dataviz palette): series 1.
-const SERIES_1 = "#22d3ee";
-const GRID = "#263449";
-const AXIS_TICK = { fontSize: 12, fill: "#94a3b8" };
-const LEGEND_STYLE = { fontSize: 12, color: "#cbd5e1" };
+const SERIES_1 = "#2563eb";
+const GRID = "#e2e8f0";
+const AXIS_TICK = { fontSize: 12, fill: "#5b6b82" };
+const LEGEND_STYLE = { fontSize: 12, color: "#334155" };
 
 const riskColors: Record<RiskLevel, string> = {
-  Low: "#34d399",
-  Medium: "#fbbf24",
-  High: "#fb923c",
-  Critical: "#fb7185",
+  Low: "#16a34a",
+  Medium: "#d97706",
+  High: "#ea580c",
+  Critical: "#dc2626",
 };
 
 const tooltipStyle = {
   borderRadius: 12,
-  border: "1px solid #34465f",
-  backgroundColor: "#162238",
-  color: "#f1f5f9",
+  border: "1px solid #cbd5e1",
+  backgroundColor: "#ffffff",
+  color: "#1e293b",
   fontSize: 12,
-  boxShadow: "0 8px 24px rgb(0 0 0 / 0.5)",
+  boxShadow: "0 4px 12px rgb(15 23 42 / 0.12)",
 };
 
 function currencyTooltip(value: unknown) {
@@ -116,7 +116,7 @@ export function SegmentDonutChart({ data }: { data: SegmentSummary[] }) {
           innerRadius={62}
           outerRadius={96}
           paddingAngle={2}
-          stroke="#111c2f"
+          stroke="#ffffff"
           strokeWidth={2}
         >
           {data.map((entry) => (
@@ -150,7 +150,7 @@ export function SegmentRevenueBars({ data }: { data: SegmentSummary[] }) {
           tickLine={false}
           axisLine={false}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(37, 99, 235, 0.06)" }} />
         <Bar dataKey="revenue" name="Revenue" radius={[0, 4, 4, 0]} barSize={22}>
           {data.map((entry) => (
             <Cell key={entry.name} fill={entry.color} />
@@ -175,7 +175,7 @@ export function ClvBySegmentChart({ data }: { data: SegmentSummary[] }) {
           width={56}
           tickFormatter={(value: number) => formatCompactCurrency(value)}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(37, 99, 235, 0.06)" }} />
         <Legend wrapperStyle={LEGEND_STYLE} />
         <Bar dataKey="current" name="Average CLV to date" fill={SERIES_1} radius={[4, 4, 0, 0]} />
       </BarChart>
@@ -196,7 +196,7 @@ export function RevenueAtRiskChart({ data }: { data: RevenueAtRiskPoint[] }) {
           width={56}
           tickFormatter={(value: number) => formatCompactCurrency(value)}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={currencyTooltip} cursor={{ fill: "rgba(37, 99, 235, 0.06)" }} />
         <Bar dataKey="atRisk" name="Revenue at risk" fill={SERIES_1} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ChartFrame>
@@ -216,7 +216,7 @@ export function RiskDistributionChart({ data }: { data: RiskBucket[] }) {
           width={48}
           tickFormatter={(value: number) => formatNumber(value)}
         />
-        <Tooltip contentStyle={tooltipStyle} formatter={numberTooltip} cursor={{ fill: "rgba(34, 211, 238, 0.08)" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={numberTooltip} cursor={{ fill: "rgba(37, 99, 235, 0.06)" }} />
         <Bar dataKey="customers" name="Customers" radius={[4, 4, 0, 0]}>
           {data.map((entry) => (
             <Cell key={entry.level} fill={riskColors[entry.level]} />

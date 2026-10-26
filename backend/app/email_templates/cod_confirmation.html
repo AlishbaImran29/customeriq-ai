@@ -1,0 +1,11 @@
+{% extends "_layout.html" %}{% from "_parts.html" import button, order_summary with context %}
+{% block body %}
+<p style="margin:0 0 16px 0;">Hi {{ first_name }},</p>
+<p style="margin:0 0 8px 0;">Thank you for shopping with {{ store_name }}! We&rsquo;ve received your order{% if order_number %} <strong>#{{ order_number }}</strong>{% endif %} and it&rsquo;s almost ready to ship.</p>
+{{ order_summary(items, order_total, delivery_city) }}
+<p style="margin:0 0 20px 0;">Since you chose Cash on Delivery, please confirm your order so we can dispatch it right away.</p>
+<p style="margin:0 0 8px 0;text-align:center;">{{ button(confirm_url, "Confirm My Order") }}</p>
+<p style="margin:0 0 24px 0;text-align:center;font-size:14px;"><a href="{{ cancel_url }}" style="color:#6b7280;">Cancel Order</a></p>
+{% if support_email %}<p style="margin:0 0 16px 0;">Questions? Just reply to this email or contact us at <a href="mailto:{{ support_email }}" style="color:{{ brand_color }};">{{ support_email }}</a>.</p>{% else %}<p style="margin:0 0 16px 0;">Questions? Just reply to this email.</p>{% endif %}
+<p style="margin:0;">Warm regards,<br>The {{ store_name }} Team</p>
+{% endblock %}

@@ -1,0 +1,14 @@
+Hi {{ first_name }},
+
+We just launched something we think you'll love.
+
+{{ product_name }}{% if product_price %} - {{ product_price }}{% endif %}
+{% if product_description %}{{ product_description }}
+{% endif %}
+Shop now: {{ product_url }}
+
+Thank you for being part of the {{ store_name }} family!
+The {{ store_name }} Team
+{% if unsubscribe_url %}
+Unsubscribe: {{ unsubscribe_url }}
+{% endif %}

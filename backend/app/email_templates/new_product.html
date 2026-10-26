@@ -1,0 +1,10 @@
+{% extends "_layout.html" %}{% from "_parts.html" import button with context %}
+{% block body %}
+<p style="margin:0 0 16px 0;">Hi {{ first_name }},</p>
+<p style="margin:0 0 16px 0;">We just launched something we think you&rsquo;ll love.</p>
+{% if product_image %}<p style="margin:0 0 16px 0;text-align:center;"><img src="{{ product_image }}" alt="{{ product_name }}" width="536" style="max-width:100%;height:auto;border-radius:6px;border:0;"></p>{% endif %}
+<p style="margin:0 0 8px 0;font-size:20px;"><strong>{{ product_name }}</strong>{% if product_price %} &ndash; {{ product_price }}{% endif %}</p>
+{% if product_description %}<p style="margin:0 0 20px 0;color:#4b5563;">{{ product_description }}</p>{% endif %}
+<p style="margin:20px 0;text-align:center;">{{ button(product_url, "Shop Now") }}</p>
+<p style="margin:0;">Thank you for being part of the {{ store_name }} family!<br>The {{ store_name }} Team</p>
+{% endblock %}

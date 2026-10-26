@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ subject }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f3f6;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f3f6;">
+<tr><td align="center" style="padding:24px 12px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;">
+    <tr><td align="center" style="padding:24px 24px 8px 24px;border-top:4px solid {{ brand_color }};">
+      {% if store_logo_url %}<img src="{{ store_logo_url }}" alt="{{ store_name }}" style="max-height:56px;max-width:220px;border:0;">
+      {% else %}<div style="font-size:22px;font-weight:bold;color:{{ brand_color }};">{{ store_name }}</div>{% endif %}
+    </td></tr>
+    <tr><td style="padding:16px 32px 24px 32px;font-size:16px;line-height:24px;color:#1f2937;">
+{% block body %}{% endblock %}
+    </td></tr>
+    <tr><td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e5e7eb;font-size:12px;line-height:18px;color:#6b7280;text-align:center;">
+      <strong>{{ store_name }}</strong>{% if support_email %} &middot; <a href="mailto:{{ support_email }}" style="color:#6b7280;">{{ support_email }}</a>{% endif %}
+      {% if unsubscribe_url %}<br>You get this email because you shopped with us. <a href="{{ unsubscribe_url }}" style="color:#6b7280;">Unsubscribe</a>{% endif %}
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>

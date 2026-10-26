@@ -104,7 +104,7 @@ function Logo() {
   return (
     <Link href="/welcome" className="flex items-center gap-2">
       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-sm font-bold text-accent-ink">IQ</span>
-      <span className="text-sm font-semibold text-white">CustomerIQ AI</span>
+      <span className="text-sm font-semibold text-ink">CustomerIQ AI</span>
     </Link>
   );
 }
@@ -113,12 +113,11 @@ function Logo() {
 function DashboardPreview() {
   return (
     <figure className="relative mx-auto w-full max-w-xl">
-      <div className="absolute -inset-4 rounded-[2rem] bg-accent/20 blur-2xl" aria-hidden="true" />
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-surface/80 shadow-2xl ring-1 ring-white/5 backdrop-blur" aria-hidden="true">
-        <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-3">
-          <span className="h-2.5 w-2.5 rounded-full bg-danger/80" />
-          <span className="h-2.5 w-2.5 rounded-full bg-warning/80" />
-          <span className="h-2.5 w-2.5 rounded-full bg-success/80" />
+      <div className="relative overflow-hidden rounded-xl border border-line bg-surface shadow-md" aria-hidden="true">
+        <div className="flex items-center gap-1.5 border-b border-line bg-surface-2 px-4 py-3">
+          <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
+          <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
+          <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
           <span className="ml-3 text-xs text-faint">Customer Intelligence Dashboard</span>
         </div>
         <div className="space-y-4 p-4">
@@ -128,14 +127,14 @@ function DashboardPreview() {
               { label: "Retention", value: "62%", delta: "+3 pts" },
               { label: "Growth score", value: "71/100", delta: "" },
             ].map((kpi) => (
-              <div key={kpi.label} className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <div key={kpi.label} className="rounded-lg border border-line bg-surface-2 p-3">
                 <p className="text-[10px] uppercase tracking-wide text-faint">{kpi.label}</p>
-                <p className="mt-1 text-lg font-semibold text-white">{kpi.value}</p>
+                <p className="mt-1 text-lg font-semibold text-ink">{kpi.value}</p>
                 <p className="text-[11px] text-success">{kpi.delta || " "}</p>
               </div>
             ))}
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-lg border border-line bg-surface-2 p-3">
             <p className="text-[11px] text-faint">Monthly revenue</p>
             <div className="mt-3 flex h-28 items-end gap-1.5">
               {bars.map((height, index) => (
@@ -147,7 +146,7 @@ function DashboardPreview() {
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-lg border border-line bg-surface-2 p-3">
             <p className="text-[11px] text-faint">Customer segments</p>
             <div className="mt-3 flex h-3 overflow-hidden rounded-full">
               {segments.map((segment) => (
@@ -173,16 +172,16 @@ function DashboardPreview() {
 export default function WelcomePage() {
   return (
     <div className="min-h-screen bg-app text-ink">
-      <header className="absolute inset-x-0 top-0 z-20">
+      <header className="absolute inset-x-0 top-0 z-20 border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
           <Logo />
           <nav aria-label="Main" className="hidden items-center gap-7 text-sm text-faint md:flex">
-            <a href="#features" className="hover:text-white">Features</a>
-            <a href="#how" className="hover:text-white">How it works</a>
-            <a href="#honest" className="hover:text-white">Why trust it</a>
+            <a href="#features" className="hover:text-ink">Features</a>
+            <a href="#how" className="hover:text-ink">How it works</a>
+            <a href="#honest" className="hover:text-ink">Why trust it</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/login" className="rounded-xl px-3.5 py-2 text-sm font-medium text-ink-2 hover:text-white">
+            <Link href="/login" className="rounded-xl px-3.5 py-2 text-sm font-medium text-ink-2 hover:text-ink">
               Sign in
             </Link>
             <Link href="/login?mode=signup" className="rounded-xl bg-accent px-3.5 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-strong">
@@ -193,14 +192,10 @@ export default function WelcomePage() {
       </header>
 
       <main>
-        <section className="relative overflow-hidden bg-sidebar pb-20 pt-32 text-white sm:pb-28 sm:pt-40">
-          <div
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(60rem_40rem_at_70%_-10%,rgba(20,184,166,0.25),transparent),radial-gradient(40rem_30rem_at_0%_100%,rgba(14,165,233,0.12),transparent)]"
-            aria-hidden="true"
-          />
+        <section className="relative overflow-hidden border-b border-line bg-surface-2 pb-20 pt-32 text-ink sm:pb-28 sm:pt-40">
           <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-accent-strong">
+              <p className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs font-medium text-accent-strong">
                 <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                 Customer intelligence for online stores
               </p>
@@ -214,12 +209,12 @@ export default function WelcomePage() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/login?mode=signup"
-                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-accent-ink shadow-lg shadow-accent/20 hover:bg-accent-strong"
+                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-accent-ink shadow-sm hover:bg-accent-strong"
                 >
                   Get started
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
-                <a href="#how" className="rounded-xl border border-white/15 px-5 py-3 text-sm font-medium text-ink hover:bg-white/5">
+                <a href="#how" className="rounded-xl border border-line-strong bg-surface px-5 py-3 text-sm font-medium text-ink hover:bg-surface-3">
                   See how it works
                 </a>
               </div>
@@ -278,7 +273,7 @@ export default function WelcomePage() {
           </div>
         </section>
 
-        <section id="honest" className="scroll-mt-20 bg-sidebar py-20 text-white sm:py-24">
+        <section id="honest" className="scroll-mt-20 border-t border-line bg-surface-2 py-20 text-ink sm:py-24">
           <div className="mx-auto max-w-6xl px-5">
             <div className="mx-auto max-w-2xl text-center">
               <p className="inline-flex items-center gap-2 text-sm font-semibold text-accent">
@@ -292,7 +287,7 @@ export default function WelcomePage() {
             </div>
             <div className="mt-12 grid gap-5 sm:grid-cols-2">
               {promises.map((promise) => (
-                <div key={promise.title} className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div key={promise.title} className="rounded-xl border border-line bg-surface p-6">
                   <h3 className="flex items-start gap-2 font-semibold">
                     <Check className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden="true" />
                     {promise.title}
@@ -304,12 +299,12 @@ export default function WelcomePage() {
           </div>
         </section>
 
-        <section className="bg-gradient-to-br from-accent to-teal py-16 text-accent-ink">
+        <section className="bg-accent py-16 text-accent-ink">
           <div className="mx-auto flex max-w-4xl flex-col items-center px-5 text-center">
-            <Lock className="h-6 w-6 text-accent-strong" aria-hidden="true" />
+            <Lock className="h-6 w-6 text-accent-ink" aria-hidden="true" />
             <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Ready to see your customers clearly?</h2>
             <p className="mt-3 max-w-xl text-accent-ink">Sign in, import your orders, and your dashboards fill in within moments.</p>
-            <Link href="/login?mode=signup" className="mt-7 inline-flex items-center gap-2 rounded-xl bg-app px-6 py-3 text-sm font-semibold text-accent shadow-lg hover:bg-sidebar">
+            <Link href="/login?mode=signup" className="mt-7 inline-flex items-center gap-2 rounded-xl bg-surface px-6 py-3 text-sm font-semibold text-accent shadow-sm hover:bg-surface-3">
               Get started
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
@@ -317,7 +312,7 @@ export default function WelcomePage() {
         </section>
       </main>
 
-      <footer className="bg-sidebar py-8">
+      <footer className="theme-sidebar bg-sidebar py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 text-xs text-muted sm:flex-row">
           <Logo />
           <p>Predictions are estimates based on your past orders, not guarantees.</p>

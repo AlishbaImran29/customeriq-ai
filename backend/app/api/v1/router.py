@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import enforce_role, require_user
-from app.api.v1 import analytics, auth, campaigns, carts, cash, couriers, customer_records, health, imports, inbox, internal, inventory, launch, launch_steps, leads, messaging, messaging_automation, messaging_cod, messaging_media, messaging_orders, meta_ads, model_report, order_risk, profit, quick_orders, returns, seasons, shipments, team, webhooks, whatsapp_import, workflows
+from app.api.v1 import analytics, auth, campaigns, email_auto, email_public, carts, cash, couriers, customer_records, health, imports, inbox, internal, inventory, launch, launch_steps, leads, messaging, messaging_automation, messaging_cod, messaging_media, messaging_orders, meta_ads, model_report, order_risk, profit, quick_orders, returns, seasons, shipments, team, webhooks, whatsapp_import, workflows
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -10,6 +10,7 @@ api_router.include_router(health.router)
 api_router.include_router(auth.router)
 # Meta and mail apps cannot sign in: these two protect themselves (a signature, a signed token).
 api_router.include_router(webhooks.router)
+api_router.include_router(email_public.router)    # the COD email buttons: a signed token, no sign-in
 # The scheduler calls this with a shared secret (X-Scheduler-Secret), not a sign-in.
 api_router.include_router(internal.router)
 
@@ -43,3 +44,4 @@ api_router.include_router(team.router, dependencies=_signed_in)
 api_router.include_router(profit.router, dependencies=_signed_in)
 api_router.include_router(inbox.router, dependencies=_signed_in)
 api_router.include_router(meta_ads.router, dependencies=_signed_in)
+api_router.include_router(email_auto.router, dependencies=_signed_in)

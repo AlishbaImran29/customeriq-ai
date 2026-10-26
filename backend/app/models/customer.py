@@ -44,5 +44,7 @@ class Customer(TimestampMixin, Base):
     acquisition_source: Mapped[str | None] = mapped_column(String(60))
     status: Mapped[str] = mapped_column(String(12), default="active", server_default="active")
     anonymised_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # Email Automations: active, at_risk (no order for 60+ days) or lost (180+ days); None until first worked out.
+    lifecycle: Mapped[str | None] = mapped_column(String(10))
 
     orders: Mapped[list["Order"]] = relationship(back_populates="customer")

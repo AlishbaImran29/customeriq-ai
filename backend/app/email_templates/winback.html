@@ -1,0 +1,17 @@
+{% extends "_layout.html" %}{% from "_parts.html" import button, product_cards with context %}
+{% block body %}
+<p style="margin:0 0 16px 0;">Hi {{ first_name }},</p>
+<p style="margin:0 0 12px 0;">It&rsquo;s been a while since your last order with us{% if days_since_last_order %} ({{ days_since_last_order }} days){% endif %}, and we wanted to check in.</p>
+{% if last_product_name %}<p style="margin:0 0 12px 0;">We hope you loved your {{ last_product_name }}!{% if recommended_products %} Here are a few picks we think you&rsquo;ll like:{% endif %}</p>
+{% elif recommended_products %}<p style="margin:0 0 12px 0;">Here are a few picks we think you&rsquo;ll like:</p>{% endif %}
+{{ product_cards(recommended_products) }}
+{% if discount_code %}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:20px 0;"><tr><td align="center" style="padding:18px;border:2px dashed {{ brand_color }};border-radius:6px;">
+  <div style="font-size:15px;">Use code</div>
+  <div style="font-size:24px;font-weight:bold;letter-spacing:2px;color:{{ brand_color }};margin:6px 0;">{{ discount_code }}</div>
+  <div style="font-size:15px;">{% if discount_value %}to get {{ discount_value }} off your next order.{% else %}on your next order.{% endif %}</div>
+</td></tr></table>
+{% endif %}
+<p style="margin:20px 0;text-align:center;">{{ button(store_url, "Visit " ~ store_name) }}</p>
+<p style="margin:0;">See you soon,<br>The {{ store_name }} Team</p>
+{% endblock %}

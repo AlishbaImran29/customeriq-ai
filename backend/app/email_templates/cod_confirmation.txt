@@ -1,0 +1,17 @@
+Hi {{ first_name }},
+
+Thank you for shopping with {{ store_name }}! We've received your order{% if order_number %} #{{ order_number }}{% endif %} and it's almost ready to ship.
+
+{% for item in items %}- {{ item.name }}{% if item.quantity %} x {{ item.quantity }}{% endif %}{% if item.price %} - {{ item.price }}{% endif %}
+{% endfor %}{% if order_total %}Order total: {{ order_total }}
+{% endif %}{% if delivery_city %}Delivery to: {{ delivery_city }}
+{% endif %}
+Since you chose Cash on Delivery, please confirm your order so we can dispatch it right away.
+
+Confirm my order: {{ confirm_url }}
+Cancel order: {{ cancel_url }}
+
+{% if support_email %}Questions? Just reply to this email or contact us at {{ support_email }}.{% else %}Questions? Just reply to this email.{% endif %}
+
+Warm regards,
+The {{ store_name }} Team
