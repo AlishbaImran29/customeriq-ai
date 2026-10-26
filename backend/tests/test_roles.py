@@ -20,6 +20,7 @@ def as_role(role: str, email: str | None = None):
 
 @pytest.mark.parametrize("method,path,needed", [
     ("GET", "/api/v1/customers", "viewer"),
+    ("POST", "/api/v1/assistant/chat", "viewer"),
     ("GET", "/api/v1/messaging/settings", "viewer"),
     ("GET", "/api/v1/customer-records/export.csv", "owner"),
     ("POST", "/api/v1/orders", "staff"),

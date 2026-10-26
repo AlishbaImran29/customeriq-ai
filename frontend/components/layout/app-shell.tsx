@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Activity,
   LayoutDashboard,
+  Bot,
   Lightbulb,
   CirclePlus,
   Menu,
@@ -96,6 +97,7 @@ const navGroups = [
     label: "Actions",
     items: [
       { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
+      { href: "/assistant", label: "AI Business Assistant", icon: Bot },
     ],
   },
   {

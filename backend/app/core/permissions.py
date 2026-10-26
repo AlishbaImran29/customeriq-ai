@@ -22,6 +22,7 @@ OWNER_ONLY_READS = (
 
 # Changing nothing: a viewer may use these (a dry-run test, a check).
 VIEWER_SAFE_WRITES = (
+    r"^/api/v1/assistant(/.*)?$",          # asking the assistant a question changes nothing
     r"^/api/v1/workflows/(validate|test)$",
     r"^/api/v1/auth/.*$",
 )
