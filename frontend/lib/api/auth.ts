@@ -33,7 +33,10 @@ function problemFrom(message: string): AuthProblem {
   if (m.includes("valid email") || m.includes("invalid email")) return new AuthProblem("Please enter a valid email address.", "email");
   if (m.includes("rate limit") || m.includes("too many")) return new AuthProblem("Too many attempts. Please wait a few minutes and try again.");
   if (m.includes("email not confirmed")) return new AuthProblem("This account's email is not confirmed. Ask the site owner to switch off email confirmation in Supabase (Authentication, Providers, Email).");
-  return new AuthProblem("Something went wrong. Please try again.");
+  if (m.includes("signup") && m.includes("disabled")) return new AuthProblem("Sign-ups are switched off in Supabase (Authentication, Sign In / Providers: turn on Allow new users to sign up, and Email).");
+  if (m.includes("api key") || m.includes("apikey") || m.includes("jwt")) return new AuthProblem("The Supabase key on the website is not correct. Check NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel and redeploy.");
+  if (m.includes("failed to fetch") || m.includes("network")) return new AuthProblem("Could not reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL in Vercel and redeploy.");
+  return new AuthProblem(`Something went wrong (${message.slice(0, 120)}). Please try again.`);
 }
 
 export const getMe = () => apiGet<AuthUser>("/api/v1/auth/me");
