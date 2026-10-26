@@ -109,6 +109,268 @@ Har step mein **Click** (kya dabana hai), **Bolna** (kya kehna hai).
 
 ---
 
+## Hissa 3B: Website ka har page (A se Z): kya hai, kaise kaam karta hai
+
+Har page ke liye: **Maqsad** (kyun), **Screen par** (kya dikhta hai), **Peeche kaise** (kaam kaise hota hai), **Example**, **Sawal** (teacher kya pooch sakta hai).
+Pehle sidebar ka naqsha yaad kar lein, ye 6 group hain:
+
+| Group | Pages |
+|---|---|
+| **Analytics** | Overview, Segmentation, Churn Prediction, Cohort Retention, Lifetime Value, Revenue Intelligence, Order Risk, Model Report Card, Courier Scorecard, Cash Tracker, Real Profit, Meta Ads, Season Forecast |
+| **Auto Messenger** | Messenger Settings, Templates, Consent, Inbox, Messages, Order Updates, COD Confirmation, Email Automations, Abandoned Carts, Customer Videos, Announcements, Journeys, Messaging Results |
+| **Automation** | Workflows, Workflow Logs |
+| **Actions** | Recommendations, AI Business Assistant |
+| **Data** | Add Order, Leads, Returns and Refunds, Complaints, Inventory, Import Data |
+| **Baqi** | Welcome (landing), Login, Account, Customer profile |
+
+**Teen jumle jo har page par kaam aate hain:** (1) "Ye page seller ko ... mein madad karta hai." (2) "Agar data kam ho to ye 'need more data' dikhata hai, nakli number nahi." (3) "Ye sab server par hota hai, browser sirf dikhata hai."
+
+---
+
+### Group 1: Analytics
+
+**1. Overview (Dashboard) `/`**
+- **Maqsad:** ek nazar mein business ki sehat.
+- **Screen par:** 6 KPI cards (Total Customers, Revenue 90 din, Lifetime Value, Retention, Predicted Churn Risk, Growth Score), Revenue trend chart, Segment mix donut, Next best actions, Order Risk ka chhota card, aur "Churn model" ka note.
+- **Peeche kaise:** backend sab orders se numbers nikalta hai; har KPI ke saath pichle 90 din se tabdeeli (%). Churn Risk tab dikhta hai jab model baseline ko haraye.
+- **Example:** "Revenue 4.2 lakh, pichle 90 din se +8%."
+- **Sawal:** "Growth Score kya hai?" → "Humara apna composite: revenue growth 35%, retention 30%, customer growth 15% (weights normalise hote hain). Industry standard nahi, prediction nahi."
+
+**2. Segmentation `/segmentation`**
+- **Maqsad:** customers ko groups mein baantna taake sab ke saath ek jaisa sulook na ho.
+- **Screen par:** 5 groups (Champions, Loyal, Potential Loyalists, At-Risk, Lost), har group ke customers aur revenue, donut/bar charts.
+- **Peeche kaise:** RFM: har customer ko baqi customers ke muqable mein R, F, M ka 1-5 score; phir recency aur (frequency+monetary) se group. Kam az kam 20 customers chahiye.
+- **Example:** Sara: pichle haftay aayi (R=5), 12 orders (F=5), bara kharch (M=5) → Champion.
+- **Sawal:** "Segments ka fayda?" → "Champions ko early access, At-Risk ko win-back, Lost ko aakhri koshish."
+
+**3. Churn Prediction `/churn`**
+- **Maqsad:** wo customers pakadna jo chhorne wale hain, pehle se.
+- **Screen par:** customers ki list: churn probability, risk level (Low/Medium/High/Critical), recommended action, **"Why?"** (top 3 wajahen), filters.
+- **Peeche kaise:** `HistGradientBoostingClassifier`, 90 din ka horizon, time-based split, baseline se muqabla; "Why?" model se nikalti hai.
+- **Example:** Ali: 78% churn chance; wajah "120 din se order nahi", "pehle har 30 din mein khareedta tha".
+- **Sawal:** "Probability 78% ka matlab?" → "Model ka andaza ke 100 aise customers mein se ~78 agle 90 din mein nahi khareedenge; certainty nahi."
+
+**4. Cohort Retention `/cohorts`**
+- **Maqsad:** dekhna ke naye customers kitni der tak rukte hain.
+- **Screen par:** heat map: rows = pehle order ka mahina, columns = us ke baad ke mahine, cell = kitne % wapas aaye (jitna gehra blue, utna zyada).
+- **Peeche kaise:** har customer ko uske pehle order ke mahine ke group mein rakh kar baad ke mahinon mein dobara khareedne ka % nikalta hai.
+- **Example:** "Jan 2025 wale 100 mein se 22 ne mahina 3 mein dobara khareeda."
+- **Sawal:** "Retention aur cohort mein farq?" → "Retention overall ek number hai; cohort har group ki zindagi alag alag dikhata hai."
+
+**5. Lifetime Value `/clv`**
+- **Maqsad:** kaun sa customer / segment sab se qeemti hai.
+- **Screen par:** average CLV, segments ka average CLV chart, customers ki list (orders, CLV to date).
+- **Peeche kaise:** CLV = ab tak ka total kharch (historical). **Predicted CLV nahi dikhate**: wo baseline se behtar nahi nikla.
+- **Example:** Champions ka average 25,000, Lost ka 3,000.
+- **Sawal:** "Future CLV kyun nahi?" → "Test mein model 'pichle 6 mahine dohra do' wale simple rule se behtar nahi tha, isliye hata diya."
+
+**6. Revenue Intelligence `/revenue`**
+- **Maqsad:** paisa kahan se aa raha hai aur kahan khatre mein hai.
+- **Screen par:** monthly revenue chart, category/country ke hisab se revenue, naye vs purane customers, revenue at risk (At-Risk/Lost customers ka pichle 12 mahine ka kharch).
+- **Peeche kaise:** orders ko groups mein jama karke; "revenue at risk" historical hai, predicted loss nahi.
+- **Sawal:** "Revenue at risk ka matlab?" → "Un customers ka pichle saal ka kharch jo ab At-Risk ya Lost hain; ye wo paisa hai jo hum kho sakte hain."
+
+**7. Order Risk `/order-risk`**
+- **Maqsad:** COD order bhejne se pehle andaza ke wapas/refuse ho sakta hai.
+- **Screen par:** haal ke orders ki list: risk level, wajah ("Why?"), kya karna chahiye (pehle call karo, advance maango). Isi ka chhota card Overview par bhi hai.
+- **Peeche kaise:** Logistic Regression, labels = wapas/cancel; time split; baseline = customer ki apni purani cancel rate; confirmation ka koi jawab na aaye to risk ek level upar (plain rule, saaf likha hota hai).
+- **Example:** "Naya customer, bara order, address mein house number nahi → High risk."
+- **Sawal:** "Label kahan se?" → "Courier ki wapsi ki file ya (public data mein) cancellation credit notes; source ka naam page par likha hota hai."
+
+**8. Model Report Card `/models`**
+- **Maqsad:** saboot ke app ke models imandaar hain.
+- **Screen par:** har model ka score, baseline ka score, test ka size, test ka period, aur "available" ya "hidden" wajah ke saath.
+- **Peeche kaise:** har model ko naye, na dekhe hue data par baseline se muqabla; behtar na ho to chhupa deta hai.
+- **Example:** Churn: model 0.80, rule 0.76 → available.
+- **Sawal:** "Ye page kyun?" → "Taake seller aur examiner khud dekhen ke kaun sa model kitna bharosey ka hai."
+
+**9. Courier Scorecard `/couriers`**
+- **Maqsad:** kaun sa courier kis shehar mein behtar hai.
+- **Screen par:** courier x city: deliveries, returns, average delivery time.
+- **Peeche kaise:** shipments ki file (ya Add Order ke saath courier) se; courier/city ke alag spellings ek naam mein milaye jate hain ("TCS", "t.c.s" → TCS; "Isb" → Islamabad).
+- **Sawal:** "Naam kaise milte?" → "`courier_names.json` aur `city_names.json` ki list; jo naam list mein nahi wo as-is rakha jata hai aur 'new name' bata diya jata hai, andaza nahi lagate."
+
+**10. Cash Tracker `/cash`**
+- **Maqsad:** COD ka wo paisa jo courier ne wasool kar liya magar abhi aap ko nahi diya.
+- **Screen par:** baqi rakam courier ke hisab se, kitne din se, payments ki file upload.
+- **Peeche kaise:** delivered COD orders ka total minus courier ki payments file se matching.
+- **Example:** "TCS ke paas 85,000 baqi, sab se purana 12 din."
+
+**11. Real Profit `/profit`**
+- **Maqsad:** revenue nahi, asli munafa.
+- **Screen par:** revenue, delivered revenue, aur har kharch (product cost, courier, ads, wapsi) ke baad profit, product/channel/city/courier ke hisab se.
+- **Peeche kaise:** costs seller ki settings se; agar koi cost maloom nahi to naam likh kar batata hai, andaza nahi lagata ("estimates" alag likhe jate hain).
+- **Sawal:** "Kaise pata kon sa product nuqsan mein?" → "Wapsi ke baad delivered revenue minus us product ke costs."
+
+**12. Meta Ads `/meta-ads`**
+- **Maqsad:** Facebook/Instagram ads ka sahi hisab.
+- **Screen par:** audiences (hashed), Conversions API events, ad spend, "Meta kehta hai" vs "asli delivered revenue" (True ROAS).
+- **Peeche kaise:** sirf wo customers Meta ko bheje jate hain jinhon ne ijazat di (hashed, yani email/phone ka SHA-256 nishan, asli nahi); purchase event sirf **delivered** order ka; **test mode default**, jab tak seller off na kare kuch nahi jata.
+- **Sawal:** "Hashed ka matlab?" → "Email ko ek tarfa nishan (hash) mein badal kar bhejte hain; Meta match kar sakta hai magar asli email wapas nahi nikal sakta."
+
+**13. Season Forecast `/seasons`**
+- **Maqsad:** Eid ya Christmas par kitna stock chahiye.
+- **Screen par:** har product ka season ka forecast (units, range) ya "pichle saal ki sales (reliable forecast nahi)".
+- **Peeche kaise:** Ridge regression + seasonal-naive baseline, 28 din pehle forecast, sirf tab dikhata hai jab 5% behtar ho.
+
+---
+
+### Group 2: Auto Messenger
+
+**14. Messenger Settings `/messenger/settings`**
+- **Maqsad:** WhatsApp/email ko jorna aur hudood tai karna.
+- **Screen par:** connection status, **Dry-run** toggle, quiet hours (raat ko message nahi), weekly marketing cap, test message.
+- **Peeche kaise:** server ki `MESSAGING_DRY_RUN=true` seller ke toggle par bhari hai (demo safe).
+- **Sawal:** "Dry-run kyun?" → "Test mein galti se asal customers ko message na jaye."
+
+**15. Templates `/messenger/templates`**
+- **Maqsad:** har automatic message ka text, jo seller approve karta hai.
+- **Screen par:** events (order confirmed, dispatched, COD confirmation...), variables jaise `{{first_name}}`, approve button, preview.
+- **Peeche kaise:** sirf approved template se message jata hai; `{{galat_naam}}` jaisi galti save hone par hi pakri jati hai; kisi zaruri variable ki value na ho to message "skipped" (jhoota text nahi jata).
+- **Example:** "Hi {{first_name}}, aap ka order {{order_number}} dispatch ho gaya."
+
+**16. Consent `/messenger/consent`**
+- **Maqsad:** kis ne kis channel par ijazat di.
+- **Screen par:** har customer ka WhatsApp/email status (agreed/stopped/not asked), history, CSV se consent import.
+- **Peeche kaise:** `customer_consent` (maujooda haal) aur `consent_events` (har tabdeeli ki history). Record na ho to "agreed nahi".
+
+**17. Inbox `/inbox`**
+- **Maqsad:** customers ke WhatsApp messages ek jagah, aur jawab ke draft.
+- **Screen par:** conversations, suggested reply, FAQ list, notes.
+- **Peeche kaise:** jawab seller ke apne FAQ/records se draft hota hai; complaint/return/refund jaisi baaten insaan ke liye chhodi jati hain (AI khud jawab nahi deta).
+
+**18. Messages `/messenger/messages`**
+- **Maqsad:** har message ka record: bheja, nahi bheja, aur kyun.
+- **Screen par:** list: status (queued/sent/delivered/read/failed/skipped), wajah (consent nahi, quiet hours, dry-run).
+- **Sawal:** "Skipped kyun?" → "Consent ya variable ya cap ya quiet hours; wajah har message ke saath likhi hoti hai."
+
+**19. Order Updates `/messenger/orders`**
+- **Maqsad:** order ka status badalna aur customer ko batana.
+- **Screen par:** orders, status (confirmed, dispatched, delivered...), "update karo aur batao".
+- **Peeche kaise:** status history save hoti hai; customer ko WhatsApp ya email (jis ki ijazat ho); courier/tracking ke saath.
+
+**20. COD Confirmation `/messenger/cod`**
+- **Maqsad:** COD order se pehle customer se "kya waqai chahiye?" pooochna.
+- **Screen par:** orders ki state: waiting, confirmed, cancelled, needs a phone call; seller khud result bhi likh sakta hai.
+- **Peeche kaise:** WhatsApp par YES = confirm, NO = cancel (stock wapas); 12 ghante mein jawab na aaye to "needs call" aur Order Risk ek level upar. ("STOP" likhna alag cheez hai: us par pura messaging band.)
+
+**21. Email Automations `/email-automations`**
+- **Maqsad:** teen qisam ki personalised emails: COD confirmation, win-back, new product.
+- **Screen par:** aaj ke emails (x/300), COD table (status), Win-back card (discount code), Announce product + preview, 4 template previews, Email look (logo, rang), Test mode.
+- **Peeche kaise:** Brevo API; signed links; log table; 30 din ka rule; 300/din limit; unsubscribe. Detail Hissa 3 step 11 mein.
+
+**22. Abandoned Carts `/messenger/carts`**
+- **Maqsad:** jo shopper checkout chhor gaya use yaad dilana.
+- **Screen par:** carts ki list, status, reminders.
+- **Peeche kaise:** Shopify checkout webhook se; reminder sirf consent walon ko; kharid hote hi band ("recovered").
+
+**23. Customer Videos `/messenger/videos`**
+- **Maqsad:** customers ki bheji photos/videos aur ye ke ads mein istemal ki ijazat hai ya nahi.
+- **Peeche kaise:** WhatsApp se aati media private storage (Supabase bucket) mein; ijazat poochi jati hai ("kya hum ye ad mein use karein?"); jawab YES ho tabhi "may use".
+
+**24. Announcements `/messenger/campaigns`**
+- **Maqsad:** naye product ka elaan sahi customers ko.
+- **Screen par:** product, audience (same-category buyers + chune hue segments), AI draft, 5 sample messages, approve.
+- **Peeche kaise:** AI ek hi draft banata hai (segment ke hisab se), seller edit karke approve karta hai; Champions ko pehle (early access), baqi baad mein; har customer ko ek channel par ek hi message.
+- **Sawal:** "AI jhoot na likhe?" → "Prompt mein manaa hai ke naye number, review, 'sold' count na banaye, aur code check karta hai (`claims.py`): aisa jumla nikal deta hai."
+
+**25. Journeys `/messenger/journeys`**
+- **Maqsad:** segment ke hisab se khud-bakhud follow-ups.
+- **Screen par:** har segment ka journey, steps, **holdout group** (kuch customers ko jaan bujh kar message nahi).
+- **Peeche kaise:** holdout se pata chalta hai ke message ne asal mein farq dala ya nahi (A/B jaisa).
+- **Example:** At-Risk customers ko 3 din baad reminder; 10% ko nahi bheja, phir dono ke orders ka muqabla.
+
+**26. Messaging Results `/messenger/results`**
+- **Maqsad:** messages ka asar.
+- **Screen par:** delivery %, orders aur revenue messages ke baad, **messaged vs not messaged**.
+- **Sawal:** "Ye 'causation' hai?" → "Nahi, holdout se sirf behtar andaza milta hai; ghalat dawa nahi karte."
+
+---
+
+### Group 3: Automation
+
+**27. Workflows `/workflows`**
+- **Maqsad:** "jab ye ho + ye shart ho to wo karo" khud kaam.
+- **Screen par:** builder: trigger (jaise naya order), conditions, actions (message bhejo, tag lagao, to-do banao, order status badlo), wait.
+- **Peeche kaise:** engine har pass mein due jobs chalata hai, durable queue; test mode (dry-run) se pehle dekhna.
+- **Example:** "Naya order aaye aur COD ho to 'COD' tag lagao aur task banao 'call karo'."
+
+**28. Workflow Logs `/workflows/runs`**
+- **Maqsad:** har run ka saboot, qadam ba qadam.
+- **Screen par:** runs, har step ka natija, jo facts dekhe, fail step dobara chalane ka button.
+
+---
+
+### Group 4: Actions
+
+**29. Recommendations `/recommendations`**
+- **Maqsad:** "ab kya karun?" ki list, asar ke hisab se.
+- **Screen par:** cards: title, impact (High/Medium/Low), audience size, purana revenue, next action.
+- **Peeche kaise:** **rules se**, ML se nahi (page ka naam "AI Recommendations" hai, par asal mein rules hain; agar teacher poochein to saaf bata dein).
+- **Example:** "Champions ko early access do: 79 customers, pichla revenue 3.1 lakh."
+
+**30. AI Business Assistant `/assistant`**
+- **Maqsad:** data se sawal ka jawab seedhi zuban mein.
+- **Screen par:** chat box, starter questions, status banner (configured ya nahi).
+- **Peeche kaise:** backend data ka summary banata hai (naam/email nahi), AI ko deta hai, jawab wapas; rate limit; `notAvailable` list se AI ko bataya jata hai kya nahi maloom.
+
+---
+
+### Group 5: Data
+
+**31. Add Order `/orders/new`**
+- **Maqsad:** chat mein mila order 10 second mein darj karna.
+- **Screen par:** form (naam, phone, products, rakam, city, channel, COD/prepaid, courier).
+- **Peeche kaise:** phone normalise (`+923...`), purana customer mile to jorta hai, duplicate order se rokta hai; naya COD order ho to COD email/WhatsApp confirmation chalti hai.
+
+**32. Leads `/leads`**
+- **Maqsad:** jis ne dilchaspi dikhayi magar khareeda nahi.
+- **Screen par:** pipeline (new → contacted → ... → converted), 24 ghante ka alert, source (Meta Lead Ads, website form).
+- **Peeche kaise:** lead ko customer mein badalte waqt source nahi khota (acquisition source).
+
+**33. Returns and Refunds `/returns`**
+- **Maqsad:** wapsi ka poora process.
+- **Screen par:** requests, approve/reject, replacement, goods received, refund record, evidence (photo/video).
+- **Peeche kaise:** evidence private storage mein; **refund sirf record hota hai, paisa app se nahi jata**; sirf owner refund record kar sakta hai.
+
+**34. Complaints `/tickets`**
+- **Maqsad:** shikayat ka follow-up.
+- **Screen par:** tickets: owner, status, notes.
+
+**35. Inventory `/inventory`**
+- **Maqsad:** stock ka sahi hisab.
+- **Peeche kaise:** confirmed order stock reserve karta hai, dispatched becha hua ginta hai, cancel par wapas; har tabdeeli (stock movement) ka record.
+
+**36. Import Data `/import`**
+- **Maqsad:** seller ka data andar lana.
+- **Screen par:** orders CSV/Excel upload (preview, galat rows ki list), courier shipments, product sales ke cards, supported sources.
+- **Peeche kaise:** har row validate; duplicate order id update; 4.5 MB se bari file ke liye `import_remote.py` script.
+
+---
+
+### Baqi pages
+
+**37. Welcome (landing page) `/welcome`**
+Naya visitor jo sign in nahi hai use app ka taaruf: hero, features, "From a file to a plan in three steps", "Honest by design", sign-in button.
+
+**38. Login `/login`**
+Email aur password se sign in/create account (Supabase Auth). Pehla account owner banta hai. Bina login ke koi data page nahi khulta (`proxy.ts` session check karta hai).
+
+**39. Account `/account`**
+Aap ka naam, email, aakhri sign-in, aur password badalna (purana password check karke naya set hota hai).
+
+**40. Customer profile `/customers/[id]`**
+Ek customer ki puri tasveer: notes aur tags, **timeline** (orders, status, messages, replies, consent), aur **Erase this customer** (anonymise: naam/email/phone/messages mit jate hain, orders ke figures bache rehte hain; ya poora delete).
+
+---
+
+### Aakhri mashwara
+- Har page ke liye khud ek baar kholein, is guide ke "Maqsad" aur "Example" ko apne alfaaz mein ek jumle mein bolna practise karein.
+- Jo page "need more data" dikhaye, usay chhupayen mat: "ye app ki imaandari hai."
+- Teacher koi bhi page khol de, aap ka jawab 3 hisson mein ho: **kyun hai, kaise kaam karta hai, ek example**.
+
+---
+
 ## Hissa 4: Testing (aap ke liye, main ne ye chala ke dekha hai)
 
 ### 4.1 Automated tests (khud chalayein)
