@@ -4,7 +4,7 @@ ROLES   viewer < staff < owner
 VIEWER  can look at everything except the owner-only pages, and can run the harmless "ask / test" actions (they change nothing).
 STAFF   can do the daily work: add orders, move leads, manage returns, send messages through the normal checks.
 OWNER   can do everything, including: settings, anything that deletes, erases or merges customers, exports, recording refunds,
-        switching automations on, seeing the action log, and managing who has which role.
+        switching automations on, and managing who has which role.
 
 `minimum_role(method, path)` answers "which role is needed for this request". The rules are plain data below so they can be read,
 tested and explained: add a pattern to change what a role may do.
@@ -17,7 +17,6 @@ RANK = {role: i for i, role in enumerate(ROLES)}
 
 # Looking is for everyone signed in, except these pages of the owner.
 OWNER_ONLY_READS = (
-    r"^/api/v1/audit(/.*)?$",
     r"^/api/v1/team(/.*)?$",
     r"^/api/v1/customer-records/(audit|export\.csv)$",
 )

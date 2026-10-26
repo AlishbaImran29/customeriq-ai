@@ -1,16 +1,16 @@
-"""Team (who has which role) and the action log. Both are for the owner only (enforced in core/permissions.py)."""
+"""Team (who has which role). For the owner only (enforced in core/permissions.py)."""
 
 import uuid
 from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
 from app.db.session import get_db
-from app.models import AuditLog, User
+from app.models import User
 from app.schemas.imports import CamelModel
 
 router = APIRouter(tags=["team"])
@@ -30,17 +30,6 @@ class MemberOut(CamelModel):
 class MemberPatch(CamelModel):
     role: Role | None = None
     is_active: bool | None = None
-
-
-class AuditOut(CamelModel):
-    id: int
-    at: datetime
-    actor_email: str
-    actor_role: str
-    method: str
-    route: str
-    outcome: str
-    detail: dict[str, Any]
 
 
 def _out(u: User) -> MemberOut:
@@ -65,15 +54,3 @@ def change_member(user_id: uuid.UUID, body: MemberPatch, db: Session = Depends(g
     user.role, user.is_active = new_role, new_active
     db.commit()
     return _out(user)
-
-
-@router.get("/audit", response_model=list[AuditOut], summary="The action log: who changed what, and what was refused")
-def action_log(
-    outcome: Literal["allowed", "denied"] | None = Query(None), actor: str | None = Query(None, max_length=320), limit: int = Query(100, ge=1, le=500), db: Session = Depends(get_db),
-) -> list[AuditLog]:
-    query = select(AuditLog).order_by(AuditLog.id.desc()).limit(limit)
-    if outcome:
-        query = query.where(AuditLog.outcome == outcome)
-    if actor:
-        query = query.where(AuditLog.actor_email == actor.strip().lower())
-    return list(db.scalars(query))

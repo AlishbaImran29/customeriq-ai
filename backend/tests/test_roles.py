@@ -21,7 +21,6 @@ def as_role(role: str, email: str | None = None):
 @pytest.mark.parametrize("method,path,needed", [
     ("GET", "/api/v1/customers", "viewer"),
     ("GET", "/api/v1/messaging/settings", "viewer"),
-    ("GET", "/api/v1/audit", "owner"),
     ("GET", "/api/v1/team/users", "owner"),
     ("GET", "/api/v1/customer-records/export.csv", "owner"),
     ("POST", "/api/v1/orders", "staff"),
@@ -57,7 +56,7 @@ def test_a_viewer_can_look_and_ask_but_not_change(db_client):
     assert db_client.post("/api/v1/workflows/validate", json={"name": "x", "trigger": "order_created", "actions": []}).status_code == 200
     blocked = db_client.post("/api/v1/leads", json={"phone": "03001234567"})
     assert blocked.status_code == 403 and blocked.json()["error"]["code"] == "forbidden" and "only look" in blocked.json()["error"]["message"]
-    assert db_client.get("/api/v1/audit").status_code == 403
+    assert db_client.get("/api/v1/team/users").status_code == 403
 
 
 def test_staff_do_the_daily_work_but_not_settings_deletions_or_refund_payments(db_client):
@@ -70,13 +69,13 @@ def test_staff_do_the_daily_work_but_not_settings_deletions_or_refund_payments(d
     assert db_client.delete("/api/v1/workflows/1").status_code == 403
     assert db_client.get("/api/v1/customer-records/export.csv").status_code == 403
     assert db_client.get("/api/v1/team/users").status_code == 403
-    assert "only the account owner" in db_client.get("/api/v1/audit").json()["error"]["message"].lower()
+    assert "only the account owner" in db_client.get("/api/v1/team/users").json()["error"]["message"].lower()
 
 
 def test_the_owner_can_do_everything(db_client):
     as_role("owner")
     assert db_client.put("/api/v1/messaging/settings", json={"weeklyMarketingCap": 3}).status_code == 200
-    assert db_client.get("/api/v1/team/users").status_code == 200 and db_client.get("/api/v1/audit").status_code == 200
+    assert db_client.get("/api/v1/team/users").status_code == 200
 
 
 def test_a_user_without_a_role_is_refused_everything(db_client):
@@ -98,17 +97,6 @@ def test_changes_and_refusals_are_logged_but_reading_is_not(db_client, db_sessio
     logged = " ".join(str(r.detail) + r.route for r in rows)
     assert "Test Secret Name" not in logged and "TX-SECRET" not in logged and "03001234567" not in logged       # what was typed is never logged
     assert created.status_code == 201
-
-
-def test_the_owner_reads_the_log_with_filters(db_client):
-    as_role("staff", "someone@test.example")
-    db_client.post("/api/v1/refunds/9/record", json={"method": "x"})
-    db_client.post("/api/v1/leads", json={"phone": "03001234567"})
-    as_role("owner")
-    everything = db_client.get("/api/v1/audit").json()
-    denied = db_client.get("/api/v1/audit?outcome=denied").json()
-    mine = db_client.get("/api/v1/audit?actor=someone@test.example").json()
-    assert len(everything) >= 2 and [r["route"] for r in denied] == ["/api/v1/refunds/{refund_id}/record"] and len(mine) == 2
 
 
 # --- managing roles -----------------------------------------------------------------------------------------------------------

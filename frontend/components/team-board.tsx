@@ -4,11 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { formatWhen } from "@/components/messenger-bits";
 import { ErrorState } from "@/components/states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FilterPills } from "@/components/ui/filter-pills";
 import { Select } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_MODE, ApiError } from "@/lib/api/config";
-import { ROLE_TEXT, changeMember, listActions, listMembers, type AuditRow, type Member, type Role } from "@/lib/api/team";
+import { ROLE_TEXT, changeMember, listMembers, type Member, type Role } from "@/lib/api/team";
 
 /** Who can sign in and what they may do (owner only). The rules are enforced on the server; this page only changes the role. */
 export function TeamBoard() {
@@ -69,43 +68,6 @@ function TeamContent() {
       )}
       <div aria-live="polite">{error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}</div>
       <p className="text-xs text-muted">New people who sign up start as Viewers. Raise their role here.</p>
-    </div>
-  );
-}
-
-/** The action log: every change anyone made (and every refusal), without anything they typed. */
-export function ActionLogBoard() {
-  const [show, setShow] = useState<"all" | "denied">("all");
-  const [rows, setRows] = useState<AuditRow[] | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (API_MODE !== "live") return;
-    let cancelled = false;
-    listActions(show === "denied" ? "denied" : undefined)
-      .then((r) => !cancelled && (setRows(r), setFailed(null)))
-      .catch((e) => !cancelled && setFailed(e instanceof ApiError ? e.message : "x"));
-    return () => {
-      cancelled = true;
-    };
-  }, [show]);
-
-  if (API_MODE !== "live") return <p className="text-sm text-muted">The action log needs the backend. Connect it to use it.</p>;
-  if (failed) return <ErrorState title="Could not load the action log" description={(failed === "x" ? "Please check your connection and reload the page." : failed)} />;
-  return (
-    <div className="space-y-4">
-      <FilterPills label="Show" value={show} onChange={setShow} options={[{ value: "all" as const, label: "Everything" }, { value: "denied" as const, label: "Refused only" }]} />
-      {!rows ? <Skeleton className="h-40 w-full" /> : rows.length === 0 ? <p className="text-sm text-muted">Nothing logged yet.</p> : (
-        <ul className="space-y-1.5 text-sm">
-          {rows.map((r) => (
-            <li key={r.id} className="rounded-xl border border-line bg-surface-2 px-3 py-2 text-ink-2">
-              <span className="text-xs text-muted">{formatWhen(r.at)}</span> · <span className="font-medium text-ink">{r.actorEmail}</span> ({r.actorRole}) · {r.method} {r.route}
-              {r.detail.ids && Object.keys(r.detail.ids).length ? ` · ${Object.entries(r.detail.ids).map(([k, v]) => `${k}=${v}`).join(", ")}` : ""}
-              {r.outcome === "denied" ? <span className="ml-2 rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-medium text-danger">Refused</span> : null}
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
