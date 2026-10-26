@@ -74,7 +74,7 @@ class Settings(BaseSettings):
         )
         return has_webhook or bool(sender and (has_api_key or (self.smtp_host and has_password)))
 
-    # Screenshot storage for Launch Studio (Supabase Storage, a PRIVATE bucket). The service key stays on the server.
+    # Private file storage (Supabase Storage). The service key stays on the server.
     supabase_url: str | None = None
     supabase_service_key: SecretStr | None = None
     supabase_bucket: str = "competitor-ads"
@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     supabase_evidence_bucket: str = "return-evidence"   # private bucket for return photos and videos
     supabase_media_bucket: str = "customer-media"       # private bucket for customer videos (part 3)
 
-    # AI connection for Launch Studio and Auto Messenger drafts (server-side only; never exposed to the browser).
+    # AI connection for Auto Messenger campaign drafts (server-side only; never exposed to the browser).
     # Provider: "anthropic" (Claude, default) or "openai".
     ai_provider: Literal["anthropic", "openai"] = "anthropic"
     anthropic_api_key: SecretStr | None = None

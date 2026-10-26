@@ -13,7 +13,7 @@ CAMPAIGN_STATUSES = ("draft", "approved", "sending", "completed", "cancelled")
 
 
 class CatalogProduct(TimestampMixin, Base):
-    """A product the seller wants to tell customers about: typed in, created by a Shopify webhook, or taken from Launch Studio."""
+    """A product the seller wants to tell customers about: typed in or created by a Shopify webhook."""
 
     __tablename__ = "catalog_products"
     __table_args__ = (
@@ -30,7 +30,6 @@ class CatalogProduct(TimestampMixin, Base):
     product_url: Mapped[str | None] = mapped_column(String(500))              # where Shop now goes
     source: Mapped[str] = mapped_column(String(14), default="manual", server_default="manual")
     external_id: Mapped[str | None] = mapped_column(String(60), unique=True)   # Shopify's product id
-    launch_project_id: Mapped[int | None] = mapped_column(ForeignKey("launch_projects.id", ondelete="SET NULL"))
 
 
 class Campaign(TimestampMixin, Base):

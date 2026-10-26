@@ -1,9 +1,0 @@
-TEST DATA ONLY: a made-up chat, not real people.
-05/09/2026, 14:02 - Zara: Hi, order book karna hai
-05/09/2026, 14:04 - Zara: 1 scarf chahiye, Karachi delivery
-05/09/2026, 14:06 - Shop: Rs 1800 with delivery
-05/09/2026, 14:07 - Zara: ok advance transfer kar diya easypaisa pe
-05/09/2026, 14:08 - Zara: +92 321 9876543
-05/09/2026, 18:30 - Imran: bhej do 2 kurta, total 6000 rupay, cash on delivery
-05/09/2026, 18:31 - Imran: 0345 1112223 Multan
-05/09/2026, 18:40 - Shop: confirm

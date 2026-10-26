@@ -9,8 +9,8 @@ import pytest
 from app.core.config import Settings, get_settings
 from app.core.errors import ApiError
 from app.main import app
-from app.models import Campaign, CampaignRecipient, CatalogProduct, Customer, LaunchProject, Message, MessageTemplate, Order
-from app.services import launch_ai, shopify_hooks
+from app.models import Campaign, CampaignRecipient, CatalogProduct, Customer, Message, MessageTemplate, Order
+from app.services import ai_cache, shopify_hooks
 from app.services.messaging import campaign_ai, campaigns, consent
 from app.services.messaging.settings_store import get_row
 
@@ -39,7 +39,7 @@ def customer(db, *, name="Test Ali", phone=None, email=None, wa=True, mail=False
 
 def product(db, **fields):
     fields = {"name": "Test sandals", "category": "Shoes", "price": Decimal("1999"), "description": "Light summer sandals", "source": "manual", **fields}
-    return campaigns.create_product(db, **{k: fields.get(k) for k in ("name", "category", "price", "description", "source", "external_id", "launch_project_id")})
+    return campaigns.create_product(db, **{k: fields.get(k) for k in ("name", "category", "price", "description", "source", "external_id")})
 
 
 def with_segments(monkeypatch, mapping):
@@ -70,7 +70,7 @@ class FakeModel:
 
 def use_model(monkeypatch, answer):
     fake = FakeModel(answer)
-    monkeypatch.setattr(launch_ai, "get_model", lambda s: fake)
+    monkeypatch.setattr(ai_cache, "get_model", lambda s: fake)
     return fake
 
 
@@ -174,7 +174,7 @@ def test_a_draft_that_breaks_the_rules_is_thrown_away(db_session, monkeypatch, a
     with pytest.raises(ApiError) as caught:
         campaign_ai.generate(db_session, settings(), campaign, product_row, ["champions", "other"], None, force=False)
     assert caught.value.status_code == 502 and caught.value.code == "ai_bad_answer"
-    assert db_session.query(launch_ai.AiCache).count() == 0                                   # a bad answer is never saved
+    assert db_session.query(ai_cache.AiCache).count() == 0                                   # a bad answer is never saved
 
 
 def test_an_offer_is_allowed_only_when_the_seller_typed_one(db_session, monkeypatch):
@@ -434,18 +434,6 @@ def test_generating_for_an_empty_audience_and_the_ai_limit(db_client, db_session
     assert db_client.post(f"/api/v1/messaging/campaigns/{cid2}/generate", json={"force": True}).status_code == 200
     assert db_client.post(f"/api/v1/messaging/campaigns/{cid2}/generate", json={"force": True}).status_code == 429
     reset_rate_limits()
-
-
-def test_a_product_from_launch_studio_makes_a_draft_once(db_client, db_session):
-    project = LaunchProject(product_name="Test neck fan", category="Gadgets", notes="USB rechargeable fan")
-    db_session.add(project)
-    db_session.flush()
-    first = db_client.post(f"/api/v1/messaging/products/from-launch/{project.id}")
-    assert first.status_code == 201 and first.json()["source"] == "launch_studio" and first.json()["description"] == "USB rechargeable fan"
-    again = db_client.post(f"/api/v1/messaging/products/from-launch/{project.id}")
-    assert again.json()["id"] == first.json()["id"] and db_session.query(CatalogProduct).count() == 1
-    assert db_client.post("/api/v1/messaging/products/from-launch/999999").status_code == 404
-    assert [p["name"] for p in db_client.get("/api/v1/messaging/products").json()] == ["Test neck fan"]
 
 
 def test_a_shopify_new_product_webhook_makes_a_draft_campaign(db_session):

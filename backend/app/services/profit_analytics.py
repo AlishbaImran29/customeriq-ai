@@ -2,7 +2,7 @@
 
 REAL PROFIT PER ORDER  =  revenue  -  product cost  -  packing  -  courier fee  -  return shipping  -  ad cost (estimate)
 
-by what happened to the parcel (the same cash-on-delivery model as the Launch Studio Profit Check):
+by what happened to the parcel (a cash-on-delivery model):
 - DELIVERED  revenue = the order value;      product cost counts (it was sold).
 - RETURNED   revenue = 0;                    product cost does NOT count (the goods come back to the shelf);
              the courier fee out, the packing and the RETURN SHIPPING are lost.

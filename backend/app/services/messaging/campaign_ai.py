@@ -7,7 +7,7 @@ product, offer and segments costs nothing. The per-customer parts (name, last pu
 The answer is an "AI draft": the seller reads and edits it, and nothing is sent until they approve. It is also CHECKED
 in code before the seller even sees it:
 - only known {{variables}} may appear (and {{price}} / {{offer_text}} only when there is a price / an offer);
-- no claim that cannot be proven (a "sold" count, reviews, fake scarcity: launch_ai_content.unprovable_claim);
+- no claim that cannot be proven (a "sold" count, reviews, fake scarcity: claims.unprovable_claim);
 - no discount, "free" or "sale" wording unless the seller typed an offer (an invented discount is refused).
 """
 
@@ -18,8 +18,8 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.errors import ApiError
 from app.models import Campaign, CatalogProduct
-from app.services.launch_ai import parse_json_object, run_cached
-from app.services.launch_ai_content import NO_INVENTION, unprovable_claim
+from app.services.ai_cache import parse_json_object, run_cached
+from app.services.messaging.claims import NO_INVENTION, unprovable_claim
 from app.services.messaging import campaigns
 from app.services.messaging.render import check_template_text, variables_in
 

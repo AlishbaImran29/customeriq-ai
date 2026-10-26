@@ -97,7 +97,7 @@ function NewProduct({ onAdded }: { onAdded: (p: Product) => void }) {
     <Card>
       <CardHeader>
         <CardTitle>Announce a new product</CardTitle>
-        <CardDescription>This only makes a draft. Nothing is sent until you approve it. A product from Launch Studio can be announced from its results page.</CardDescription>
+        <CardDescription>This only makes a draft. Nothing is sent until you approve it.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2" noValidate>

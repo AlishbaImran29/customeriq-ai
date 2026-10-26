@@ -10,12 +10,12 @@ from app.api.deps import require_user
 from app.core.config import Settings, get_settings
 from app.core.errors import ApiError
 from app.db.session import get_db
-from app.models import Campaign, CampaignRecipient, CatalogProduct, Customer, LaunchProject, Message, User
+from app.models import Campaign, CampaignRecipient, CatalogProduct, Customer, Message, User
 from app.schemas.campaigns import (
     ApproveOut, AudienceConfig, AudienceOut, CampaignMessages, CampaignOut, CampaignPatch, DraftOut, GenerateIn, PreviewOut,
     ProductIn, ProductOut, RecipientCounts, RecipientOut, SampleOut, SegmentMessage,
 )
-from app.services.launch_ai import is_cached
+from app.services.ai_cache import is_cached
 from app.services.messaging import campaign_ai, campaigns
 from app.services.messaging.render import check_template_text
 from app.services.messaging.settings_store import get_row
@@ -89,19 +89,6 @@ def add_product(body: ProductIn, db: Session = Depends(get_db)) -> ProductOut:
     product, _ = campaigns.create_product(
         db, name=body.name, category=body.category, price=Decimal(str(body.price)) if body.price is not None else None, description=body.description, source="manual",
     )
-    db.commit()
-    return _product_out(db, product)
-
-
-@router.post("/products/from-launch/{project_id}", response_model=ProductOut, status_code=status.HTTP_201_CREATED, summary="Announce a Launch Studio product")
-def product_from_launch(project_id: int, db: Session = Depends(get_db)) -> ProductOut:
-    project = db.get(LaunchProject, project_id)
-    if project is None:
-        raise ApiError(404, "project_not_found", "That launch project was not found.")
-    existing = db.scalar(select(CatalogProduct).where(CatalogProduct.launch_project_id == project_id))
-    if existing is not None:
-        return _product_out(db, existing)
-    product, _ = campaigns.create_product(db, name=project.product_name, category=project.category, price=None, description=project.notes, source="launch_studio", launch_project_id=project.id)
     db.commit()
     return _product_out(db, product)
 

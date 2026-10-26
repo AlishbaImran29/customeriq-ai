@@ -102,7 +102,6 @@ def db_session():
     connection.execute(text("DELETE FROM customer_consent"))
     connection.execute(text("DELETE FROM message_templates"))
     connection.execute(text("DELETE FROM vendors"))
-    connection.execute(text("DELETE FROM launch_projects"))
     connection.execute(text("DELETE FROM ai_cache"))
     connection.execute(text("DELETE FROM orders"))
     connection.execute(text("DELETE FROM customers"))

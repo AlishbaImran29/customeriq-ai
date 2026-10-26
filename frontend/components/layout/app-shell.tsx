@@ -9,7 +9,6 @@ import {
   Lightbulb,
   CirclePlus,
   Menu,
-  MessagesSquare,
   PackageX,
   Sparkles,
   TrendingUp,
@@ -21,13 +20,6 @@ import {
   Truck,
   Banknote,
   CalendarClock,
-  Rocket,
-  Telescope,
-  BookUser,
-  Eye,
-  Palette,
-  Calculator,
-  Flag,
   ClipboardCheck,
   Boxes,
   UserPlus,
@@ -76,18 +68,6 @@ const navGroups = [
     ],
   },
   {
-    label: "Launch Studio",
-    items: [
-      { href: "/launch", label: "Launch projects", icon: Rocket },
-      { href: "/launch/trends", label: "Trend Finder", icon: Telescope },
-      { href: "/launch/vendors", label: "Vendor Book", icon: BookUser },
-      { href: "/launch/competitors", label: "Competitor Board", icon: Eye },
-      { href: "/launch/creatives", label: "Creative Studio", icon: Palette },
-      { href: "/launch/profit", label: "Profit Check", icon: Calculator },
-      { href: "/launch/finish", label: "Launch", icon: Flag },
-    ],
-  },
-  {
     label: "Auto Messenger",
     items: [
       { href: "/messenger/settings", label: "Messenger Settings", icon: Settings },
@@ -127,14 +107,12 @@ const navGroups = [
       { href: "/tickets", label: "Complaints", icon: LifeBuoy },
       { href: "/inventory", label: "Inventory", icon: Boxes },
       { href: "/import", label: "Import Data", icon: Upload },
-      { href: "/import/whatsapp", label: "Import WhatsApp Chat", icon: MessagesSquare },
     ],
   },
 ];
 
 function isActive(pathname: string, href: string) {
-  // "/", "/import" and "/launch" only match themselves, because "/import/whatsapp" and "/launch/trends" have their own menu items.
-  return href === "/" || href === "/import" || href === "/launch" || href === "/workflows" ? pathname === href : pathname.startsWith(href);
+  return href === "/" || href === "/workflows" ? pathname === href : pathname.startsWith(href);
 }
 
 // Matches Tailwind's `lg` breakpoint, where the sidebar is always visible.

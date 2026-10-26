@@ -1,7 +1,7 @@
 """New product announcements (Auto Messenger part 4).
 
 THE FLOW
-  1. A product is added (the form, a Shopify "products/create" webhook, or Launch Studio) -> a DRAFT campaign is made.
+  1. A product is added (the form, a Shopify "products/create" webhook,) -> a DRAFT campaign is made.
   2. The audience is worked out: customers who bought from the same category before, plus the segments the seller
      chose (Champions by default). Customers who have not agreed to a channel are left out and counted.
   3. The AI writes ONE base message per segment, in English and Urdu (campaign_ai.py): one AI call for the whole
@@ -61,7 +61,7 @@ def template_name(campaign_id: int, key: str, language: str, channel: str) -> st
 
 def create_product(
     db: Session, *, name: str, category: str | None, price: Decimal | None, description: str | None, source: str,
-    external_id: str | None = None, launch_project_id: int | None = None,
+    external_id: str | None = None,
 ) -> tuple[CatalogProduct, Campaign]:
     """Save a product and make its DRAFT campaign. Nothing is sent. A Shopify product that is already known is returned as is."""
     if external_id:
@@ -72,7 +72,7 @@ def create_product(
                 return known, campaign
     product = CatalogProduct(
         name=name.strip()[:120], category=(category or "").strip()[:100] or None, price=price, description=(description or "").strip() or None,
-        source=source, external_id=external_id, launch_project_id=launch_project_id,
+        source=source, external_id=external_id,
     )
     db.add(product)
     db.flush()

@@ -244,7 +244,6 @@ export type Recipient = { id: number; customerName: string; segment: string; sta
 
 export const listProducts = () => apiGet<Product[]>(`${P}/products`);
 export const addProduct = (body: { name: string; category?: string; price?: number; description?: string }) => apiPostJson<Product>(`${P}/products`, body);
-export const productFromLaunch = (projectId: number) => apiPostJson<Product>(`${P}/products/from-launch/${projectId}`, {});
 export const listCampaigns = () => apiGet<Campaign[]>(`${P}/campaigns`);
 export const getCampaign = (id: number) => apiGet<Campaign>(`${P}/campaigns/${id}`);
 export const editCampaign = (id: number, patch: Partial<{ name: string; audience: AudienceConfig; offerText: string; earlyAccessHours: number }>) => apiPatchJson<Campaign>(`${P}/campaigns/${id}`, patch);

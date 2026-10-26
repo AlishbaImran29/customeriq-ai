@@ -1,4 +1,4 @@
-"""The AI connection shared by Launch Studio (ideas, ad copy, competitor analysis) and the Auto Messenger campaign drafts.
+"""The AI connection used by the Auto Messenger campaign drafts.
 
 Two providers, chosen with AI_PROVIDER: Anthropic Claude (default) or OpenAI.
 API keys stay on the server and message text is never logged.
