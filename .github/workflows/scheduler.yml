@@ -29,6 +29,10 @@ jobs:
           SCHEDULER_URL: ${{ secrets.SCHEDULER_URL }}
           SCHEDULER_SECRET: ${{ secrets.SCHEDULER_SECRET }}
         run: |
+          # copy-paste often adds a space, a new line or a slash at the end: clean all three
+          SCHEDULER_URL=$(printf '%s' "$SCHEDULER_URL" | tr -d '[:space:]')
+          SCHEDULER_URL="${SCHEDULER_URL%/}"
+          SCHEDULER_SECRET=$(printf '%s' "$SCHEDULER_SECRET" | tr -d '[:space:]')
           if [ -z "$SCHEDULER_URL" ] || [ -z "$SCHEDULER_SECRET" ]; then
             echo "SCHEDULER_URL and SCHEDULER_SECRET must be set as repository secrets."
             exit 1
